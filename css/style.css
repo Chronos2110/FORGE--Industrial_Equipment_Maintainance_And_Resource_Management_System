@@ -1,154 +1,257 @@
 /* ==========================================================================
-   FORGE - Industrial Equipment Maintenance & Resource Management System
-   Visual Identity: Industrial Technology Company + Enterprise Software
-   Theme System: Dark Mode (default) + Light Mode
+   FORGE V4 — CSS Custom Properties
+   Default theme: LIGHT (industrial warm-white + gold)
+   Dark theme: charcoal surfaces + bright gold
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+/* Light Mode — DEFAULT (root) */
 :root,
-[data-theme="dark"] {
-    --canvas-bg:          #0B0B0A;
-    --card-bg:            #161615;
-    --card-bg-elevated:   #1C1C1A;
-    --sidebar-topbar-bg:  #121212;
-    --input-bg:           #121211;
-    --input-bg-focus:     #161615;
-    --modal-bg:           #141413;
-    --modal-header-bg:    #10100F;
-    --border-color:       #2A2925;
-    --border-subtle:      #1F1F1D;
-    --input-border:       #34332F;
-    --primary:            #C9A227;
-    --primary-bright:     #E0B83F;
-    --primary-hover:      #D4AC2D;
-    --primary-muted:      rgba(201, 162, 39, 0.12);
-    --secondary:          #C77B00;
-    --success:            #4D8B57;
-    --warning:            #C77B00;
-    --danger:             #B94A48;
-    --text-primary:       #F2F0EA;
-    --text-muted:         #8E8B83;
-    --table-header-bg:    #121211;
-    --table-header-text:  #A3A098;
-    --table-hover-bg:     #1C1C1A;
-    --table-row-border:   #1F1F1D;
-    --sidebar-hover:      #1A1A18;
-    --role-badge-bg:      #1A1A18;
-    --role-switcher-bg:   #1A1A18;
-    --action-btn-bg:      #1E1E1C;
-    --btn-secondary-bg:   #222220;
-    --btn-secondary-hover:#2D2D2A;
-    --search-bg:          #121211;
-    --progress-track-bg:  #1C1C1A;
-    --lifecycle-step-bg:  #121211;
-    --alert-success-bg:   #122116;
-    --alert-success-text: #A3D8AB;
-    --alert-success-border: rgba(77, 139, 87, 0.4);
-    --alert-danger-bg:    #251212;
-    --alert-danger-text:  #F0A5A3;
-    --alert-danger-border: rgba(185, 74, 72, 0.4);
-    --alert-info-bg:      #1F1B0F;
-    --alert-info-text:    #F2D279;
-    --alert-info-border:  rgba(201, 162, 39, 0.4);
-    --login-brand-panel-bg: #10100F;
-    --login-form-panel-bg:  #161615;
-    --login-input-bg:       #10100F;
-    --login-input-focus-bg: #141413;
-    --login-label-color:    #A3A098;
-    --btn-role-preset-bg:   #121211;
-    --btn-role-preset-text: #A3A098;
-    --card-hover-bg:      #181817;
-    --card-hover-border:  #383733;
-    --landing-nav-bg:     rgba(11, 11, 10, 0.92);
-    --landing-hero-bg:    #0B0B0A;
-    --telemetry-item-bg:  #10100F;
-    --intel-card-bg:      #10100F;
-    --cta-bg:             #0E0E0D;
-    --footer-bg:          #0B0B0A;
-    --footer-text:        #6E6C65;
-    --module-meta-color:  #6E6C65;
-    --hero-btn-secondary: #141413;
-    --theme-toggle-active-text: #0B0B0A;
-    --page-bg:    var(--canvas-bg);
-    --card-border: var(--border-color);
-    --sidebar-bg: var(--sidebar-topbar-bg);
-    --sidebar-active: var(--primary);
-    --text-secondary: var(--text-muted);
-    --info: var(--primary);
-}
-
 [data-theme="light"] {
-    --canvas-bg:          #F3F2EE;
-    --card-bg:            #FFFFFF;
-    --card-bg-elevated:   #F3F2EE;
-    --sidebar-topbar-bg:  #FFFFFF;
-    --input-bg:           #FFFFFF;
-    --input-bg-focus:     #FFFFFF;
-    --modal-bg:           #FFFFFF;
-    --modal-header-bg:    #F3F2EE;
-    --border-color:       #D8D6CF;
-    --border-subtle:      #E5E3DC;
-    --input-border:       #C9C7BF;
-    --primary:            #A77B16;
-    --primary-bright:     #8C6610;
-    --primary-hover:      #B88A1E;
-    --primary-muted:      rgba(167, 123, 22, 0.10);
-    --secondary:          #B36800;
-    --success:            #3A7A45;
-    --warning:            #B36800;
-    --danger:             #A83432;
-    --text-primary:       #20211F;
-    --text-muted:         #686863;
-    --table-header-bg:    #E9E7E0;
-    --table-header-text:  #4A4A45;
-    --table-hover-bg:     #F3F2EE;
-    --table-row-border:   #E5E3DC;
-    --sidebar-hover:      #2A2C29;
-    --role-badge-bg:      #F3F2EE;
-    --role-switcher-bg:   #F3F2EE;
-    --action-btn-bg:      #F3F2EE;
-    --btn-secondary-bg:   #E9E7E0;
-    --btn-secondary-hover:#D8D6CF;
-    --search-bg:          #FFFFFF;
-    --progress-track-bg:  #E5E3DC;
-    --lifecycle-step-bg:  #F3F2EE;
-    --alert-success-bg:   #EBF5ED;
-    --alert-success-text: #2D6A35;
-    --alert-success-border: rgba(58, 122, 69, 0.35);
-    --alert-danger-bg:    #FAEDED;
-    --alert-danger-text:  #8C2A28;
-    --alert-danger-border: rgba(168, 52, 50, 0.35);
-    --alert-info-bg:      #FBF5E6;
-    --alert-info-text:    #7A5410;
-    --alert-info-border:  rgba(167, 123, 22, 0.35);
-    --login-brand-panel-bg: #1A1B19;
-    --login-form-panel-bg:  #FFFFFF;
-    --login-input-bg:       #FFFFFF;
-    --login-input-focus-bg: #F9F8F5;
-    --login-label-color:    #686863;
-    --btn-role-preset-bg:   #F3F2EE;
-    --btn-role-preset-text: #4A4A45;
-    --card-hover-bg:      #F9F8F5;
-    --card-hover-border:  #C9C7BF;
-    --landing-nav-bg:     rgba(243, 242, 238, 0.95);
-    --landing-hero-bg:    #F3F2EE;
-    --telemetry-item-bg:  #FFFFFF;
-    --intel-card-bg:      #FFFFFF;
-    --cta-bg:             #F3F2EE;
-    --footer-bg:          #E9E7E0;
-    --footer-text:        #686863;
-    --module-meta-color:  #9E9B93;
-    --hero-btn-secondary: #F3F2EE;
+    /* V4 Core Palette */
+    --bg-canvas:           #F7F7F5;
+    --surface-card:        #FFFFFF;
+    --surface-nav:         #202B33;
+    --text-main:           #202124;
+    --text-muted:          #5F6368;
+    --border-color:        #D9DDDF;
+    --accent-brand:        #C59B27; /* Industrial Gold */
+    --accent-brand-hover:  #A37E1A;
+    --accent-teal:         #1F5E6B;
+
+    /* Semantics & Contrast */
+    --success:             #3A7A45;
+    --warning:             #B36800;
+    --danger:              #A83432;
+    --secondary:           #B36800;
+
+    /* Component Aliases */
+    --canvas-bg:           var(--bg-canvas);
+    --card-bg:             var(--surface-card);
+    --card-bg-elevated:    #F0EFEB;
+    --card-hover-bg:       #F0EFEB;
+    --card-hover-border:   #C5C9CC;
+    --surface-elevated:    #F0EFEB;
+    --surface-input:       #FFFFFF;
+    --surface-modal:       #FFFFFF;
+    --surface-modal-hdr:   #F7F7F5;
+
+    --sidebar-topbar-bg:   var(--surface-card);
+    --text-primary:        var(--text-main);
+    --text-secondary:      var(--text-muted);
+    --primary:             var(--accent-brand);
+    --primary-bright:      var(--accent-brand-hover);
+    --primary-hover:       var(--accent-brand-hover);
+    --primary-muted:       rgba(197, 155, 39, 0.12);
+
+    /* Inputs & Forms */
+    --input-bg:            #FFFFFF;
+    --input-bg-focus:      #FFFFFF;
+    --input-border:        #C5C9CC;
+    --search-bg:           #FFFFFF;
+    --border-subtle:       #EAECEE;
+
+    /* Modals */
+    --modal-bg:            var(--surface-card);
+    --modal-header-bg:     #F7F7F5;
+
+    /* Tables */
+    --table-header-bg:     #EAECEE;
+    --table-header-text:   #3C4043;
+    --table-hdr-bg:        #EAECEE;
+    --table-hdr-text:      #3C4043;
+    --table-hover-bg:      #F7F7F5;
+    --table-hover:         #F7F7F5;
+    --table-row-border:    #EAECEE;
+    --row-border:          #EAECEE;
+
+    /* Badges & Buttons */
+    --badge-bg:            #F0EFEB;
+    --role-badge-bg:       #F0EFEB;
+    --role-switcher-bg:    #FFFFFF;
+    --action-btn-bg:       #F0EFEB;
+    --btn-secondary-bg:    #E8E8E4;
+    --btn-secondary-hover: #D9D9D4;
     --theme-toggle-active-text: #FFFFFF;
-    --page-bg:    var(--canvas-bg);
-    --card-border: var(--border-color);
-    --sidebar-bg: var(--sidebar-topbar-bg);
-    --sidebar-active: var(--primary);
-    --text-secondary: var(--text-muted);
-    --info: var(--primary);
+    --toggle-active-text:  #FFFFFF;
+    --toggle-inactive-bg:  #F0EFEB;
+
+    /* Alerts */
+    --alert-success-bg:    #EBF5ED;
+    --alert-success-text:  #2D6A35;
+    --alert-success-border: rgba(58, 122, 69, 0.35);
+    --alert-success-brd:   rgba(58, 122, 69, 0.35);
+    --alert-danger-bg:     #FAEDED;
+    --alert-danger-text:   #8C2A28;
+    --alert-danger-border: rgba(168, 52, 50, 0.35);
+    --alert-danger-brd:    rgba(168, 52, 50, 0.35);
+    --alert-info-bg:       #FBF5E6;
+    --alert-info-text:     #7A5410;
+    --alert-info-border:   rgba(197, 155, 39, 0.35);
+    --alert-info-brd:      rgba(197, 155, 39, 0.35);
+
+    /* Progress & Lifecycle */
+    --progress-track:      #E0E0DC;
+    --progress-track-bg:   #E0E0DC;
+    --lifecycle-step:      #F7F7F5;
+    --lifecycle-step-bg:   #F7F7F5;
+
+    /* Login & Landing */
+    --login-brand-panel-bg:#202B33;
+    --login-brand-bg:      #202B33;
+    --login-form-panel-bg: #FFFFFF;
+    --login-form-bg:       #FFFFFF;
+    --login-input-bg:      #FFFFFF;
+    --login-input-focus-bg:#FFFFFF;
+    --login-label-color:   #5F6368;
+    --login-label:         #5F6368;
+    --btn-role-preset-bg:  #F0EFEB;
+    --btn-role-preset-text:#3C4043;
+    --preset-btn-bg:       #F0EFEB;
+    --preset-btn-text:     #3C4043;
+    --landing-nav-bg:      rgba(247, 247, 245, 0.95);
+    --landing-hero-bg:     #F7F7F5;
+    --telemetry-bg:        #FFFFFF;
+    --footer-bg:           #E8E8E4;
+    --footer-text:         #5F6368;
+    --module-meta:         #9AA0A6;
+    --module-meta-color:   #9AA0A6;
+    --hero-btn-secondary:  #F0EFEB;
+    --hero-btn-2-bg:       #F0EFEB;
+
+    /* Sidebar always dark */
+    --sidebar-bg:          #202B33;
+    --sidebar-text:        #C8D0D8;
+    --sidebar-active:      var(--accent-brand);
+    --sidebar-border:      #2D3A44;
+    --sidebar-hover:       #2A3742;
+    --sidebar-label:       #5C7080;
+    --sidebar-active-bg:   var(--sidebar-hover);
 }
 
+/* Dark Mode */
+[data-theme="dark"] {
+    /* V4 Core Palette */
+    --bg-canvas:           #121518;
+    --surface-card:        #1B2126;
+    --surface-nav:         #0F1316;
+    --text-main:           #E8EAED;
+    --text-muted:          #9AA0A6;
+    --border-color:        #2D353C;
+    --accent-brand:        #D4AF37; /* Bright Industrial Gold */
+    --accent-brand-hover:  #E5C158;
+    --accent-teal:         #2A7B8C;
+
+    /* Semantics & Contrast */
+    --success:             #4D8B57;
+    --warning:             #C77B00;
+    --danger:              #B94A48;
+    --secondary:           #C77B00;
+
+    /* Component Aliases */
+    --canvas-bg:           var(--bg-canvas);
+    --card-bg:             var(--surface-card);
+    --card-bg-elevated:    #222A30;
+    --card-hover-bg:       #222A30;
+    --card-hover-border:   #3D4852;
+    --surface-elevated:    #222A30;
+    --surface-input:       #161C21;
+    --surface-modal:       #1B2126;
+    --surface-modal-hdr:   #141A1F;
+
+    --sidebar-topbar-bg:   var(--surface-card);
+    --text-primary:        var(--text-main);
+    --text-secondary:      var(--text-muted);
+    --primary:             var(--accent-brand);
+    --primary-bright:      var(--accent-brand-hover);
+    --primary-hover:       var(--accent-brand-hover);
+    --primary-muted:       rgba(212, 175, 55, 0.15);
+
+    /* Inputs & Forms */
+    --input-bg:            #161C21;
+    --input-bg-focus:      #1B2126;
+    --input-border:        #384550;
+    --search-bg:           #161C21;
+    --border-subtle:       #222A30;
+
+    /* Modals */
+    --modal-bg:            var(--surface-card);
+    --modal-header-bg:     #141A1F;
+
+    /* Tables */
+    --table-header-bg:     #141A1F;
+    --table-header-text:   #9AA0A6;
+    --table-hdr-bg:        #141A1F;
+    --table-hdr-text:      #9AA0A6;
+    --table-hover-bg:      #1F2A32;
+    --table-hover:         #1F2A32;
+    --table-row-border:    #222A30;
+    --row-border:          #222A30;
+
+    /* Badges & Buttons */
+    --badge-bg:            #1F2A32;
+    --role-badge-bg:       #1F2A32;
+    --role-switcher-bg:    #161C21;
+    --action-btn-bg:       #1F2A32;
+    --btn-secondary-bg:    #222A30;
+    --btn-secondary-hover: #2D3A44;
+    --theme-toggle-active-text: #0F1316;
+    --toggle-active-text:  #0F1316;
+    --toggle-inactive-bg:  #1F2A32;
+
+    /* Alerts */
+    --alert-success-bg:    #122116;
+    --alert-success-text:  #A3D8AB;
+    --alert-success-border: rgba(77, 139, 87, 0.4);
+    --alert-success-brd:   rgba(77, 139, 87, 0.4);
+    --alert-danger-bg:     #251212;
+    --alert-danger-text:   #F0A5A3;
+    --alert-danger-border: rgba(185, 74, 72, 0.4);
+    --alert-danger-brd:    rgba(185, 74, 72, 0.4);
+    --alert-info-bg:       #1F1B0F;
+    --alert-info-text:     #F2D279;
+    --alert-info-border:   rgba(212, 175, 55, 0.4);
+    --alert-info-brd:      rgba(212, 175, 55, 0.4);
+
+    /* Progress & Lifecycle */
+    --progress-track:      #1F2A32;
+    --progress-track-bg:   #1F2A32;
+    --lifecycle-step:      #141A1F;
+    --lifecycle-step-bg:   #141A1F;
+
+    /* Login & Landing */
+    --login-brand-panel-bg:#0F1316;
+    --login-brand-bg:      #0F1316;
+    --login-form-panel-bg: #1B2126;
+    --login-form-bg:       #1B2126;
+    --login-input-bg:      #141A1F;
+    --login-input-focus-bg:#1B2126;
+    --login-label-color:   #9AA0A6;
+    --login-label:         #9AA0A6;
+    --btn-role-preset-bg:  #161C21;
+    --btn-role-preset-text:#9AA0A6;
+    --preset-btn-bg:       #161C21;
+    --preset-btn-text:     #9AA0A6;
+    --landing-nav-bg:      rgba(15, 19, 22, 0.94);
+    --landing-hero-bg:     #121518;
+    --telemetry-bg:        #141A1F;
+    --footer-bg:           #0F1316;
+    --footer-text:         #5C7080;
+    --module-meta:         #5C7080;
+    --module-meta-color:   #5C7080;
+    --hero-btn-secondary:  #1B2126;
+    --hero-btn-2-bg:       #1B2126;
+
+    /* Sidebar */
+    --sidebar-bg:          #0F1316;
+    --sidebar-text:        #9AA0A6;
+    --sidebar-active:      var(--accent-brand);
+    --sidebar-border:      #1E2830;
+    --sidebar-hover:       #1A2530;
+    --sidebar-label:       #445060;
+    --sidebar-active-bg:   var(--sidebar-hover);
+}
 /* ========== Reset & Base ========== */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -515,7 +618,7 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-primary); font-weight: 700; letter-sp
 .form-control, .form-select { background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color); }
 .form-control:focus, .form-select:focus { background-color: var(--input-bg-focus); color: var(--text-primary); border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
 .form-control::placeholder { color: var(--text-muted); }
-[data-theme="light"] .form-select, [data-theme="light"] .modal-body .form-select, [data-theme="light"] .filter-select {
+[data-theme="light"] .form-select, [data-theme="light"] .modal-body .form-select {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23686863' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
 }
 
@@ -589,3 +692,316 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-primary); font-weight: 700; letter-sp
     .lifecycle-track { flex-direction: column; align-items: stretch; }
     .lifecycle-arrow { justify-content: center; transform: rotate(90deg); padding: 4px 0; }
 }
+
+
+/* ==========================================================================
+   V4 Additions: Sidebar uses always-dark variables (overrides theme vars)
+   ========================================================================== */
+
+.sidebar {
+    background-color: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--sidebar-border) !important;
+    color: var(--sidebar-text);
+}
+
+.sidebar-brand h2 { color: #E8EAED !important; }
+.sidebar-brand .brand-sub { color: var(--sidebar-label) !important; }
+.nav-section-label { color: var(--sidebar-label) !important; }
+
+.sidebar a {
+    color: var(--sidebar-text) !important;
+    border-left: 2px solid transparent;
+}
+.sidebar a:hover {
+    background-color: var(--sidebar-hover) !important;
+    color: #E8EAED !important;
+    border-left-color: rgba(212,175,55,0.45) !important;
+}
+.sidebar a.active {
+    background-color: var(--sidebar-hover) !important;
+    color: #E8EAED !important;
+    border-left: 2px solid var(--accent-brand) !important;
+}
+.sidebar-footer { border-top: 1px solid var(--sidebar-border) !important; }
+
+/* ==========================================================================
+   Main content area (uses theme vars)
+   ========================================================================== */
+.main-content { background-color: var(--bg-canvas); }
+
+.topbar {
+    background-color: var(--surface-card);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+.topbar-left h3 { color: var(--text-main); }
+.topbar-left .topbar-subtitle { color: var(--text-muted); }
+
+.dashboard-card {
+    background-color: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--border-color);
+}
+.dashboard-card:hover { background-color: var(--surface-elevated); }
+.dashboard-card h5 { color: var(--text-muted); }
+.dashboard-card h2 { color: var(--text-main); }
+.dashboard-card .card-hint { color: var(--text-muted); }
+
+.dashboard-section { background-color: var(--surface-card); border: 1px solid var(--border-color); }
+.section-header { border-bottom: 1px solid var(--border-color); }
+.section-header h4 { color: var(--text-main); }
+
+.table { color: var(--text-main); border-color: var(--border-color); }
+.table thead th { background-color: var(--table-hdr-bg); color: var(--table-hdr-text); border-bottom: 1px solid var(--border-color); }
+.table tbody td { color: var(--text-main); border-bottom: 1px solid var(--row-border); }
+.table tbody tr:hover { background-color: var(--table-hover) !important; }
+
+.modal-content { background-color: var(--surface-modal); border: 1px solid var(--border-color); color: var(--text-main); }
+.modal-header { background-color: var(--surface-modal-hdr); border-bottom: 1px solid var(--border-color); }
+.modal-header .modal-title { color: var(--text-main); }
+.modal-body { background-color: var(--surface-modal); color: var(--text-main); }
+.modal-body .form-label { color: var(--text-muted); }
+.modal-body .form-control, .modal-body .form-select { background-color: var(--surface-input); color: var(--text-main); border-color: var(--border-color); }
+.modal-body .form-control:focus, .modal-body .form-select:focus { border-color: var(--accent-brand); background-color: var(--surface-input); color: var(--text-main); box-shadow: 0 0 0 1px var(--accent-brand); }
+.modal-body .form-control::placeholder { color: var(--text-muted); }
+.modal-footer { background-color: var(--surface-modal-hdr); border-top: 1px solid var(--border-color); }
+
+.form-control, .form-select { background-color: var(--surface-input); color: var(--text-main); border-color: var(--border-color); }
+.form-control:focus, .form-select:focus { background-color: var(--surface-input); color: var(--text-main); border-color: var(--accent-brand); box-shadow: 0 0 0 1px var(--accent-brand); }
+.form-control::placeholder { color: var(--text-muted); }
+
+.search-input { background-color: var(--search-bg); color: var(--text-main); border-color: var(--border-color); }
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus { border-color: var(--accent-brand); box-shadow: 0 0 0 1px var(--accent-brand); background-color: var(--search-bg); }
+.filter-select { background-color: var(--search-bg); color: var(--text-main); border-color: var(--border-color); }
+.filter-select:focus { border-color: var(--accent-brand); box-shadow: 0 0 0 1px var(--accent-brand); }
+
+.action-toolbar { background-color: var(--surface-card); border: 1px solid var(--border-color); }
+
+.btn-primary { background-color: var(--accent-brand); border-color: var(--accent-brand); color: #FFFFFF; font-weight: 700; border-radius: 2px; }
+.btn-primary:hover, .btn-primary:focus { background-color: var(--accent-brand-hover); border-color: var(--accent-brand-hover); color: #FFFFFF; }
+
+.btn-outline-primary { color: var(--accent-brand); border-color: var(--accent-brand); background-color: transparent; border-radius: 2px; font-weight: 600; }
+.btn-outline-primary:hover { background-color: var(--accent-brand); color: #FFFFFF; border-color: var(--accent-brand); }
+
+.btn-secondary { background-color: var(--btn-secondary-bg); border-color: var(--border-color); color: var(--text-main); border-radius: 2px; font-weight: 600; }
+.btn-secondary:hover { background-color: var(--btn-secondary-hover); color: var(--text-main); border-color: var(--input-border); }
+
+.btn-outline-secondary { color: var(--text-muted); border-color: var(--border-color); background-color: transparent; border-radius: 2px; font-weight: 600; }
+.btn-outline-secondary:hover { background-color: var(--btn-secondary-bg); color: var(--text-main); border-color: var(--input-border); }
+
+.btn-outline-danger { color: var(--danger); border-color: var(--danger); background-color: transparent; border-radius: 2px; font-weight: 600; }
+.btn-outline-danger:hover { background-color: var(--danger); color: #FFFFFF; }
+
+.role-badge { background-color: var(--role-badge-bg); color: var(--text-main); border: 1px solid var(--border-color); }
+
+.page-container { background-color: var(--bg-canvas); }
+
+#roleSwitcherSelect { background-color: var(--role-badge-bg) !important; color: var(--text-main) !important; border: 1px solid var(--border-color) !important; }
+
+/* Alert / Toast */
+.custom-alert-success { background-color: var(--alert-success-bg); color: var(--alert-success-text); border-color: var(--alert-success-brd); }
+.custom-alert-danger  { background-color: var(--alert-danger-bg);  color: var(--alert-danger-text);  border-color: var(--alert-danger-brd);  }
+.custom-alert-info    { background-color: var(--alert-info-bg);    color: var(--alert-info-text);    border-color: var(--alert-info-brd);    }
+
+/* Progress tracks */
+.progress-track { background-color: var(--progress-track); border-color: var(--border-color); }
+.lifecycle-step { background-color: var(--lifecycle-step); border-color: var(--border-color); }
+.lifecycle-step-name { color: var(--text-main); }
+.lifecycle-step-num  { color: var(--text-muted); }
+
+/* Badge fixes for light mode */
+[data-theme="light"] .badge.bg-light.text-dark,
+[data-theme="light"] .badge.bg-light.text-secondary {
+    background-color: var(--surface-elevated) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="light"] .modal-header .btn-close { filter: none; opacity: 0.6; }
+[data-theme="dark"]  .modal-header .btn-close { filter: invert(1) grayscale(100%) brightness(200%); opacity: 0.6; }
+
+/* Theme Toggle in topbar */
+.theme-toggle { border: 1px solid var(--border-color); background-color: var(--role-badge-bg); }
+.theme-toggle-btn { background-color: var(--toggle-inactive-bg); color: var(--text-muted); }
+.theme-toggle-btn:hover { color: var(--text-main); background-color: var(--surface-elevated); }
+.theme-toggle-btn.active { background-color: var(--accent-brand); color: var(--toggle-active-text); }
+.theme-toggle-divider { background-color: var(--border-color); }
+
+/* ==========================================================================
+   V4: Role-Specific Dashboard View Panels
+   ========================================================================== */
+
+.role-view-panel {
+    display: none;
+}
+.role-view-panel.active {
+    display: block;
+}
+
+/* Technician Dashboard — personal task cards */
+.tech-task-card {
+    background-color: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-brand);
+    border-radius: 2px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    transition: background-color 0.15s ease;
+}
+.tech-task-card:hover { background-color: var(--surface-elevated); }
+.tech-task-card .task-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+.tech-task-card .task-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 4px 0;
+}
+.tech-task-card .task-meta {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.tech-task-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+/* Operator Dashboard — machine status grid */
+.operator-machine-card {
+    background-color: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    padding: 14px 16px;
+    transition: background-color 0.15s ease;
+}
+.operator-machine-card:hover { background-color: var(--surface-elevated); }
+.operator-machine-card .machine-name { font-weight: 700; color: var(--text-main); font-size: 0.9rem; }
+.operator-machine-card .machine-loc  { font-size: 0.75rem; color: var(--text-muted); }
+.op-status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block; margin-right: 6px;
+}
+.op-status-dot.operational { background-color: var(--success); }
+.op-status-dot.maintenance { background-color: var(--warning); }
+.op-status-dot.faulty      { background-color: var(--danger); }
+
+/* Operator: Report Fault CTA */
+.operator-fault-cta {
+    background-color: var(--surface-card);
+    border: 2px solid var(--accent-brand);
+    border-radius: 2px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.operator-fault-cta h5 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 4px 0;
+}
+.operator-fault-cta p {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* ==========================================================================
+   V4: Fault Reports Page
+   ========================================================================== */
+
+.fault-priority-high   { color: var(--danger);  font-weight: 700; }
+.fault-priority-medium { color: var(--warning); font-weight: 700; }
+.fault-priority-low    { color: var(--success); font-weight: 700; }
+
+.badge-fault-open        { background-color: rgba(185,74,72,0.15); color: var(--danger);  border: 1px solid rgba(185,74,72,0.4); }
+.badge-fault-reviewing   { background-color: rgba(197,155,39,0.15); color: var(--accent-brand); border: 1px solid rgba(197,155,39,0.4); }
+.badge-fault-converted   { background-color: rgba(77,139,87,0.15); color: var(--success); border: 1px solid rgba(77,139,87,0.4); }
+.badge-fault-closed      { background-color: var(--btn-secondary-bg); color: var(--text-muted); border: 1px solid var(--border-color); }
+
+[data-theme="light"] .badge-fault-open      { background-color: rgba(168,52,50,0.1);   color: #8C2A28; border-color: rgba(168,52,50,0.3); }
+[data-theme="light"] .badge-fault-reviewing { background-color: rgba(197,155,39,0.12); color: #7A5410; border-color: rgba(197,155,39,0.35); }
+[data-theme="light"] .badge-fault-converted { background-color: rgba(58,122,69,0.1);   color: #2D6A35; border-color: rgba(58,122,69,0.3); }
+
+/* ==========================================================================
+   V4: Login page
+   ========================================================================== */
+.login-brand-panel {
+    background-color: var(--login-brand-bg) !important;
+    color: #E8EAED;
+    border-right-color: var(--sidebar-border) !important;
+}
+.login-form-panel { background-color: var(--login-form-bg) !important; }
+.login-form-panel .form-control,
+.login-form-panel .form-select {
+    background-color: var(--login-input-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+.login-form-panel .form-label { color: var(--login-label) !important; }
+.btn-role-preset {
+    background-color: var(--preset-btn-bg) !important;
+    color: var(--preset-btn-text) !important;
+    border-color: var(--border-color) !important;
+}
+.btn-role-preset:hover { border-color: var(--accent-brand) !important; color: var(--accent-brand) !important; }
+
+/* ==========================================================================
+   V4: Landing page overrides
+   ========================================================================== */
+.landing-nav { background-color: var(--landing-nav-bg); border-bottom-color: var(--border-color); }
+.landing-brand { color: var(--text-main); }
+.landing-links a { color: var(--text-muted); }
+.landing-links a:hover { color: var(--accent-brand); }
+.landing-hero { background-color: var(--landing-hero-bg); border-bottom-color: var(--border-color); }
+.hero-title { color: var(--text-main); }
+.hero-title span { color: var(--accent-brand); }
+.hero-lead { color: var(--text-muted); }
+.hero-telemetry-item { background-color: var(--telemetry-bg); }
+.telemetry-label { color: var(--text-muted); }
+.telemetry-val { color: var(--text-main); }
+.telemetry-val.gold { color: var(--accent-brand); }
+.module-card, .intel-card, .problem-card { background-color: var(--surface-card); border-color: var(--border-color); }
+.module-card:hover, .intel-card:hover { background-color: var(--surface-elevated); }
+.module-card h4, .intel-card h5, .problem-card h5 { color: var(--text-main); }
+.module-card p, .intel-card p, .problem-card p { color: var(--text-muted); }
+.module-meta { color: var(--module-meta); border-top-color: var(--border-subtle); }
+.module-code, .section-eyebrow { color: var(--accent-brand); }
+.section-heading { color: var(--text-main); }
+.section-subtext { color: var(--text-muted); }
+.landing-cta { background-color: var(--bg-canvas); border-bottom-color: var(--border-color); }
+.landing-cta h2, .landing-cta p { color: var(--text-main); }
+.landing-cta p { color: var(--text-muted); }
+.landing-footer { background-color: var(--footer-bg); color: var(--footer-text); }
+
+/* ==========================================================================
+   V4: btn-action-edit light mode fix
+   ========================================================================== */
+[data-theme="light"] .btn-action-edit { color: var(--accent-brand); border-color: rgba(197,155,39,0.5); background-color: var(--action-btn-bg); }
+
+/* Text color fixes for light mode */
+[data-theme="light"] .text-muted { color: var(--text-muted) !important; }
+[data-theme="light"] h1, [data-theme="light"] h2, [data-theme="light"] h3,
+[data-theme="light"] h4, [data-theme="light"] h5, [data-theme="light"] h6 { color: var(--text-main); }
+
+/* Lifecycle */
+.lifecycle-container { background-color: var(--surface-card); border-color: var(--border-color); }
+.lifecycle-title { color: var(--accent-brand); }
+.lifecycle-arrow { color: var(--accent-brand); }
+.lifecycle-exception-box { background-color: rgba(197,155,39,0.05); border-top-color: var(--border-color); }
+.lifecycle-exception-label { color: var(--accent-brand); }
+
+/* Empty states */
+.empty-state h5 { color: var(--text-main); }
+.empty-state p  { color: var(--text-muted); }

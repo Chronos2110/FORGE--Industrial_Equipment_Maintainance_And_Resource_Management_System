@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Load records from localStorage
 function loadInventoryData() {
-    let saved = localStorage.getItem("iemrs_inventory");
+    let saved = localStorage.getItem("forge_inventory") || localStorage.getItem("iemrs_inventory");
     if (saved) {
         inventoryList = JSON.parse(saved);
     } else {
@@ -114,7 +114,7 @@ function filterAndRenderTable() {
 
     emptyState.classList.add("d-none");
 
-    let workorders = JSON.parse(localStorage.getItem("iemrs_workorders")) || [];
+    let workorders = JSON.parse(localStorage.getItem("forge_workorders") || localStorage.getItem("iemrs_workorders")) || [];
 
     for (let j = 0; j < filtered.length; j++) {
         let p = filtered[j];
@@ -190,7 +190,7 @@ function handleFormSubmit(event) {
         return;
     }
 
-    let workorders = JSON.parse(localStorage.getItem("iemrs_workorders")) || [];
+    let workorders = JSON.parse(localStorage.getItem("forge_workorders") || localStorage.getItem("iemrs_workorders")) || [];
     let waitingForThis = workorders.filter(o => o.status === "Waiting for Parts" && o.requiredPart === name);
 
     if (editIndexVal === -1) {
@@ -235,7 +235,7 @@ function handleFormSubmit(event) {
         }
     }
 
-    localStorage.setItem("iemrs_inventory", JSON.stringify(inventoryList));
+    localStorage.setItem("forge_inventory", JSON.stringify(inventoryList));
 
     inventoryModalInstance.hide();
     filterAndRenderTable();
@@ -276,7 +276,7 @@ function deletePart(id) {
 
     let target = inventoryList.find(p => p.id === id);
     inventoryList = inventoryList.filter(p => p.id !== id);
-    localStorage.setItem("iemrs_inventory", JSON.stringify(inventoryList));
+    localStorage.setItem("forge_inventory", JSON.stringify(inventoryList));
 
     if (target) {
         logActivity(target.name, "Spare part " + id + " removed from inventory", "badge-faulty");
@@ -286,3 +286,4 @@ function deletePart(id) {
     filterAndRenderTable();
     updateKpiCards();
 }
+

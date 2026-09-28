@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Load records from localStorage
 function loadMaintenanceData() {
-    let saved = localStorage.getItem("iemrs_maintenance");
+    let saved = localStorage.getItem("forge_maintenance") || localStorage.getItem("iemrs_maintenance");
     if (saved) {
         maintenanceList = JSON.parse(saved);
     } else {
@@ -72,7 +72,7 @@ function updateKpiCards() {
 
 // Populate Equipment & Technician dropdowns
 function populateFormDropdowns() {
-    let equipmentList = JSON.parse(localStorage.getItem("iemrs_equipment")) || [];
+    let equipmentList = JSON.parse(localStorage.getItem("forge_equipment") || localStorage.getItem("iemrs_equipment")) || [];
     let eqSelect = document.getElementById("maintEquipment");
     if (eqSelect) {
         eqSelect.innerHTML = '<option value="">-- Select Target Equipment --</option>';
@@ -85,7 +85,7 @@ function populateFormDropdowns() {
         });
     }
 
-    let workforce = JSON.parse(localStorage.getItem("iemrs_workforce")) || [];
+    let workforce = JSON.parse(localStorage.getItem("forge_technicians") || localStorage.getItem("iemrs_workforce")) || [];
     let techSelect = document.getElementById("maintTechnician");
     if (techSelect) {
         techSelect.innerHTML = '<option value="">-- Select or Auto-Assign Technician --</option>';
@@ -278,7 +278,7 @@ function handleFormSubmit(event) {
     // Crucial loop: sync equipment status
     syncEquipmentStatusOnWorkOrder(equipment, status, scheduledDate);
 
-    localStorage.setItem("iemrs_maintenance", JSON.stringify(maintenanceList));
+    localStorage.setItem("forge_maintenance", JSON.stringify(maintenanceList));
 
     maintenanceModalInstance.hide();
     filterAndRenderTable();
@@ -290,7 +290,7 @@ function generateWorkOrderFromMaint(id) {
     let maint = maintenanceList.find(m => m.id === id);
     if (!maint) return;
 
-    let workorders = JSON.parse(localStorage.getItem("iemrs_workorders")) || [];
+    let workorders = JSON.parse(localStorage.getItem("forge_workorders") || localStorage.getItem("iemrs_workorders")) || [];
     let newOrderId = "WO-" + (300 + workorders.length + 1);
 
     let priority = maint.type === "Corrective" ? "High" : "Medium";
@@ -316,11 +316,11 @@ function generateWorkOrderFromMaint(id) {
     };
 
     workorders.unshift(newOrder);
-    localStorage.setItem("iemrs_workorders", JSON.stringify(workorders));
+    localStorage.setItem("forge_workorders", JSON.stringify(workorders));
 
     maint.workOrderId = newOrderId;
     maint.status = "Assigned";
-    localStorage.setItem("iemrs_maintenance", JSON.stringify(maintenanceList));
+    localStorage.setItem("forge_maintenance", JSON.stringify(maintenanceList));
 
     logActivity(maint.equipment, "Generated work order " + newOrderId + " from maintenance schedule " + id, "badge-assigned");
     showAlert("Created Work Order " + newOrderId + " assigned to " + maint.technician + ".", "success");
@@ -394,7 +394,7 @@ function handleRescheduleSubmit(event) {
     maint.rescheduledDate = newDate;
     maint.rescheduleReason = reason;
 
-    localStorage.setItem("iemrs_maintenance", JSON.stringify(maintenanceList));
+    localStorage.setItem("forge_maintenance", JSON.stringify(maintenanceList));
 
     maintRescheduleModalInstance.hide();
     showAlert("Maintenance task " + id + " rescheduled to " + newDate + ".", "info");
@@ -410,7 +410,7 @@ function deleteMaintenance(id) {
 
     let target = maintenanceList.find(m => m.id === id);
     maintenanceList = maintenanceList.filter(m => m.id !== id);
-    localStorage.setItem("iemrs_maintenance", JSON.stringify(maintenanceList));
+    localStorage.setItem("forge_maintenance", JSON.stringify(maintenanceList));
 
     if (target) {
         logActivity(target.equipment, "Maintenance schedule " + id + " removed", "badge-faulty");
@@ -420,3 +420,4 @@ function deleteMaintenance(id) {
     filterAndRenderTable();
     updateKpiCards();
 }
+

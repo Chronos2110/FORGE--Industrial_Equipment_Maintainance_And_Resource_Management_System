@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FORGE — Built to Keep Industry Moving</title>
-    <!-- Apply theme before render to prevent flash -->
+    <!-- Apply theme before render to prevent flash (default: light) -->
     <script>
         (function () {
-            var t = localStorage.getItem("forge_theme") || "dark";
+            var t = localStorage.getItem("forge_theme") || "light";
             document.documentElement.setAttribute("data-theme", t);
         })();
     </script>
@@ -32,6 +32,11 @@
         </ul>
 
         <div class="d-flex align-items-center gap-3">
+            <div class="theme-toggle" id="landingThemeToggle" role="group" aria-label="Theme selector">
+                <button class="theme-toggle-btn" id="landingThemeBtnLight" title="Switch to Light Mode" aria-pressed="true">&#9728; Light</button>
+                <span class="theme-toggle-divider" aria-hidden="true"></span>
+                <button class="theme-toggle-btn" id="landingThemeBtnDark" title="Switch to Dark Mode" aria-pressed="false">&#9790; Dark</button>
+            </div>
             <a href="login.html" class="btn btn-sm btn-outline-primary fw-semibold">Sign In</a>
             <a href="login.html" class="btn btn-sm btn-primary">ENTER FORGE &rarr;</a>
         </div>
@@ -401,6 +406,41 @@
 
     <!-- Bootstrap 5 Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Landing Page Theme Toggle Logic -->
+    <script>
+        (function () {
+            var currentTheme = localStorage.getItem("forge_theme") || "light";
+            var btnLight = document.getElementById("landingThemeBtnLight");
+            var btnDark = document.getElementById("landingThemeBtnDark");
+
+            function syncLandingToggle(theme) {
+                if (!btnLight || !btnDark) return;
+                btnLight.classList.toggle("active", theme === "light");
+                btnLight.setAttribute("aria-pressed", String(theme === "light"));
+                btnDark.classList.toggle("active", theme === "dark");
+                btnDark.setAttribute("aria-pressed", String(theme === "dark"));
+            }
+
+            syncLandingToggle(currentTheme);
+
+            if (btnLight) {
+                btnLight.addEventListener("click", function () {
+                    document.documentElement.setAttribute("data-theme", "light");
+                    localStorage.setItem("forge_theme", "light");
+                    syncLandingToggle("light");
+                });
+            }
+
+            if (btnDark) {
+                btnDark.addEventListener("click", function () {
+                    document.documentElement.setAttribute("data-theme", "dark");
+                    localStorage.setItem("forge_theme", "dark");
+                    syncLandingToggle("dark");
+                });
+            }
+        })();
+    </script>
 
 </body>
 

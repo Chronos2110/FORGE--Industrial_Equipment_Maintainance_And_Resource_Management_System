@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Load records from localStorage
 function loadWorkforceData() {
-    let saved = localStorage.getItem("iemrs_workforce");
+    let saved = localStorage.getItem("forge_technicians") || localStorage.getItem("iemrs_workforce");
     if (saved) {
         workforceList = JSON.parse(saved);
     } else {
@@ -208,7 +208,7 @@ function handleFormSubmit(event) {
         }
     }
 
-    localStorage.setItem("iemrs_workforce", JSON.stringify(workforceList));
+    localStorage.setItem("forge_technicians", JSON.stringify(workforceList));
 
     workforceModalInstance.hide();
     filterAndRenderTable();
@@ -249,7 +249,7 @@ function deleteTechnician(id) {
 
     let target = workforceList.find(t => t.id === id);
     workforceList = workforceList.filter(t => t.id !== id);
-    localStorage.setItem("iemrs_workforce", JSON.stringify(workforceList));
+    localStorage.setItem("forge_technicians", JSON.stringify(workforceList));
 
     if (target) {
         logActivity(target.name, "Technician " + id + " removed from roster", "badge-faulty");
@@ -259,3 +259,4 @@ function deleteTechnician(id) {
     filterAndRenderTable();
     updateKpiCards();
 }
+

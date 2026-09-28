@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Load data from localStorage
 function loadEquipmentData() {
-    let saved = localStorage.getItem("iemrs_equipment");
+    let saved = localStorage.getItem("forge_equipment") || localStorage.getItem("iemrs_equipment");
     if (saved) {
         equipmentList = JSON.parse(saved);
     } else {
@@ -192,7 +192,7 @@ function handleFormSubmit(event) {
     }
 
     // Persist in localStorage
-    localStorage.setItem("iemrs_equipment", JSON.stringify(equipmentList));
+    localStorage.setItem("forge_equipment", JSON.stringify(equipmentList));
 
     // Hide Modal & Refresh
     equipmentModalInstance.hide();
@@ -235,7 +235,7 @@ function deleteEquipment(id) {
 
     let target = equipmentList.find(e => e.id === id);
     equipmentList = equipmentList.filter(e => e.id !== id);
-    localStorage.setItem("iemrs_equipment", JSON.stringify(equipmentList));
+    localStorage.setItem("forge_equipment", JSON.stringify(equipmentList));
 
     if (target) {
         logActivity(target.name, "Equipment " + id + " removed from plant registry", "badge-faulty");
@@ -245,3 +245,4 @@ function deleteEquipment(id) {
     filterAndRenderTable();
     updateKpiCards();
 }
+

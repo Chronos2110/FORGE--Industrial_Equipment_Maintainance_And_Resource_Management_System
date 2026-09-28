@@ -1,34 +1,39 @@
 // ==========================================================================
-// FORGE - Login JavaScript (js/app.js)
-// Simple, direct validation suitable for college lab viva explanation
+// FORGE V4 - Login JavaScript (js/app.js)
+// Stores role in both forge_role and iemrs_role for backward compatibility
 // ==========================================================================
 
-const loginForm = document.getElementById("loginForm");
+document.addEventListener("DOMContentLoaded", function () {
+    var loginForm = document.getElementById("loginForm");
+    if (!loginForm) return;
 
-loginForm.addEventListener("submit", function (event) {
-    event.preventDefault();
+    loginForm.addEventListener("submit", function (event) {
+        event.preventDefault();
 
-    let username = document.getElementById("username").value.trim();
-    let password = document.getElementById("password").value.trim();
-    let role = document.getElementById("role").value;
-    let message = document.getElementById("loginMessage");
+        var username = document.getElementById("username").value.trim();
+        var password = document.getElementById("password").value.trim();
+        var role = document.getElementById("role").value;
+        var message = document.getElementById("loginMessage");
 
-    // Validation
-    if (username === "" || password === "" || role === "") {
-        message.innerHTML = "Please enter username, password, and select a role.";
-        message.style.color = "#e74c3c";
-        return;
-    }
+        if (!username || !password || !role) {
+            if (message) {
+                message.innerHTML = "Please enter username, password, and select a role.";
+                message.style.color = "#e74c3c";
+            }
+            return;
+        }
 
-    // Successful login simulation
-    message.innerHTML = "Login successful. Redirecting to dashboard...";
-    message.style.color = "#27ae60";
+        if (message) {
+            message.innerHTML = "Authentication successful. Redirecting…";
+            message.style.color = "#4D8B57";
+        }
 
-    // Save selected role in sessionStorage for dashboard and topbars
-    sessionStorage.setItem("iemrs_role", role);
+        // Store role in both keys for full V4 + legacy compatibility
+        sessionStorage.setItem("forge_role",  role);
+        sessionStorage.setItem("iemrs_role",  role);
 
-    // Redirect to dashboard
-    setTimeout(function () {
-        window.location.href = "pages/dashboard.html";
-    }, 500);
+        setTimeout(function () {
+            window.location.href = "pages/dashboard.html";
+        }, 500);
+    });
 });

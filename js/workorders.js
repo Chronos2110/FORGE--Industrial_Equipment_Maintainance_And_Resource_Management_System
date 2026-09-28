@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Load records from localStorage
 function loadWorkOrdersData() {
-    let saved = localStorage.getItem("iemrs_workorders");
+    let saved = localStorage.getItem("forge_workorders") || localStorage.getItem("iemrs_workorders");
     if (saved) {
         ordersList = JSON.parse(saved);
     } else {
@@ -76,7 +76,7 @@ function updateKpiCards() {
 
 // Populate Equipment, Technician & Inventory dropdowns
 function populateFormDropdowns() {
-    let equipmentList = JSON.parse(localStorage.getItem("iemrs_equipment")) || [];
+    let equipmentList = JSON.parse(localStorage.getItem("forge_equipment") || localStorage.getItem("iemrs_equipment")) || [];
     let eqSelect = document.getElementById("orderEquipment");
     if (eqSelect) {
         eqSelect.innerHTML = '<option value="">-- Select Target Equipment --</option>';
@@ -89,7 +89,7 @@ function populateFormDropdowns() {
         });
     }
 
-    let workforce = JSON.parse(localStorage.getItem("iemrs_workforce")) || [];
+    let workforce = JSON.parse(localStorage.getItem("forge_technicians") || localStorage.getItem("iemrs_workforce")) || [];
     let techSelect = document.getElementById("orderTechnician");
     if (techSelect) {
         techSelect.innerHTML = '<option value="">-- Select or Auto-Assign Technician --</option>';
@@ -102,7 +102,7 @@ function populateFormDropdowns() {
         });
     }
 
-    let inventory = JSON.parse(localStorage.getItem("iemrs_inventory")) || [];
+    let inventory = JSON.parse(localStorage.getItem("forge_inventory") || localStorage.getItem("iemrs_inventory")) || [];
     let partSelect = document.getElementById("orderRequiredPart");
     if (partSelect) {
         partSelect.innerHTML = '<option value="">-- No Spare Part Required --</option>';
@@ -148,7 +148,7 @@ function updatePartAvailabilityNotice() {
         return;
     }
 
-    let inventory = JSON.parse(localStorage.getItem("iemrs_inventory")) || [];
+    let inventory = JSON.parse(localStorage.getItem("forge_inventory") || localStorage.getItem("iemrs_inventory")) || [];
     let found = inventory.find(p => p.name === partName);
 
     if (found) {
@@ -204,7 +204,7 @@ function filterAndRenderTable() {
 
     emptyState.classList.add("d-none");
 
-    let inventory = JSON.parse(localStorage.getItem("iemrs_inventory")) || [];
+    let inventory = JSON.parse(localStorage.getItem("forge_inventory") || localStorage.getItem("iemrs_inventory")) || [];
 
     for (let j = 0; j < filtered.length; j++) {
         let o = filtered[j];
@@ -376,7 +376,7 @@ function handleFormSubmit(event) {
         consumeSpareParts(requiredPart, requiredQuantity, id);
     }
 
-    localStorage.setItem("iemrs_workorders", JSON.stringify(ordersList));
+    localStorage.setItem("forge_workorders", JSON.stringify(ordersList));
 
     orderModalInstance.hide();
     filterAndRenderTable();
@@ -427,7 +427,7 @@ function resumeWorkOrder(id) {
 
     order.status = "In Progress";
     order.waitingReason = "";
-    localStorage.setItem("iemrs_workorders", JSON.stringify(ordersList));
+    localStorage.setItem("forge_workorders", JSON.stringify(ordersList));
 
     syncEquipmentStatusOnWorkOrder(order.equipment, "In Progress");
     logActivity(order.equipment, "Work order " + id + " resumed (Waiting for Parts -> In Progress)", "badge-in-progress");
@@ -473,7 +473,7 @@ function handleRescheduleSubmit(event) {
     order.rescheduledDate = newDate;
     order.rescheduleReason = reason;
 
-    localStorage.setItem("iemrs_workorders", JSON.stringify(ordersList));
+    localStorage.setItem("forge_workorders", JSON.stringify(ordersList));
 
     rescheduleModalInstance.hide();
     showAlert("Work order " + id + " rescheduled to " + newDate + ".", "info");
@@ -484,7 +484,7 @@ function handleRescheduleSubmit(event) {
 
 // Consume spare parts from inventory upon Work Order completion
 function consumeSpareParts(partName, quantity, orderId) {
-    let inventory = JSON.parse(localStorage.getItem("iemrs_inventory")) || [];
+    let inventory = JSON.parse(localStorage.getItem("forge_inventory") || localStorage.getItem("iemrs_inventory")) || [];
     let partIndex = inventory.findIndex(p => p.name === partName);
 
     if (partIndex !== -1) {
@@ -493,7 +493,7 @@ function consumeSpareParts(partName, quantity, orderId) {
         let deductQty = Math.min(currentQty, quantity);
         part.quantity = Math.max(0, currentQty - deductQty);
 
-        localStorage.setItem("iemrs_inventory", JSON.stringify(inventory));
+        localStorage.setItem("forge_inventory", JSON.stringify(inventory));
         logActivity(part.name, "Consumed " + deductQty + " units for Work Order " + orderId, "badge-maintenance");
 
         // If stock level dropped below minStock, log warning
@@ -510,7 +510,7 @@ function deleteOrder(id) {
 
     let target = ordersList.find(o => o.id === id);
     ordersList = ordersList.filter(o => o.id !== id);
-    localStorage.setItem("iemrs_workorders", JSON.stringify(ordersList));
+    localStorage.setItem("forge_workorders", JSON.stringify(ordersList));
 
     if (target) {
         logActivity(target.equipment, "Work order " + id + " deleted from records", "badge-faulty");
@@ -520,3 +520,4 @@ function deleteOrder(id) {
     filterAndRenderTable();
     updateKpiCards();
 }
+

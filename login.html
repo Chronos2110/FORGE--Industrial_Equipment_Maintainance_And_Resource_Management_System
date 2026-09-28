@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FORGE - Industrial Access & Authentication</title>
-    <!-- Apply theme before render to prevent flash -->
+    <!-- Apply theme before render to prevent flash (default: light) -->
     <script>
         (function () {
-            var t = localStorage.getItem("forge_theme") || "dark";
+            var t = localStorage.getItem("forge_theme") || "light";
             document.documentElement.setAttribute("data-theme", t);
         })();
     </script>
@@ -25,9 +25,9 @@
         <!-- Theme Toggle — top right corner of login page -->
         <div class="login-theme-toggle-wrapper">
             <div class="theme-toggle" role="group" aria-label="Theme selector">
-                <button class="theme-toggle-btn" id="loginThemeBtnLight" title="Switch to Light Mode" aria-pressed="false">&#9728; Light</button>
+                <button class="theme-toggle-btn active" id="loginThemeBtnLight" title="Switch to Light Mode" aria-pressed="true">&#9728; Light</button>
                 <span class="theme-toggle-divider" aria-hidden="true"></span>
-                <button class="theme-toggle-btn" id="loginThemeBtnDark" title="Switch to Dark Mode" aria-pressed="true">&#9790; Dark</button>
+                <button class="theme-toggle-btn" id="loginThemeBtnDark" title="Switch to Dark Mode" aria-pressed="false">&#9790; Dark</button>
             </div>
         </div>
 
@@ -113,7 +113,7 @@
     <!-- Login Page Theme Toggle Logic -->
     <script>
         (function () {
-            var currentTheme = localStorage.getItem("forge_theme") || "dark";
+            var currentTheme = localStorage.getItem("forge_theme") || "light";
             var btnLight = document.getElementById("loginThemeBtnLight");
             var btnDark = document.getElementById("loginThemeBtnDark");
 
