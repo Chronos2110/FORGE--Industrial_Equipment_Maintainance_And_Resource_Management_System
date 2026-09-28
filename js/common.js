@@ -5,6 +5,12 @@
 //          Activity Logging, XSS Protection, and Role-Aware UI
 // ==========================================================================
 
+// Apply theme immediately before anything renders to avoid flash
+(function () {
+    var theme = localStorage.getItem("forge_theme") || "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+})();
+
 document.addEventListener("DOMContentLoaded", function () {
     initDefaultData();
     migrateLegacyData();
@@ -12,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
     applyRolePermissions();
 });
 
-// Display active navigation, role, quick role switcher, and bind logout
+// Display active navigation, role, quick role switcher, theme toggle, and bind logout
 function initCommon() {
     let role = sessionStorage.getItem("iemrs_role") || "Administrator";
 
@@ -47,7 +53,30 @@ function initCommon() {
         });
     }
 
-    // 3. Active Sidebar Navigation
+    // 3. Inject Theme Toggle if not already present
+    if (topbarRight && !document.getElementById("forgeThemeToggle")) {
+        let currentTheme = localStorage.getItem("forge_theme") || "dark";
+        let toggleWrapper = document.createElement("div");
+        toggleWrapper.className = "theme-toggle";
+        toggleWrapper.id = "forgeThemeToggle";
+        toggleWrapper.setAttribute("role", "group");
+        toggleWrapper.setAttribute("aria-label", "Theme selector");
+        toggleWrapper.innerHTML = `
+            <button class="theme-toggle-btn ${currentTheme === "light" ? "active" : ""}" id="themeBtnLight" title="Switch to Light Mode" aria-pressed="${currentTheme === "light"}">&#9728; Light</button>
+            <span class="theme-toggle-divider" aria-hidden="true"></span>
+            <button class="theme-toggle-btn ${currentTheme === "dark" ? "active" : ""}" id="themeBtnDark" title="Switch to Dark Mode" aria-pressed="${currentTheme === "dark"}">&#9790; Dark</button>
+        `;
+        topbarRight.insertBefore(toggleWrapper, topbarRight.firstChild);
+
+        document.getElementById("themeBtnLight").addEventListener("click", function () {
+            applyTheme("light");
+        });
+        document.getElementById("themeBtnDark").addEventListener("click", function () {
+            applyTheme("dark");
+        });
+    }
+
+    // 4. Active Sidebar Navigation
     let currentPath = window.location.pathname.toLowerCase();
     let navLinks = document.querySelectorAll(".sidebar a:not(.logout)");
 
@@ -60,7 +89,7 @@ function initCommon() {
         }
     });
 
-    // 4. Logout handling
+    // 5. Logout handling
     let logoutLinks = document.querySelectorAll(".sidebar .logout, #logoutBtn");
     logoutLinks.forEach(function (btn) {
         btn.addEventListener("click", function (e) {
@@ -70,6 +99,42 @@ function initCommon() {
         });
     });
 }
+
+// ==========================================================================
+// Theme Management
+// ==========================================================================
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("forge_theme", theme);
+
+    // Update toggle button active states
+    let btnLight = document.getElementById("themeBtnLight");
+    let btnDark = document.getElementById("themeBtnDark");
+    if (btnLight && btnDark) {
+        if (theme === "light") {
+            btnLight.classList.add("active");
+            btnLight.setAttribute("aria-pressed", "true");
+            btnDark.classList.remove("active");
+            btnDark.setAttribute("aria-pressed", "false");
+        } else {
+            btnDark.classList.add("active");
+            btnDark.setAttribute("aria-pressed", "true");
+            btnLight.classList.remove("active");
+            btnLight.setAttribute("aria-pressed", "false");
+        }
+    }
+
+    // Also sync any login-page toggle if present
+    let loginBtnLight = document.getElementById("loginThemeBtnLight");
+    let loginBtnDark = document.getElementById("loginThemeBtnDark");
+    if (loginBtnLight && loginBtnDark) {
+        loginBtnLight.classList.toggle("active", theme === "light");
+        loginBtnDark.classList.toggle("active", theme === "dark");
+        loginBtnLight.setAttribute("aria-pressed", String(theme === "light"));
+        loginBtnDark.setAttribute("aria-pressed", String(theme === "dark"));
+    }
+}
+
 
 // ==========================================================================
 // Role-Aware UI Permission Enforcement
