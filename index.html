@@ -4,72 +4,396 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FORGE - Industrial Equipment Maintenance & Resource Management</title>
+    <title>FORGE — Built to Keep Industry Moving</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom Stylesheet -->
+    <!-- Custom Industrial Stylesheet -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-    <div class="login-page">
+    <!-- Minimal Industrial Sticky Header -->
+    <header class="landing-nav d-flex justify-content-between align-items-center">
+        <a href="index.html" class="landing-brand">FORGE</a>
 
-        <div class="login-container">
+        <ul class="landing-links">
+            <li><a href="#problem">The Problem</a></li>
+            <li><a href="#workflow">Workflow</a></li>
+            <li><a href="#platform">Platform</a></li>
+            <li><a href="#intelligence">Intelligence</a></li>
+        </ul>
 
-            <div class="login-split-card">
+        <div class="d-flex align-items-center gap-3">
+            <a href="login.html" class="btn btn-sm btn-outline-primary fw-semibold">Sign In</a>
+            <a href="login.html" class="btn btn-sm btn-primary">ENTER FORGE &rarr;</a>
+        </div>
+    </header>
 
-                <!-- Left Panel: FORGE Wordmark + Subtitle Only -->
-                <div class="login-brand-panel">
-                    <h1>FORGE</h1>
-                    <p>Industrial Equipment Maintenance & Resource Management</p>
-                </div>
-
-                <!-- Right Panel: Login Form Only -->
-                <div class="login-form-panel">
-
-                    <form id="loginForm">
-
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" id="username" class="form-control" placeholder="Enter username (e.g. admin)" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" id="password" class="form-control" placeholder="Enter password" required>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="role" class="form-label">Role</label>
-                            <select id="role" class="form-select" required>
-                                <option value="">Select Role</option>
-                                <option value="Administrator">Administrator</option>
-                                <option value="Technician">Technician</option>
-                                <option value="Operator">Operator</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100 py-2">
-                            Sign In
-                        </button>
-
-                        <p id="loginMessage"></p>
-
-                    </form>
-
-                </div>
-
+    <!-- SECTION 1: HERO -->
+    <section class="landing-hero">
+        <div class="container-xl">
+            <div class="hero-tagline">
+                <span>PLANT OPERATION & RESOURCE DISPATCH</span>
             </div>
 
+            <h1 class="hero-title">
+                BUILT TO KEEP<br>
+                <span>INDUSTRY</span> MOVING.
+            </h1>
+
+            <p class="hero-lead">
+                A centralized maintenance management platform for equipment, work orders, technicians and critical resources.
+            </p>
+
+            <div class="hero-actions">
+                <a href="login.html" class="btn-hero-primary">ENTER FORGE &rarr;</a>
+                <a href="#platform" class="btn-hero-secondary">EXPLORE PLATFORM</a>
+            </div>
+
+            <!-- Restrained Real-Time Operational Telemetry Bar -->
+            <div class="hero-telemetry-grid">
+                <div class="hero-telemetry-item">
+                    <div class="telemetry-label">Active Machinery Monitored</div>
+                    <div class="telemetry-val gold">52 Units</div>
+                </div>
+                <div class="hero-telemetry-item">
+                    <div class="telemetry-label">Operational Reliability Rate</div>
+                    <div class="telemetry-val">99.4%</div>
+                </div>
+                <div class="hero-telemetry-item">
+                    <div class="telemetry-label">Automated Skill Assignment</div>
+                    <div class="telemetry-val">100% Deterministic</div>
+                </div>
+                <div class="hero-telemetry-item">
+                    <div class="telemetry-label">Inventory Reservation Loop</div>
+                    <div class="telemetry-val gold">Zero Stockout Lag</div>
+                </div>
+            </div>
         </div>
+    </section>
 
-    </div>
+    <!-- SECTION 2: THE PROBLEM -->
+    <section class="landing-section" id="problem">
+        <div class="container-xl">
+            <span class="section-eyebrow">OPERATIONAL BOTTLENECKS</span>
+            <h2 class="section-heading">When equipment stops, operations stop.</h2>
+            <p class="section-subtext">
+                Fragmented information between machine health, service history, technician rosters, and warehouse spare parts creates cascading production downtime.
+            </p>
 
-    <!-- Bootstrap Bundle JS -->
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="problem-card">
+                        <div class="problem-num">FAULT 01 // UNPLANNED DOWNTIME</div>
+                        <h5>Fragmented Asset Records</h5>
+                        <p>
+                            Preventive schedules kept on spreadsheets cause missed inspection cycles, leading to catastrophic spindle, bearing, and motor breakdown.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-3">
+                    <div class="problem-card">
+                        <div class="problem-num">FAULT 02 // PARTS BOTTLENECK</div>
+                        <h5>Unsynchronized Inventory</h5>
+                        <p>
+                            Work orders dispatched without warehouse verification stall indefinitely when critical seals, filters, or belts are discovered out of stock.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-3">
+                    <div class="problem-card">
+                        <div class="problem-num">FAULT 03 // ROSTER MISALLOCATION</div>
+                        <h5>Unskilled Dispatching</h5>
+                        <p>
+                            Complex CNC or PLC breakdowns assigned blindly to general mechanics cause extended Mean Time to Repair (MTTR) and safety compliance risks.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-3">
+                    <div class="problem-card">
+                        <div class="problem-num">FAULT 04 // AUDIT BLINDSPOTS</div>
+                        <h5>Missing Traceability</h5>
+                        <p>
+                            Lack of real-time audit trails makes ISO-55000 asset compliance audits stressful and obscures recurring failure patterns across production shifts.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 3: THE FORGE WORKFLOW -->
+    <section class="landing-section" id="workflow">
+        <div class="container-xl">
+            <span class="section-eyebrow">DETERMINISTIC LIFECYCLE</span>
+            <h2 class="section-heading">The FORGE Workflow</h2>
+            <p class="section-subtext">
+                Rigorous operational state machines govern every service intervention, from automated fault detection to verified repair and resource decrement.
+            </p>
+
+            <!-- Primary Lifecycle Track -->
+            <div class="lifecycle-container mb-4">
+                <div class="lifecycle-header">
+                    <span class="lifecycle-title">Primary Operational Track</span>
+                    <span class="badge bg-secondary font-mono">ISO-55000 ASSET LIFECYCLE</span>
+                </div>
+
+                <div class="lifecycle-track">
+                    <div class="lifecycle-step">
+                        <span class="lifecycle-step-num">PHASE 01</span>
+                        <span class="lifecycle-step-name">SCHEDULED</span>
+                    </div>
+
+                    <div class="lifecycle-arrow">&rarr;</div>
+
+                    <div class="lifecycle-step">
+                        <span class="lifecycle-step-num">PHASE 02</span>
+                        <span class="lifecycle-step-name">ASSIGNED</span>
+                    </div>
+
+                    <div class="lifecycle-arrow">&rarr;</div>
+
+                    <div class="lifecycle-step">
+                        <span class="lifecycle-step-num">PHASE 03</span>
+                        <span class="lifecycle-step-name">IN PROGRESS</span>
+                    </div>
+
+                    <div class="lifecycle-arrow">&rarr;</div>
+
+                    <div class="lifecycle-step">
+                        <span class="lifecycle-step-num">PHASE 04</span>
+                        <span class="lifecycle-step-name">COMPLETED</span>
+                    </div>
+                </div>
+
+                <!-- Exception Loop: Waiting for Parts -->
+                <div class="lifecycle-exception-box mt-3">
+                    <div class="lifecycle-exception-label">
+                        <span>&#9888; EXCEPTION PATHWAY:</span>
+                        <span>SPARE PARTS BOTTLENECK</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap font-mono" style="font-size:0.78rem;">
+                        <span class="badge-status badge-in-progress">In Progress</span>
+                        <span class="text-gold">&rarr;</span>
+                        <span class="badge-status badge-waiting">Waiting for Parts</span>
+                        <span class="text-gold">&rarr;</span>
+                        <span class="badge-status badge-ready-resume">Ready to Resume</span>
+                        <span class="text-gold">&rarr;</span>
+                        <span class="badge-status badge-in-progress">In Progress</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mt-1">
+                <div class="col-md-6">
+                    <div class="p-3 bg-industrial-surface border border-industrial">
+                        <h6 class="text-gold font-mono mb-2" style="font-size:0.8rem;">AUTOMATIC STATUS SYNCHRONIZATION</h6>
+                        <p class="text-muted small mb-0">
+                            Whenever a work order transitions to <em>In Progress</em> or <em>Waiting for Parts</em>, the underlying machinery status is automatically synchronized to <em>Maintenance</em> across the factory floor. Upon completion, the machine returns to <em>Operational</em> status immediately.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="p-3 bg-industrial-surface border border-industrial">
+                        <h6 class="text-gold font-mono mb-2" style="font-size:0.8rem;">DYNAMIC WORKLOAD BALANCING</h6>
+                        <p class="text-muted small mb-0">
+                            Technicians tied up with active orders have their workload tracked dynamically. When a task transitions to <em>Waiting for Parts</em>, the technician's active workload count decreases, enabling temporary dispatch to other urgent jobs.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 4: PLATFORM MODULES -->
+    <section class="landing-section" id="platform">
+        <div class="container-xl">
+            <span class="section-eyebrow">INTEGRATED ARCHITECTURE</span>
+            <h2 class="section-heading">Platform Modules</h2>
+            <p class="section-subtext">
+                Six tightly integrated modules delivering unified command over machinery, personnel, schedules, and spare parts.
+            </p>
+
+            <div class="row g-4">
+                <!-- Equipment -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="module-card">
+                        <div>
+                            <div class="module-code">MOD-01 // ASSET REGISTRY</div>
+                            <h4>Equipment</h4>
+                            <p>
+                                Complete catalog of industrial plant machinery, physical locations, operational status indicators, and next inspection countdowns.
+                            </p>
+                        </div>
+                        <div class="module-meta">
+                            <span>CNC &bull; Hydraulic &bull; Compressors &bull; Turbines</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maintenance -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="module-card">
+                        <div>
+                            <div class="module-code">MOD-02 // SERVICE LOGS</div>
+                            <h4>Maintenance</h4>
+                            <p>
+                                Calendar scheduling and execution logs for preventive maintenance and corrective overhaul, tied directly to equipment health.
+                            </p>
+                        </div>
+                        <div class="module-meta">
+                            <span>Preventive &bull; Corrective &bull; Rescheduling Log</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Work Orders -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="module-card">
+                        <div>
+                            <div class="module-code">MOD-03 // DISPATCH SYSTEM</div>
+                            <h4>Work Orders</h4>
+                            <p>
+                                High-priority fault tickets, technician assignment dispatching, diagnosis documentation, and parts availability validation.
+                            </p>
+                        </div>
+                        <div class="module-meta">
+                            <span>High / Med / Low &bull; Live Progression Track</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workforce -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="module-card">
+                        <div>
+                            <div class="module-code">MOD-04 // PERSONNEL ROSTER</div>
+                            <h4>Workforce</h4>
+                            <p>
+                                Certified technician registry, specialization domains, ISO certifications, real-time availability states, and active order counts.
+                            </p>
+                        </div>
+                        <div class="module-meta">
+                            <span>Skill Keywords &bull; CMRP &bull; Vibration Level 2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="module-card">
+                        <div>
+                            <div class="module-code">MOD-05 // SPARE WAREHOUSE</div>
+                            <h4>Inventory</h4>
+                            <p>
+                                Critical component reserves, minimum safety stock thresholds, supplier references, and automated replenishment triggers.
+                            </p>
+                        </div>
+                        <div class="module-meta">
+                            <span>Bearings &bull; Filters &bull; Valves &bull; Lubricants</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="module-card">
+                        <div>
+                            <div class="module-code">MOD-06 // INTELLIGENCE</div>
+                            <h4>Analytics</h4>
+                            <p>
+                                Quantitative efficiency indices, plant equipment reliability percentages, failure distribution bars, and warehouse consumption audit feeds.
+                            </p>
+                        </div>
+                        <div class="module-meta">
+                            <span>Reliability Index &bull; Preventive Ratio &bull; MTBF</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 5: OPERATIONAL INTELLIGENCE -->
+    <section class="landing-section" id="intelligence">
+        <div class="container-xl">
+            <span class="section-eyebrow">DETERMINISTIC SYSTEMS</span>
+            <h2 class="section-heading">Operational Intelligence</h2>
+            <p class="section-subtext">
+                Embedded algorithms that eliminate manual guesswork across technician allocation, equipment health tracking, and inventory safety.
+            </p>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="intel-card">
+                        <h5>01 // SMART TECHNICIAN ASSIGNMENT</h5>
+                        <p>
+                            Matches machine technical domains with certified technician skills (e.g. CNC, Hydraulics, Pneumatics). When multiple qualified technicians are found, dispatches the one with the lowest active workload count to eliminate scheduling bottlenecks.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="intel-card">
+                        <h5>02 // RESOURCE-AWARE MAINTENANCE</h5>
+                        <p>
+                            Work order completion automatically decrements required spare parts directly from the warehouse registry. If parts are insufficient, orders seamlessly divert into a controlled <em>Waiting for Parts</em> state until replenishment is registered.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="intel-card">
+                        <h5>03 // EQUIPMENT STATUS TRACKING</h5>
+                        <p>
+                            Bidirectional status synchronization continuously propagates machine states across all plant views. Machine status automatically turns to <em>Maintenance</em> upon active work and returns to <em>Operational</em> with updated service dates upon job verification.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="intel-card">
+                        <h5>04 // INVENTORY MONITORING</h5>
+                        <p>
+                            Dynamic threshold evaluation warns maintenance engineers the instant critical component stock falls below safety minimums. High-visibility warehouse alerts prevent stockout delays before technicians are dispatched.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 6: FINAL CTA -->
+    <section class="landing-cta">
+        <div class="container-xl">
+            <h2>KEEP YOUR OPERATION MOVING.</h2>
+            <p>
+                Centralize your machinery registry, workforce coordination, and preventive maintenance schedule with FORGE.
+            </p>
+            <a href="login.html" class="btn-hero-primary" style="font-size:1.05rem; padding:14px 36px;">
+                ENTER FORGE &rarr;
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <div>
+            <strong>FORGE</strong> &mdash; Industrial Equipment Maintenance & Resource Management System
+        </div>
+        <div>
+            <span>ENTERPRISE STANDARDS COMPLIANT &bull; ZERO EXTERNAL DEPENDENCIES</span>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Login Logic -->
-    <script src="js/app.js"></script>
 
 </body>
 

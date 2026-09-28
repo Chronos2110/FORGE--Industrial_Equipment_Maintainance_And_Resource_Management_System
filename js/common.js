@@ -66,7 +66,7 @@ function initCommon() {
         btn.addEventListener("click", function (e) {
             e.preventDefault();
             sessionStorage.removeItem("iemrs_role");
-            window.location.href = "../index.html";
+            window.location.href = "../login.html";
         });
     });
 }

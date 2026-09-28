@@ -37,16 +37,28 @@ function loadDashboardMetrics() {
         }
     }
 
+    // Calculate Open Work Orders
+    let workorders = JSON.parse(localStorage.getItem("iemrs_workorders")) || [];
+    let openOrdersCount = 0;
+    for (let j = 0; j < workorders.length; j++) {
+        let st = workorders[j].status;
+        if (st !== "Completed" && st !== "Cancelled") {
+            openOrdersCount++;
+        }
+    }
+
     // Update Overview DOM Elements
     let totalEl = document.getElementById("totalEquipment");
     let opEl = document.getElementById("operationalEquipment");
     let maintEl = document.getElementById("maintenanceEquipment");
     let faultyEl = document.getElementById("faultyEquipment");
+    let openOrdersEl = document.getElementById("openWorkOrdersMetric");
 
     if (totalEl) totalEl.textContent = total;
     if (opEl) opEl.textContent = operational;
     if (maintEl) maintEl.textContent = inMaintenance;
     if (faultyEl) faultyEl.textContent = faulty;
+    if (openOrdersEl) openOrdersEl.textContent = openOrdersCount;
 }
 
 // 2. Load Upcoming Maintenance Tasks

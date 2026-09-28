@@ -1,94 +1,93 @@
-# Industrial Equipment Maintenance and Resource Management System (IEMRS)
+# FORGE — Industrial Equipment Maintenance & Resource Management System
 
-A comprehensive, deployable web-based industrial control and equipment management frontend built for the college **Web Programming Lab**.
+A premium, enterprise-grade industrial operations and asset management software suite designed for modern manufacturing plants and built with pure HTML5, CSS3, Bootstrap 5, and Vanilla JavaScript.
 
 ---
 
 ## 📌 Project Overview
 
-**IEMRS** is an industrial asset management and plant control dashboard designed to monitor equipment health, schedule preventive and corrective maintenance, dispatch work orders, manage certified technician workloads, track critical spare parts inventory, and provide quantitative operational analytics.
+**FORGE** is an industrial asset management and plant operations platform engineered to monitor equipment health, schedule preventive and corrective maintenance, dispatch work orders, balance technician workloads, track warehouse spare parts, and deliver quantitative operational analytics.
 
-### 🌍 UN Sustainable Development Goals (SDG) Alignment:
-- **SDG 8 – Decent Work and Economic Growth**: Fair labor allocation, certified technician tracking, safe work order distribution, and workplace hazard mitigation.
-- **SDG 9 – Industry, Innovation and Infrastructure**: Quantitative equipment uptime tracking, Mean Time Between Failures (MTBF) optimization, and preventive maintenance scheduling to prevent costly industrial breakdowns.
-- **SDG 12 – Responsible Consumption and Production**: Strict spare parts inventory tracking, lubricant degradation control, scrap component minimization, and automated low-stock warnings.
+Designed with a high-contrast **Obsidian Black + Industrial Gold** visual identity, FORGE delivers the aesthetic and structural fidelity of enterprise industrial systems (such as Zebra Technologies and Siemens Industrial Software).
 
 ---
 
-## 🛠️ Technology Stack (Frontend Only)
+## 🛠️ Technology Stack (Zero External Dependencies)
 
-- **Structure**: HTML5 (Semantic elements, accessible modal dialogues, tables)
-- **Styling**: Vanilla CSS3 + Bootstrap 5 (Custom "Modern Industrial Control Dashboard" design system in `css/style.css`)
-- **Logic**: Vanilla JavaScript (ES6)
-- **Persistence**: Browser `localStorage` (Client-side JSON data store)
+- **Structure**: Semantic HTML5 (Accessible modals, data grids, toolbars)
+- **Styling**: Vanilla CSS3 + Bootstrap 5 (Custom "Industrial Technology" design system in `css/style.css`)
+- **Typography**: Inter + IBM Plex Mono (Google Fonts)
+- **Logic**: Pure Vanilla JavaScript (ES6 DOM APIs)
+- **Persistence**: Browser `localStorage` (Reliable client-side JSON data store) & `sessionStorage` (Role state)
 
-> **Note**: As per the Web Programming Lab stage, this application is completely backend-agnostic and runs entirely client-side without Node.js, Express, MySQL, or React.
+> **Note**: This application is completely backend-agnostic and runs 100% client-side without React, Tailwind, TypeScript, or Node.js runtime requirements.
 
 ---
 
-## 📂 Project Structure
+## 📂 Project Architecture
 
 ```
 Mini-Project/
 │
-├── index.html                  # Industrial System Authentication / Login
+├── index.html                  # FORGE Industrial Product Landing Page
+├── login.html                  # Dedicated Industrial Access & Authentication Console
 ├── README.md                   # System documentation & viva reference
 │
 ├── pages/
-│   ├── dashboard.html          # Control Center, KPIs, Upcoming Maint, Low Stock
-│   ├── equipment.html          # Machinery catalog, status filters, Add/Edit/Delete
-│   ├── maintenance.html        # Preventive & corrective scheduling, service logs
-│   ├── workorders.html         # Fault diagnostics, priority dispatch & resolution
-│   ├── workforce.html          # Technician profiles, certifications & workloads (SDG 8)
-│   ├── inventory.html          # Spare parts warehouse, minimum stock alerts (SDG 12)
-│   └── analytics.html          # Asset reliability, execution rates & material balances (SDG 9)
+│   ├── dashboard.html          # Industrial Operations Control Center & KPIs
+│   ├── equipment.html          # Master machinery catalog & asset registry
+│   ├── maintenance.html        # Maintenance lifecycle state machine & scheduling
+│   ├── workorders.html         # Maintenance dispatch console & fault tracking
+│   ├── workforce.html          # Operational personnel allocation & skill routing
+│   ├── inventory.html          # Warehouse spare-parts inventory & stock triggers
+│   └── analytics.html          # Operational intelligence, reliability & MTBF indices
 │
 ├── css/
-│   └── style.css               # Shared Modern Industrial Control design tokens & styles
+│   └── style.css               # Black + Industrial Gold design tokens & styles
 │
 ├── js/
 │   ├── common.js               # Shared role display, active nav, alerts, data seeding
-│   ├── app.js                  # Login validation and session management
+│   ├── app.js                  # Authentication validation and session management
 │   ├── dashboard.js            # KPI metrics calculation and dynamic dashboard loaders
 │   ├── equipment.js            # Equipment CRUD, filtering, modal state
 │   ├── maintenance.js          # Maintenance schedule CRUD and type filters
-│   ├── workorders.js           # Work order management and priority filters
-│   ├── workforce.js            # Technician roster management and availability
+│   ├── workorders.js           # Work order management and auto-assign skill routing
+│   ├── workforce.js            # Technician roster management and workload tracking
 │   ├── inventory.js            # Spare parts CRUD, low-stock trigger evaluation
 │   └── analytics.js            # Dynamic reliability metrics, progress bars & resource logs
 │
-└── assets/                     # Static media and icons (if needed)
+└── assets/                     # Static media and assets (if needed)
 ```
 
 ---
 
-## 🚀 Key Features
+## 🚀 Key Operational Features
 
-1. **Authentication Simulation**:
-   - Role-based login (Administrator, Technician, Operator).
-   - Dynamic topbar role presentation saved in `sessionStorage`.
+1. **Dedicated Product Landing Page**:
+   - High-impact industrial hero section with real-time operational telemetry.
+   - Root-cause analysis of manufacturing bottlenecks.
+   - Interactive maintenance lifecycle visualization.
+   - Comprehensive module directory and embedded intelligence overview.
 
-2. **Control Center Dashboard**:
-   - Dynamic KPI cards (Total Equipment, Operational, Under Maintenance, Open Orders).
-   - Real-time Upcoming Maintenance table.
-   - Low-Stock alerts triggered dynamically when `quantity <= minimumStock`.
-   - Live audit activity feed and SDG overview.
+2. **Operations Control Center**:
+   - Operational KPIs (Total Equipment, Operational, Under Maintenance, Open Work Orders).
+   - Upcoming Maintenance table, Inventory Alerts, and chronological Recent Audit log.
 
-3. **Full Interactive CRUD Operations**:
-   - Machinery, Maintenance, Work Orders, Workforce, and Inventory all feature full Create, Read, Update, and Delete capabilities.
-   - Confirmation prompts before all delete operations.
-   - Sensible form validation and instant toast/alert feedback.
+3. **Deterministic Maintenance Lifecycle**:
+   - Primary track: `Scheduled → Assigned → In Progress → Completed`.
+   - Exception pathway: `Waiting for Parts → Ready to Resume`.
+   - Bidirectional equipment status synchronization.
 
-4. **Search & Multi-Criteria Filtering**:
-   - Instant search across IDs, names, types, and technicians.
-   - Status filters, priority filters, and category filters with dedicated empty states.
+4. **Intelligent Work Order Dispatching**:
+   - Algorithmic skill keyword matching + lowest active workload routing.
+   - Integrated warehouse spare parts availability checks and automatic stock decrements.
 
-5. **Client-Side Persistence (`localStorage`)**:
-   - Data persists across browser refreshes using `JSON.stringify()` and `JSON.parse()`.
-   - Auto-seeded with realistic industrial machinery and spare parts on first load.
+5. **Dynamic Roster Workload Balancing**:
+   - Calculates real-time active order count per technician.
+   - Frees workload when orders enter "Waiting for Parts" bottleneck.
 
-6. **Native Pure-CSS Progress & Analytics**:
-   - Calculates equipment health rates and maintenance efficiency without third-party chart dependencies.
+6. **Client-Side Persistence (`localStorage`)**:
+   - Preserves all plant data across browser restarts via `JSON.stringify()` / `JSON.parse()`.
 
 ---
 
@@ -97,23 +96,13 @@ Mini-Project/
 If asked by the external examiner during the lab viva:
 
 - **How is data persisted without a database?**
-  > *"We use browser `localStorage` with `JSON.stringify()` to serialize our JavaScript objects into storage and `JSON.parse()` to retrieve them when rendering tables. This keeps the application fully functional and persistent offline."*
+  > *"We use browser `localStorage` with `JSON.stringify()` to serialize JavaScript objects into key-value storage and `JSON.parse()` to retrieve them when rendering tables. This keeps the application fully functional and persistent offline."*
 
-- **How is DOM manipulation handled?**
-  > *"We use standard, efficient DOM methods like `document.getElementById()`, `querySelector()`, `addEventListener()`, dynamic table row generation (`document.createElement('tr')`), and simple template strings to inject values."*
+- **How does the auto-assign technician algorithm work?**
+  > *"In `js/common.js`, `autoAssignTechnician()` inspects the equipment type or problem description, matches it against specialized skill keywords in `SKILL_KEYWORD_MAP`, filters available technicians, and selects the qualified technician who currently has the lowest active workload."*
 
 - **How are status badges and low-stock alerts determined?**
   > *"In `js/inventory.js`, each part's current quantity is compared against its minimum stock threshold (`item.quantity <= item.minStock`). If true, the system dynamically assigns the `badge-low-stock` CSS class."*
 
 - **How do the pages stay synchronized?**
   > *"Each page modifies the shared `localStorage` arrays (`iemrs_equipment`, `iemrs_maintenance`, `iemrs_inventory`, etc.). When you navigate to Dashboard or Analytics, those scripts read the latest `localStorage` state and recalculate the statistics on the fly."*
-
----
-
-## 🔮 Future Backend Roadmap
-
-In subsequent iterations, the following backend architecture will be introduced:
-- **Runtime**: Node.js & Express.js REST API
-- **Database**: MySQL relational schema for normalized tables (`equipment`, `maintenance_logs`, `technicians`, `inventory`, `work_orders`)
-- **Authentication**: Secure JWT (JSON Web Tokens) with hashed passwords (bcrypt)
-- **Reporting**: Automated PDF generation for preventive maintenance compliance

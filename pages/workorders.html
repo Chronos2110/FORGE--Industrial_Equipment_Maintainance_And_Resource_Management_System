@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FORGE - Work Orders & Fault Reporting</title>
+    <title>FORGE - Work Orders Dispatch Console</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Shared Stylesheet -->
+    <!-- Custom Industrial Stylesheet -->
     <link rel="stylesheet" href="../css/style.css">
 </head>
 
@@ -19,7 +19,7 @@
         <div class="sidebar">
             <div class="sidebar-brand">
                 <h2>FORGE</h2>
-                <span class="brand-sub">Industrial Maintenance</span>
+                <span class="brand-sub">Dispatch Console</span>
             </div>
 
             <div class="sidebar-nav">
@@ -40,18 +40,18 @@
             </div>
 
             <div class="sidebar-footer">
-                <a href="../index.html" class="logout" id="logoutBtn">Logout</a>
+                <a href="../login.html" class="logout" id="logoutBtn">LOGOUT</a>
             </div>
         </div>
 
         <!-- Main Content Area -->
         <div class="main-content">
 
-            <!-- Consistent Topbar -->
+            <!-- Minimal Topbar -->
             <div class="topbar">
                 <div class="topbar-left">
-                    <h3>Work Orders & Incident Management</h3>
-                    <p class="topbar-subtitle">Machinery fault diagnostics, technician dispatch & resolution workflows</p>
+                    <h3>WORK ORDERS</h3>
+                    <p class="topbar-subtitle">Maintenance Dispatch System &mdash; Breakdown diagnostics, technician skill routing & spare replenishment</p>
                 </div>
                 <div class="topbar-right">
                     <span class="role-badge">
@@ -67,10 +67,10 @@
                 <!-- Summary Metric Cards -->
                 <div class="row g-3 mb-4">
                     <div class="col-xl-3 col-sm-6">
-                        <div class="dashboard-card card-blue">
+                        <div class="dashboard-card card-primary">
                             <h5>Total Work Orders</h5>
-                            <h2 id="kpiTotalOrders">0</h2>
-                            <span class="card-hint">All historical and active orders</span>
+                            <h2 id="kpiTotalOrders" class="text-gold">0</h2>
+                            <span class="card-hint">All historical and active tickets</span>
                         </div>
                     </div>
                     <div class="col-xl-3 col-sm-6">
@@ -124,23 +124,23 @@
                     </div>
                 </div>
 
-                <!-- Main Section: Work Orders Table -->
+                <!-- Main Section: Work Orders Dispatch Table -->
                 <div class="dashboard-section">
                     <div class="section-header">
-                        <h4>Active Work Orders & Fault Records</h4>
-                        <span class="badge bg-light text-secondary border" id="recordsCount">0 Orders</span>
+                        <h4>Active Maintenance Dispatch Roster</h4>
+                        <span class="badge bg-secondary font-mono" id="recordsCount">0 Orders</span>
                     </div>
 
                     <div class="table-responsive">
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th>Order ID</th>
+                                    <th>Work Order ID</th>
                                     <th>Equipment</th>
-                                    <th>Problem / Details</th>
+                                    <th>Problem Description</th>
                                     <th>Technician</th>
                                     <th>Priority</th>
-                                    <th>Schedule Date</th>
+                                    <th>Date</th>
                                     <th>Status</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
@@ -151,11 +151,11 @@
                         </table>
                     </div>
 
-                    <!-- Empty State for Searches / Filters -->
+                    <!-- Empty State for Searches / No Data -->
                     <div id="workordersEmptyState" class="empty-state d-none">
-                        <div class="empty-state-icon">📝</div>
+                        <div class="empty-state-icon">📋</div>
                         <h5>No Work Orders Found</h5>
-                        <p>No work orders match the selected priority, status, or search query.</p>
+                        <p>No work orders match your search filter criteria. Try adjusting or resetting filters.</p>
                     </div>
                 </div>
 
@@ -165,69 +165,67 @@
 
     </div>
 
-    <!-- Add / Edit Work Order Modal -->
-    <div class="modal fade" id="workOrderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
+    <!-- Modal 1: Add / Edit Work Order Modal -->
+    <div class="modal fade" id="workOrderModal" tabindex="-1" aria-labelledby="workOrderModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="orderModalLabel">Create Work Order</h5>
+                    <h5 class="modal-title" id="workOrderModalLabel">File Maintenance Work Order</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="workOrderForm">
+                <form id="workOrderForm">
+                    <div class="modal-body">
                         <input type="hidden" id="editIndex" value="-1">
-
-                        <div class="row g-2 mb-3">
+                        <div class="row g-3">
                             <div class="col-md-4">
-                                <label for="orderId" class="form-label fw-bold">Work Order ID *</label>
-                                <input type="text" class="form-control" id="orderId" placeholder="e.g. WO-307" required>
+                                <label for="woId" class="form-label">Order Identifier</label>
+                                <input type="text" id="woId" class="form-control font-mono" placeholder="WO-307" required>
                             </div>
                             <div class="col-md-8">
-                                <label for="orderEquipment" class="form-label fw-bold">Target Machinery / Equipment *</label>
-                                <select class="form-select" id="orderEquipment" required>
-                                    <!-- Populated dynamically from equipment registry -->
+                                <label for="woEquipment" class="form-label">Impacted Machinery</label>
+                                <select id="woEquipment" class="form-select" required>
+                                    <option value="">Select Equipment</option>
+                                    <!-- Populated dynamically from iemrs_equipment -->
                                 </select>
                             </div>
-                        </div>
 
-                        <div class="mb-3">
-                            <label for="orderProblem" class="form-label fw-bold">Problem / Fault Description *</label>
-                            <textarea class="form-control" id="orderProblem" rows="2" placeholder="Detail the fault symptoms, noise, pressure loss, or leak..." required></textarea>
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-7">
-                                <label for="orderTechnician" class="form-label fw-bold">Assigned Technician *</label>
-                                <select class="form-select" id="orderTechnician" required>
-                                    <!-- Populated dynamically from workforce registry -->
-                                </select>
-                            </div>
-                            <div class="col-md-5 d-flex align-items-end">
-                                <button type="button" class="btn btn-outline-primary w-100" id="btnAutoAssignWO" style="padding: 7px 12px; font-weight:600;">
-                                    ⚡ Auto Assign
-                                </button>
-                            </div>
                             <div class="col-12">
-                                <small id="autoAssignFeedback" class="text-muted d-block mt-1"></small>
+                                <label for="woProblem" class="form-label">Fault / Problem Diagnostics</label>
+                                <textarea id="woProblem" class="form-control" rows="2" placeholder="Describe the symptom, abnormal vibration, fluid leak, or electrical fault..." required></textarea>
                             </div>
-                        </div>
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-4">
-                                <label for="orderPriority" class="form-label fw-bold">Priority Level *</label>
-                                <select class="form-select" id="orderPriority" required>
-                                    <option value="Low">Low</option>
-                                    <option value="Medium" selected>Medium</option>
-                                    <option value="High">High</option>
+                            <!-- Automatic Technician Skill Assignment Engine -->
+                            <div class="col-md-7">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="woTechnician" class="form-label mb-0">Assigned Technician</label>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 font-mono" id="btnAutoAssign" style="font-size:0.7rem;">
+                                        ⚡ Auto-Match Skill
+                                    </button>
+                                </div>
+                                <select id="woTechnician" class="form-select" required>
+                                    <option value="">Select Technician</option>
+                                    <!-- Populated dynamically from iemrs_workforce -->
+                                </select>
+                                <div id="autoAssignFeedback" class="small mt-1 text-gold d-none font-mono" style="font-size:0.75rem;"></div>
+                            </div>
+
+                            <div class="col-md-5">
+                                <label for="woPriority" class="form-label">Incident Priority</label>
+                                <select id="woPriority" class="form-select" required>
+                                    <option value="High">High (Production Stoppage)</option>
+                                    <option value="Medium" selected>Medium (Degraded Performance)</option>
+                                    <option value="Low">Low (Minor Inspection)</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label for="orderDate" class="form-label fw-bold">Reported Date *</label>
-                                <input type="date" class="form-control" id="orderDate" required>
+
+                            <div class="col-md-6">
+                                <label for="woDate" class="form-label">Scheduled Execution Date</label>
+                                <input type="date" id="woDate" class="form-control" required>
                             </div>
-                            <div class="col-md-4">
-                                <label for="orderStatus" class="form-label fw-bold">Order Status *</label>
-                                <select class="form-select" id="orderStatus" required>
+
+                            <div class="col-md-6">
+                                <label for="woStatus" class="form-label">Lifecycle Status</label>
+                                <select id="woStatus" class="form-select" required>
                                     <option value="Scheduled">Scheduled</option>
                                     <option value="Assigned">Assigned</option>
                                     <option value="In Progress">In Progress</option>
@@ -236,106 +234,115 @@
                                     <option value="Cancelled">Cancelled</option>
                                 </select>
                             </div>
-                        </div>
 
-                        <!-- Spare Parts & Waiting for Parts Section -->
-                        <div class="p-3 bg-light rounded border mb-3">
-                            <h6 class="fw-bold text-secondary mb-2" style="font-size:0.88rem;">
-                                🔩 Spare Parts Requirement & Hold Information
-                            </h6>
-                            <div class="row g-2 mb-2">
-                                <div class="col-md-8">
-                                    <label for="orderRequiredPart" class="form-label small fw-bold">Required Spare Part</label>
-                                    <select class="form-select form-select-sm" id="orderRequiredPart">
-                                        <option value="">-- No Spare Part Required --</option>
-                                        <!-- Populated dynamically from inventory registry -->
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="orderRequiredQty" class="form-label small fw-bold">Quantity Needed</label>
-                                    <input type="number" class="form-control form-control-sm" id="orderRequiredQty" min="0" value="0">
-                                </div>
-                                <div class="col-12">
-                                    <small id="partAvailabilityNotice" class="text-muted d-block"></small>
-                                </div>
-                            </div>
-
-                            <div id="waitingFieldsContainer">
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-8">
-                                        <label for="orderWaitingReason" class="form-label small fw-bold">Reason for Hold / Waiting</label>
-                                        <input type="text" class="form-control form-control-sm" id="orderWaitingReason" placeholder="e.g. Hydraulic seal kit unavailable in warehouse">
+                            <!-- Integrated Spare Parts Reservation -->
+                            <div class="col-12">
+                                <div class="p-3 bg-industrial-dark border border-industrial">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold font-mono text-gold" style="font-size:0.75rem;">SPARE PARTS RESERVATION</span>
+                                        <span class="small text-muted font-mono" style="font-size:0.7rem;">Direct warehouse stock decrement</span>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label for="orderExpectedResume" class="form-label small fw-bold">Expected Resume Date</label>
-                                        <input type="date" class="form-control form-control-sm" id="orderExpectedResume">
+                                    <div class="row g-2">
+                                        <div class="col-md-8">
+                                            <label for="woRequiredPart" class="form-label">Required Spare Part (Optional)</label>
+                                            <select id="woRequiredPart" class="form-select">
+                                                <option value="">No parts needed for this service</option>
+                                                <!-- Populated dynamically from iemrs_inventory -->
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="woRequiredQuantity" class="form-label">Quantity</label>
+                                            <input type="number" id="woRequiredQuantity" class="form-control font-mono" min="0" value="0">
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label for="orderWaitingNotes" class="form-label small fw-bold">Technician Notes</label>
-                                    <input type="text" class="form-control form-control-sm" id="orderWaitingNotes" placeholder="e.g. Expedited PO #9912 placed with Bosch Rexroth">
+                                    <div id="partAvailabilityNotice" class="mt-2 small d-none font-mono">
+                                        <span id="partAvailabilityText"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="modal-footer px-0 pb-0">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary" id="saveOrderBtn">Save Work Order</button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="saveOrderBtn">Save Work Order</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- Reschedule Work Order Modal -->
-    <div class="modal fade" id="rescheduleModal" tabindex="-1" aria-labelledby="rescheduleModalLabel" aria-hidden="true">
+    <!-- Modal 2: Transition to Waiting for Parts -->
+    <div class="modal fade" id="waitingModal" tabindex="-1" aria-labelledby="waitingModalTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="rescheduleModalLabel">Reschedule Work Order</h5>
+                    <h5 class="modal-title" id="waitingModalTitle">Hold Order: Waiting for Parts</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="rescheduleForm">
-                        <input type="hidden" id="rescheduleOrderId">
+                <form id="waitingForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="waitingOrderId">
+                        <p class="small text-muted mb-3" id="waitingOrderTitle"></p>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Target Order</label>
-                            <input type="text" class="form-control" id="rescheduleOrderDisplay" readonly>
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Original Date</label>
-                                <input type="text" class="form-control" id="rescheduleOriginalDate" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="rescheduleNewDate" class="form-label fw-bold">New Date *</label>
-                                <input type="date" class="form-control" id="rescheduleNewDate" required>
-                            </div>
+                            <label for="waitingReason" class="form-label">Parts Shortage Reason</label>
+                            <input type="text" id="waitingReason" class="form-control" placeholder="e.g. Hydraulic Filter HF-90 out of stock in warehouse" required>
                         </div>
 
                         <div class="mb-3">
-                            <label for="rescheduleReason" class="form-label fw-bold">Reason for Rescheduling *</label>
-                            <textarea class="form-control" id="rescheduleReason" rows="2" placeholder="e.g. Spare part delivery delayed / technician training" required></textarea>
+                            <label for="waitingExpectedDate" class="form-label">Expected Restock Date</label>
+                            <input type="date" id="waitingExpectedDate" class="form-control" required>
                         </div>
 
-                        <div class="modal-footer px-0 pb-0">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary" id="saveRescheduleBtn">Confirm Reschedule</button>
+                        <div class="mb-2">
+                            <label for="waitingNotes" class="form-label">Supplier / Dispatch Notes</label>
+                            <textarea id="waitingNotes" class="form-control" rows="2" placeholder="e.g. Purchase order PO-884 dispatched to Bosch Rexroth"></textarea>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Place on Hold</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap 5 Bundle JS -->
+    <!-- Modal 3: Resume Work Order (Ready to Resume) -->
+    <div class="modal fade" id="resumeModal" tabindex="-1" aria-labelledby="resumeModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resumeModalTitle">Resume Work Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="resumeForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="resumeOrderId">
+                        <p class="small text-muted mb-3" id="resumeOrderTitle"></p>
+                        <div class="p-3 bg-industrial-dark border border-industrial mb-3">
+                            <span class="d-block small text-muted font-mono mb-1">PART AVAILABILITY STATUS:</span>
+                            <div id="resumePartInfo" class="fw-bold font-mono"></div>
+                            <div id="resumeStockStatus" class="small mt-1 font-mono"></div>
+                        </div>
+                        <p class="small text-muted mb-0">
+                            Resuming this work order will transition status to <strong>In Progress</strong> and increment the assigned technician's active workload.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="confirmResumeBtn">Resume Repair</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Shared Utility Script -->
+    <!-- Shared Common Script -->
     <script src="../js/common.js"></script>
-    <!-- Page Logic Script -->
+    <!-- Page Specific Script -->
     <script src="../js/workorders.js"></script>
 
 </body>
