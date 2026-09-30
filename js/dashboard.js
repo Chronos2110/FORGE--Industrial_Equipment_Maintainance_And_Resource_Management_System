@@ -373,40 +373,57 @@ function techUpdateStatus(orderId, newStatus) {
 function loadOperatorDashboard() {
     var equipment = JSON.parse(localStorage.getItem("forge_equipment")) ||
                     JSON.parse(localStorage.getItem("iemrs_equipment")) || [];
+    var workorders = JSON.parse(localStorage.getItem("forge_workorders")) ||
+                     JSON.parse(localStorage.getItem("iemrs_workorders")) || [];
     var faults = JSON.parse(localStorage.getItem("forge_faults")) || [];
 
-    // Machine status cards
+    // KPIs
+    var opCount   = equipment.filter(function (e) { return e.status === "Operational"; }).length;
+    var downCount = equipment.filter(function (e) { return e.status === "Faulty" || e.status === "Maintenance"; }).length;
+    var openWOs   = workorders.filter(function (o) { return o.status !== "Completed" && o.status !== "Cancelled"; }).length;
+    var openFaultCount = faults.filter(function (f) { return f.status === "Open" || f.status === "Reviewing"; }).length;
+
+    setEl("opRunning",    opCount);
+    setEl("opDown",       downCount);
+    // Show open work orders count (more useful for operators than fault count which may be zero)
+    setEl("opOpenFaults", openWOs > 0 ? openWOs : openFaultCount);
+
+    // Machine status grid
     var grid = document.getElementById("operatorMachineGrid");
     if (grid) {
         grid.innerHTML = "";
-        equipment.forEach(function (eq) {
-            var dotClass = "operational";
-            if (eq.status === "Maintenance") dotClass = "maintenance";
-            else if (eq.status === "Faulty") dotClass = "faulty";
+        if (equipment.length === 0) {
+            grid.innerHTML = "<div class='col-12'><div class='empty-state'><div class='empty-state-icon'>🏭</div><h5>No Equipment Registered</h5><p>Equipment records will appear here once added.</p></div></div>";
+        } else {
+            equipment.forEach(function (eq) {
+                var dotClass = "operational";
+                if (eq.status === "Maintenance") dotClass = "maintenance";
+                else if (eq.status === "Faulty") dotClass = "faulty";
 
-            var col = document.createElement("div");
-            col.className = "col-md-4 col-sm-6";
-            col.innerHTML =
-                "<div class='operator-machine-card'>" +
-                "  <div class='d-flex align-items-center mb-1'>" +
-                "    <span class='op-status-dot " + dotClass + "'></span>" +
-                "    <span class='machine-name'>" + escapeHTML(eq.name) + "</span>" +
-                "  </div>" +
-                "  <div class='machine-loc'>" + escapeHTML(eq.location) + " — " + escapeHTML(eq.type) + "</div>" +
-                "  <div class='mt-2'><span class='badge-status " + (eq.status === "Operational" ? "badge-operational" : eq.status === "Maintenance" ? "badge-maintenance" : "badge-faulty") + "'>" + escapeHTML(eq.status) + "</span></div>" +
-                "</div>";
-            grid.appendChild(col);
-        });
+                var col = document.createElement("div");
+                col.className = "col-md-4 col-sm-6";
+                col.innerHTML =
+                    "<div class='operator-machine-card'>" +
+                    "  <div class='d-flex align-items-center mb-1'>" +
+                    "    <span class='op-status-dot " + dotClass + "'></span>" +
+                    "    <span class='machine-name'>" + escapeHTML(eq.name) + "</span>" +
+                    "  </div>" +
+                    "  <div class='machine-loc'>" + escapeHTML(eq.location || "—") + " — " + escapeHTML(eq.type || "—") + "</div>" +
+                    "  <div class='mt-2'><span class='badge-status " + (eq.status === "Operational" ? "badge-operational" : eq.status === "Maintenance" ? "badge-maintenance" : "badge-faulty") + "'>" + escapeHTML(eq.status) + "</span></div>" +
+                    "</div>";
+                grid.appendChild(col);
+            });
+        }
     }
 
-    // My submitted faults
+    // Fault / Work Order table — show open work orders if no forge_faults exist
     var faultTbody = document.getElementById("operatorFaultBody");
     if (faultTbody) {
         faultTbody.innerHTML = "";
+
+        // Prefer forge_faults; if none, fall back to open work orders
         var openFaults = faults.filter(function (f) { return f.status !== "Closed"; });
-        if (openFaults.length === 0) {
-            faultTbody.innerHTML = "<tr><td colspan='4' class='text-center text-muted py-3' style='font-size:0.85rem;'>No active fault reports submitted.</td></tr>";
-        } else {
+        if (openFaults.length > 0) {
             openFaults.forEach(function (f) {
                 var tr = document.createElement("tr");
                 var stClass = "badge-fault-open";
@@ -414,21 +431,36 @@ function loadOperatorDashboard() {
                 else if (f.status === "Reviewing") stClass = "badge-fault-reviewing";
                 tr.innerHTML =
                     "<td><strong>" + escapeHTML(f.id) + "</strong></td>" +
-                    "<td>" + escapeHTML(f.equipmentName || f.equipmentId) + "</td>" +
-                    "<td><span class='fault-priority-" + (f.priority || "medium").toLowerCase() + "'>" + escapeHTML(f.priority) + "</span></td>" +
+                    "<td>" + escapeHTML(f.equipmentName || f.equipmentId || "—") + "</td>" +
+                    "<td><span class='badge-priority badge-" + (f.priority || "medium").toLowerCase() + "'>" + escapeHTML(f.priority || "—") + "</span></td>" +
                     "<td><span class='badge-status " + stClass + "'>" + escapeHTML(f.status) + "</span>" +
                     (f.workOrderId ? " <small class='text-muted'>→ " + escapeHTML(f.workOrderId) + "</small>" : "") + "</td>";
                 faultTbody.appendChild(tr);
             });
+        } else {
+            // Show open work orders instead (useful for operator who can see WO status)
+            var openOrders = workorders.filter(function (o) { return o.status !== "Completed" && o.status !== "Cancelled"; });
+            var count = Math.min(openOrders.length, 6);
+            if (count === 0) {
+                faultTbody.innerHTML = "<tr><td colspan='4' class='text-center text-muted py-3' style='font-size:0.85rem;'>No active work orders or fault reports.</td></tr>";
+            } else {
+                for (var i = 0; i < count; i++) {
+                    var o = openOrders[i];
+                    var tr = document.createElement("tr");
+                    var sc = statusBadgeClass(o.status);
+                    var priBadge = "badge-low";
+                    if (o.priority === "High") priBadge = "badge-high";
+                    else if (o.priority === "Medium") priBadge = "badge-medium";
+                    tr.innerHTML =
+                        "<td><strong>" + escapeHTML(o.id) + "</strong></td>" +
+                        "<td>" + escapeHTML(o.equipment || "—") + "</td>" +
+                        "<td><span class='badge-priority " + priBadge + "'>" + escapeHTML(o.priority || "—") + "</span></td>" +
+                        "<td><span class='badge-status " + sc + "'>" + escapeHTML(o.status) + "</span></td>";
+                    faultTbody.appendChild(tr);
+                }
+            }
         }
     }
-
-    // KPIs
-    var opCount  = equipment.filter(function (e) { return e.status === "Operational"; }).length;
-    var downCount = equipment.filter(function (e) { return e.status === "Faulty" || e.status === "Maintenance"; }).length;
-    setEl("opRunning", opCount);
-    setEl("opDown",    downCount);
-    setEl("opOpenFaults", faults.filter(function (f) { return f.status === "Open" || f.status === "Reviewing"; }).length);
 }
 
 // ==========================================================================
