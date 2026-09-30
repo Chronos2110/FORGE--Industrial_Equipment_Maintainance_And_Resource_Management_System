@@ -14,10 +14,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // 1. Calculate Summary Cards
 function calculateSummaryCards() {
-    let equipment = JSON.parse(localStorage.getItem("iemrs_equipment")) || [];
-    let maintenance = JSON.parse(localStorage.getItem("iemrs_maintenance")) || [];
-    let workorders = JSON.parse(localStorage.getItem("iemrs_workorders")) || [];
-    let inventory = JSON.parse(localStorage.getItem("iemrs_inventory")) || [];
+    let equipment = JSON.parse(localStorage.getItem("forge_equipment") || localStorage.getItem("iemrs_equipment")) || [];
+    let maintenance = JSON.parse(localStorage.getItem("forge_maintenance") || localStorage.getItem("iemrs_maintenance")) || [];
+    let workorders = JSON.parse(localStorage.getItem("forge_workorders") || localStorage.getItem("iemrs_workorders")) || [];
+    let inventory = JSON.parse(localStorage.getItem("forge_inventory") || localStorage.getItem("iemrs_inventory")) || [];
 
     // Total Equipment
     document.getElementById("analyticTotalEq").textContent = equipment.length;
@@ -53,7 +53,7 @@ function calculateSummaryCards() {
 
 // 2. Calculate Equipment Health Progress Bars
 function calculateEquipmentHealth() {
-    let equipment = JSON.parse(localStorage.getItem("iemrs_equipment")) || [];
+    let equipment = JSON.parse(localStorage.getItem("forge_equipment") || localStorage.getItem("iemrs_equipment")) || [];
     let total = equipment.length;
 
     let operational = 0;
@@ -90,7 +90,7 @@ function calculateEquipmentHealth() {
 
 // 3. Calculate Maintenance Execution Breakdown
 function calculateMaintenanceEfficiency() {
-    let maintenance = JSON.parse(localStorage.getItem("iemrs_maintenance")) || [];
+    let maintenance = JSON.parse(localStorage.getItem("forge_maintenance") || localStorage.getItem("iemrs_maintenance")) || [];
     let total = maintenance.length;
 
     let completed = 0;
@@ -125,7 +125,7 @@ function calculateMaintenanceEfficiency() {
 
 // 4. Render Resource Usage Table
 function renderResourceUsageTable() {
-    let inventory = JSON.parse(localStorage.getItem("iemrs_inventory")) || [];
+    let inventory = JSON.parse(localStorage.getItem("forge_inventory") || localStorage.getItem("iemrs_inventory")) || [];
     let tbody = document.getElementById("resourceUsageBody");
 
     tbody.innerHTML = "";
@@ -159,7 +159,7 @@ function renderResourceUsageTable() {
 
 // 5. Render Recent Activities
 function renderRecentActivities() {
-    let activities = JSON.parse(localStorage.getItem("iemrs_activities")) || [];
+    let activities = JSON.parse(localStorage.getItem("forge_activities") || localStorage.getItem("iemrs_activities")) || [];
     let tbody = document.getElementById("analyticsActivityBody");
 
     tbody.innerHTML = "";

@@ -79,8 +79,8 @@ function filterAndRenderTable() {
         let matchesQuery =
             tech.id.toLowerCase().includes(query) ||
             tech.name.toLowerCase().includes(query) ||
-            tech.skill.toLowerCase().includes(query) ||
-            tech.certification.toLowerCase().includes(query);
+            (tech.skill || tech.specialization || "").toLowerCase().includes(query) ||
+            (tech.certification || tech.certifications || "").toLowerCase().includes(query);
 
         let activeOrders = calculateActiveWorkload(tech.name);
         let dynamicAvail = (tech.availability === "Unavailable" || tech.availability === "On Leave")
@@ -154,7 +154,7 @@ function resetForm() {
     document.getElementById("workforceForm").reset();
     document.getElementById("editIndex").value = "-1";
     document.getElementById("techId").removeAttribute("readonly");
-    document.getElementById("techModalLabel").textContent = "Register Technician";
+    document.getElementById("workforceModalLabel").textContent = "Register Technician";
 }
 
 // Form Submit Handler
@@ -238,7 +238,7 @@ function editTechnician(id) {
     document.getElementById("techAvailability").value = t.availability;
     document.getElementById("techWorkload").value = t.workload || "";
 
-    document.getElementById("techModalLabel").textContent = "Edit Technician (" + t.id + ")";
+    document.getElementById("workforceModalLabel").textContent = "Edit Technician (" + t.id + ")";
     workforceModalInstance.show();
 }
 

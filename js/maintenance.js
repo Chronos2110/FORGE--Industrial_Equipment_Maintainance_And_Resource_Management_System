@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let modalElement = document.getElementById("maintenanceModal");
     maintenanceModalInstance = new bootstrap.Modal(modalElement);
 
-    let reschedEl = document.getElementById("maintRescheduleModal");
+    let reschedEl = document.getElementById("rescheduleModal");
     maintRescheduleModalInstance = new bootstrap.Modal(reschedEl);
 
     // 2. Load data from localStorage
@@ -31,10 +31,9 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("maintenanceForm").addEventListener("submit", handleFormSubmit);
 
     // 6. Reschedule form submit
-    document.getElementById("maintRescheduleForm").addEventListener("submit", handleRescheduleSubmit);
+    document.getElementById("rescheduleForm").addEventListener("submit", handleRescheduleSubmit);
 
-    // 7. Auto-Assign button
-    document.getElementById("btnAutoAssignMaint").addEventListener("click", triggerAutoAssign);
+    // 7. Auto-Assign button is wired via inline onclick on the HTML button
 });
 
 // Load records from localStorage

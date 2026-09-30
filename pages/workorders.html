@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -177,7 +177,7 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="workOrderModalLabel">File Maintenance Work Order</h5>
+                    <h5 class="modal-title" id="orderModalLabel">File Maintenance Work Order</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="workOrderForm">
@@ -185,40 +185,40 @@
                         <input type="hidden" id="editIndex" value="-1">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label for="woId" class="form-label">Order Identifier</label>
-                                <input type="text" id="woId" class="form-control font-mono" placeholder="WO-307" required>
+                                <label for="orderId" class="form-label">Order Identifier</label>
+                                <input type="text" id="orderId" class="form-control font-mono" placeholder="WO-307" required>
                             </div>
                             <div class="col-md-8">
-                                <label for="woEquipment" class="form-label">Impacted Machinery</label>
-                                <select id="woEquipment" class="form-select" required>
+                                <label for="orderEquipment" class="form-label">Impacted Machinery</label>
+                                <select id="orderEquipment" class="form-select" required>
                                     <option value="">Select Equipment</option>
-                                    <!-- Populated dynamically from iemrs_equipment -->
+                                    <!-- Populated dynamically from forge_equipment -->
                                 </select>
                             </div>
 
                             <div class="col-12">
-                                <label for="woProblem" class="form-label">Fault / Problem Diagnostics</label>
-                                <textarea id="woProblem" class="form-control" rows="2" placeholder="Describe the symptom, abnormal vibration, fluid leak, or electrical fault..." required></textarea>
+                                <label for="orderProblem" class="form-label">Fault / Problem Diagnostics</label>
+                                <textarea id="orderProblem" class="form-control" rows="2" placeholder="Describe the symptom, abnormal vibration, fluid leak, or electrical fault..." required></textarea>
                             </div>
 
                             <!-- Automatic Technician Skill Assignment Engine -->
                             <div class="col-md-7">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label for="woTechnician" class="form-label mb-0">Assigned Technician</label>
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 font-mono" id="btnAutoAssign" style="font-size:0.7rem;">
+                                    <label for="orderTechnician" class="form-label mb-0">Assigned Technician</label>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 font-mono" id="btnAutoAssignWO" style="font-size:0.7rem;">
                                         ⚡ Auto-Match Skill
                                     </button>
                                 </div>
-                                <select id="woTechnician" class="form-select" required>
+                                <select id="orderTechnician" class="form-select" required>
                                     <option value="">Select Technician</option>
-                                    <!-- Populated dynamically from iemrs_workforce -->
+                                    <!-- Populated dynamically from forge_technicians -->
                                 </select>
                                 <div id="autoAssignFeedback" class="small mt-1 text-gold d-none font-mono" style="font-size:0.75rem;"></div>
                             </div>
 
                             <div class="col-md-5">
-                                <label for="woPriority" class="form-label">Incident Priority</label>
-                                <select id="woPriority" class="form-select" required>
+                                <label for="orderPriority" class="form-label">Incident Priority</label>
+                                <select id="orderPriority" class="form-select" required>
                                     <option value="High">High (Production Stoppage)</option>
                                     <option value="Medium" selected>Medium (Degraded Performance)</option>
                                     <option value="Low">Low (Minor Inspection)</option>
@@ -226,13 +226,13 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label for="woDate" class="form-label">Scheduled Execution Date</label>
-                                <input type="date" id="woDate" class="form-control" required>
+                                <label for="orderDate" class="form-label">Scheduled Execution Date</label>
+                                <input type="date" id="orderDate" class="form-control" required>
                             </div>
 
                             <div class="col-md-6">
-                                <label for="woStatus" class="form-label">Lifecycle Status</label>
-                                <select id="woStatus" class="form-select" required>
+                                <label for="orderStatus" class="form-label">Lifecycle Status</label>
+                                <select id="orderStatus" class="form-select" required>
                                     <option value="Scheduled">Scheduled</option>
                                     <option value="Assigned">Assigned</option>
                                     <option value="In Progress">In Progress</option>
@@ -251,15 +251,15 @@
                                     </div>
                                     <div class="row g-2">
                                         <div class="col-md-8">
-                                            <label for="woRequiredPart" class="form-label">Required Spare Part (Optional)</label>
-                                            <select id="woRequiredPart" class="form-select">
+                                            <label for="orderRequiredPart" class="form-label">Required Spare Part (Optional)</label>
+                                            <select id="orderRequiredPart" class="form-select">
                                                 <option value="">No parts needed for this service</option>
-                                                <!-- Populated dynamically from iemrs_inventory -->
+                                                <!-- Populated dynamically from forge_inventory -->
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <label for="woRequiredQuantity" class="form-label">Quantity</label>
-                                            <input type="number" id="woRequiredQuantity" class="form-control font-mono" min="0" value="0">
+                                            <label for="orderRequiredQty" class="form-label">Quantity</label>
+                                            <input type="number" id="orderRequiredQty" class="form-control font-mono" min="0" value="0">
                                         </div>
                                     </div>
                                     <div id="partAvailabilityNotice" class="mt-2 small d-none font-mono">
@@ -339,6 +339,43 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary" id="confirmResumeBtn">Resume Repair</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Reschedule Work Order -->
+    <div class="modal fade" id="rescheduleModal" tabindex="-1" aria-labelledby="rescheduleModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rescheduleModalTitle">Reschedule Work Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="rescheduleForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="rescheduleOrderId">
+                        <div class="mb-3">
+                            <label for="rescheduleOrderDisplay" class="form-label">Work Order</label>
+                            <input type="text" id="rescheduleOrderDisplay" class="form-control font-mono" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="rescheduleOriginalDate" class="form-label">Original Scheduled Date</label>
+                            <input type="text" id="rescheduleOriginalDate" class="form-control font-mono" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="rescheduleNewDate" class="form-label">New Execution Date</label>
+                            <input type="date" id="rescheduleNewDate" class="form-control" required>
+                        </div>
+                        <div class="mb-2">
+                            <label for="rescheduleReason" class="form-label">Reason for Rescheduling</label>
+                            <textarea id="rescheduleReason" class="form-control" rows="2" placeholder="e.g. Technician leave, equipment access blocked, awaiting safety clearance..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Confirm Reschedule</button>
                     </div>
                 </form>
             </div>

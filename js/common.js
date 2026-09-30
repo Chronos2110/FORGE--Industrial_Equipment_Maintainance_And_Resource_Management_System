@@ -134,8 +134,8 @@ function initCommon() {
 // ==========================================================================
 var ROLE_NAV_ACCESS = {
     "Administrator": ["dashboard","equipment","maintenance","workorders","workforce","inventory","analytics","faults"],
-    "Technician":    ["dashboard","equipment","maintenance","workorders","faults"],
-    "Operator":      ["dashboard","equipment","faults"]
+    "Technician":    ["dashboard","equipment","maintenance","workorders","inventory","faults"],
+    "Operator":      ["dashboard","equipment","maintenance","workorders","inventory","faults"]
 };
 
 function buildRoleNav(role) {
@@ -174,9 +174,9 @@ function buildRoleNav(role) {
 var PAGE_ROLE_RULES = {
     "analytics.html":  ["Administrator"],
     "workforce.html":  ["Administrator"],
-    "inventory.html":  ["Administrator", "Technician"],
-    "workorders.html": ["Administrator", "Technician"],
-    "maintenance.html":["Administrator", "Technician"]
+    "inventory.html":  ["Administrator", "Technician", "Operator"],
+    "workorders.html": ["Administrator", "Technician", "Operator"],
+    "maintenance.html":["Administrator", "Technician", "Operator"]
 };
 
 function enforceRouteGuard() {

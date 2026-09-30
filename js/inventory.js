@@ -5,11 +5,16 @@
 
 let inventoryList = [];
 let inventoryModalInstance = null;
+let restockModalInstance = null;
 
 document.addEventListener("DOMContentLoaded", function () {
     // 1. Initialize modal instance
     let modalEl = document.getElementById("inventoryModal");
     inventoryModalInstance = new bootstrap.Modal(modalEl);
+
+    // 1b. Initialize restock modal
+    let restockEl = document.getElementById("restockModal");
+    restockModalInstance = new bootstrap.Modal(restockEl);
 
     // 2. Load data
     loadInventoryData();
@@ -27,6 +32,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 5. Form submit
     document.getElementById("inventoryForm").addEventListener("submit", handleFormSubmit);
+
+    // 6. Restock form submit
+    document.getElementById("restockForm").addEventListener("submit", handleRestockSubmit);
 });
 
 // Load records from localStorage
@@ -155,6 +163,7 @@ function filterAndRenderTable() {
             "<td class='text-center'>" +
             "  <div class='btn-action-group justify-content-center'>" +
             "    <button type='button' class='btn-action-edit' onclick='editPart(\"" + escapeHTML(p.id) + "\")'>Edit</button>" +
+            "    <button type='button' class='btn-action-resume' onclick='openRestockModal(\"" + escapeHTML(p.id) + "\")'> Restock</button>" +
             "    <button type='button' class='btn-action-delete' onclick='deletePart(\"" + escapeHTML(p.id) + "\")'>Delete</button>" +
             "  </div>" +
             "</td>";
@@ -170,7 +179,7 @@ function resetForm() {
     document.getElementById("inventoryForm").reset();
     document.getElementById("editIndex").value = "-1";
     document.getElementById("partId").removeAttribute("readonly");
-    document.getElementById("partModalLabel").textContent = "Add Spare Part";
+    document.getElementById("inventoryModalLabel").textContent = "Add Spare Part";
 }
 
 // Form Submit Handler
@@ -265,7 +274,7 @@ function editPart(id) {
     document.getElementById("partQuantity").value = p.quantity;
     document.getElementById("partMinStock").value = p.minStock;
 
-    document.getElementById("partModalLabel").textContent = "Edit Spare Part (" + p.id + ")";
+    document.getElementById("inventoryModalLabel").textContent = "Edit Spare Part (" + p.id + ")";
     inventoryModalInstance.show();
 }
 
@@ -283,6 +292,63 @@ function deletePart(id) {
     }
 
     showAlert("Spare part " + id + " removed.", "danger");
+    filterAndRenderTable();
+    updateKpiCards();
+}
+
+// Open Restock Modal
+function openRestockModal(id) {
+    let part = inventoryList.find(p => p.id === id);
+    if (!part) return;
+
+    document.getElementById("restockPartId").value = part.id;
+    document.getElementById("restockPartName").value = part.name + " (Current: " + part.quantity + " units)";
+    document.getElementById("restockQuantity").value = 5;
+
+    restockModalInstance.show();
+}
+
+// Handle Restock Form Submit
+function handleRestockSubmit(event) {
+    event.preventDefault();
+
+    let partId = document.getElementById("restockPartId").value;
+    let addQty = parseInt(document.getElementById("restockQuantity").value);
+
+    if (!partId || isNaN(addQty) || addQty < 1) {
+        showAlert("Please enter a valid quantity.", "danger");
+        return;
+    }
+
+    let index = -1;
+    for (let i = 0; i < inventoryList.length; i++) {
+        if (inventoryList[i].id === partId) { index = i; break; }
+    }
+
+    if (index === -1) {
+        showAlert("Part not found.", "danger");
+        return;
+    }
+
+    let part = inventoryList[index];
+    let prevQty = part.quantity;
+    part.quantity = prevQty + addQty;
+
+    localStorage.setItem("forge_inventory", JSON.stringify(inventoryList));
+
+    // Check if any work orders can now be resumed
+    let workorders = JSON.parse(localStorage.getItem("forge_workorders") || localStorage.getItem("iemrs_workorders")) || [];
+    let waitingForThis = workorders.filter(o => o.status === "Waiting for Parts" && o.requiredPart === part.name);
+
+    if (waitingForThis.length > 0 && part.quantity >= waitingForThis.reduce((s, o) => s + (o.requiredQuantity || 1), 0)) {
+        showAlert("Stock replenished for " + part.name + ". " + waitingForThis.length + " work order(s) can now be resumed.", "info");
+        logActivity(part.name, "Restocked +" + addQty + " units (Pending WOs ready to resume)", "badge-available");
+    } else {
+        showAlert(part.name + " restocked: +" + addQty + " units (Total: " + part.quantity + " units).", "success");
+        logActivity(part.name, "Restocked +" + addQty + " units (Total stock: " + part.quantity + ")", "badge-available");
+    }
+
+    restockModalInstance.hide();
     filterAndRenderTable();
     updateKpiCards();
 }
