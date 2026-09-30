@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -83,6 +83,11 @@
                         <a href="workorders.html" class="btn btn-sm btn-primary">+ Create Work Order</a>
                     </div>
                 </div>
+
+                <!-- Role View Panels container -->
+
+                <!-- ========== PANEL: ADMINISTRATOR ========== -->
+                <div id="panelAdmin" class="role-view-panel">
 
                 <!-- Primary Operational Metrics (Restrained Industrial Numbers) -->
                 <div class="row g-3 mb-4">
@@ -246,6 +251,133 @@
                     </div>
 
                 </div>
+                <!-- ========== END PANEL: ADMINISTRATOR ========== -->
+
+                <!-- ========== PANEL: TECHNICIAN ========== -->
+                <div id="panelTechnician" class="role-view-panel">
+
+                    <!-- Tech KPI Row -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-4">
+                            <div class="dashboard-card card-amber">
+                                <h5>My Active Jobs</h5>
+                                <h2 id="techOpenTickets" class="text-gold">0</h2>
+                                <span class="card-hint">Open &amp; In Progress work orders</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="dashboard-card card-red">
+                                <h5>Waiting for Parts</h5>
+                                <h2 id="techWaitingParts">0</h2>
+                                <span class="card-hint text-warning">Blocked, awaiting restock</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="dashboard-card card-green">
+                                <h5>Due Today</h5>
+                                <h2 id="techTodaySchedule">0</h2>
+                                <span class="card-hint text-success">Scheduled for today</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assigned Task List -->
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h4>My Assigned Work Orders</h4>
+                            <a href="workorders.html" class="btn btn-sm btn-outline-primary">View All &rarr;</a>
+                        </div>
+                        <div id="techTaskList">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🔧</div>
+                                <h5>No Assigned Work Orders</h5>
+                                <p>You have no active assignments at this time.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- ========== END PANEL: TECHNICIAN ========== -->
+
+                <!-- ========== PANEL: OPERATOR ========== -->
+                <div id="panelOperator" class="role-view-panel">
+
+                    <!-- Operator KPI Row -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-4">
+                            <div class="dashboard-card card-green">
+                                <h5>Machines Running</h5>
+                                <h2 id="opRunning">0</h2>
+                                <span class="card-hint text-success">Operational status</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="dashboard-card card-red">
+                                <h5>Machines Down</h5>
+                                <h2 id="opDown">0</h2>
+                                <span class="card-hint text-danger">Faulty or under maintenance</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="dashboard-card card-amber">
+                                <h5>Open Faults</h5>
+                                <h2 id="opOpenFaults">0</h2>
+                                <span class="card-hint text-warning">Unresolved fault reports</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Report a Fault CTA -->
+                    <div class="operator-fault-cta mb-4">
+                        <div>
+                            <h5>Report a Machine Fault</h5>
+                            <p>Spotted an abnormality? Log it immediately so a technician can be dispatched.</p>
+                        </div>
+                        <a href="workorders.html" class="btn btn-primary">&plus; Report Fault</a>
+                    </div>
+
+                    <!-- Plant Floor Machine Status Grid -->
+                    <div class="dashboard-section mb-4">
+                        <div class="section-header">
+                            <h4>Plant Floor Machine Status</h4>
+                            <a href="equipment.html" class="btn btn-sm btn-outline-primary">Asset Registry &rarr;</a>
+                        </div>
+                        <div class="row g-3" id="operatorMachineGrid">
+                            <div class="col-12">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🏭</div>
+                                    <h5>No Equipment Registered</h5>
+                                    <p>Equipment records will appear here once added.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- My Fault Reports -->
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h4>Recent Fault Reports</h4>
+                            <a href="workorders.html" class="btn btn-sm btn-outline-primary">Dispatch Console &rarr;</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>WO / Fault ID</th>
+                                        <th>Equipment</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="operatorFaultBody">
+                                    <!-- Populated dynamically by dashboard.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- ========== END PANEL: OPERATOR ========== -->
 
             </div>
 
