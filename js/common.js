@@ -23,6 +23,12 @@ document.addEventListener("DOMContentLoaded", function () {
     initControlDock();
     initCommandPalette();
     initAccessibilityHardening();
+    initForgeSync();
+    initAssetDossier();
+    initAuditDrawer();
+    initKeyboardShortcutsModal();
+    initJobTravelerModal();
+    initUniversalDossierTriggers();
 });
 
 // ==========================================================================
@@ -352,6 +358,10 @@ function logActivity(target, action, badgeClass) {
     });
     if (legacyActivities.length > 20) { legacyActivities = legacyActivities.slice(0, 20); }
     localStorage.setItem("iemrs_activities", JSON.stringify(legacyActivities));
+
+    if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+        ForgeSync.broadcast("activity", "LOG", { target: target, action: action });
+    }
 }
 
 // ==========================================================================
@@ -1294,6 +1304,38 @@ function initTopbarShell() {
         topbarRight.insertBefore(resetBtn, topbarRight.firstChild);
     }
 
+    // E. Shift Handover & ISO-55000 Audit Log Trigger
+    if (topbarRight && !document.getElementById("topbarShiftLogBtn")) {
+        var shiftLogBtn = document.createElement("button");
+        shiftLogBtn.className = "btn btn-sm btn-outline-secondary font-mono d-none d-md-inline-flex align-items-center gap-1";
+        shiftLogBtn.id = "topbarShiftLogBtn";
+        shiftLogBtn.setAttribute("type", "button");
+        shiftLogBtn.setAttribute("title", "Plant Shift Handover & ISO-55000 Audit Log");
+        shiftLogBtn.setAttribute("aria-label", "Plant Shift Log");
+        shiftLogBtn.style.cssText = "font-size: 0.72rem; padding: 3px 8px; border-color: var(--border-color); color: var(--text-muted);";
+        shiftLogBtn.innerHTML = '<span aria-hidden="true">📋</span> Shift Log';
+        shiftLogBtn.addEventListener("click", function () {
+            openAuditDrawer();
+        });
+        topbarRight.insertBefore(shiftLogBtn, topbarRight.firstChild);
+    }
+
+    // F. Keyboard Shortcuts Guide Trigger (?)
+    if (topbarRight && !document.getElementById("topbarShortcutsBtn")) {
+        var shortcutsBtn = document.createElement("button");
+        shortcutsBtn.className = "btn btn-sm btn-outline-secondary font-mono d-none d-lg-inline-flex align-items-center justify-content-center";
+        shortcutsBtn.id = "topbarShortcutsBtn";
+        shortcutsBtn.setAttribute("type", "button");
+        shortcutsBtn.setAttribute("title", "Keyboard Shortcuts Reference (?)");
+        shortcutsBtn.setAttribute("aria-label", "Keyboard Shortcuts");
+        shortcutsBtn.style.cssText = "font-size: 0.75rem; padding: 3px 7px; border-color: var(--border-color); color: var(--text-muted); font-weight:700;";
+        shortcutsBtn.innerHTML = '?';
+        shortcutsBtn.addEventListener("click", function () {
+            openKeyboardShortcutsModal();
+        });
+        topbarRight.insertBefore(shortcutsBtn, topbarRight.firstChild);
+    }
+
     var roleBadge = topbar.querySelector(".role-badge");
     if (roleBadge) {
         var role = getActiveRole();
@@ -1700,6 +1742,20 @@ function initCommandPalette() {
             return;
         }
 
+        // Global Escape closes open drawers
+        if (e.key === "Escape") {
+            closeAssetDossier();
+            closeAuditDrawer();
+            return;
+        }
+
+        // Global '?' shortcut for cheat-sheet modal
+        if (e.key === "?" || (e.shiftKey && e.key === "?") || (e.key === "/" && e.shiftKey)) {
+            e.preventDefault();
+            openKeyboardShortcutsModal();
+            return;
+        }
+
         var key = e.key.toLowerCase();
         if (key === "[") {
             e.preventDefault();
@@ -1872,6 +1928,45 @@ function getCommandPaletteData() {
         action: function () {
             closeCommandPalette();
             resetDemoData(false);
+        }
+    });
+
+    // ISO-55000 Audit Log Action
+    actionItems.push({
+        category: "System Actions",
+        icon: "📋",
+        title: "View Shift Handover & ISO-55000 Audit Log",
+        meta: "SYSTEM // AUDIT TRAIL",
+        action: function () {
+            closeCommandPalette();
+            openAuditDrawer();
+        }
+    });
+
+    // Keyboard Shortcuts Cheat-Sheet Action
+    actionItems.push({
+        category: "System Actions",
+        icon: "?",
+        title: "Keyboard Shortcuts Reference Guide (?)",
+        meta: "SYSTEM // ERGONOMICS",
+        action: function () {
+            closeCommandPalette();
+            openKeyboardShortcutsModal();
+        }
+    });
+
+    // Equipment 360 Dossier Action
+    actionItems.push({
+        category: "System Actions",
+        icon: "⚙",
+        title: "Inspect Equipment 360° Technical Dossier",
+        meta: "ENGINEERING // RELATIONAL",
+        action: function () {
+            closeCommandPalette();
+            var eqList = getEquipmentList();
+            if (eqList.length > 0) {
+                openAssetDossier(eqList[0].id);
+            }
         }
     });
 
@@ -2061,5 +2156,1081 @@ function initAccessibilityHardening() {
         }
     });
 }
+
+// ==========================================================================
+// MILESTONE 5: ENTERPRISE DATA ADAPTER & REAL-TIME TELEMETRY SYNC
+// ==========================================================================
+
+/**
+ * ForgeDataService: Centralized CRUD adapter for industrial entities.
+ * Default mode: "LOCAL" (localStorage with 3NF relational integrity).
+ * REST-ready hook points for future fetch() API calls.
+ */
+var ForgeDataService = {
+    mode: "LOCAL",
+    apiBaseUrl: "/api/v1",
+
+    getEntityKey: function (entity) {
+        var map = {
+            equipment: "forge_equipment",
+            workorders: "forge_workorders",
+            maintenance: "forge_maintenance",
+            technicians: "forge_technicians",
+            workforce: "forge_technicians",
+            inventory: "forge_inventory",
+            faults: "forge_faults",
+            activity: "forge_activity"
+        };
+        return map[entity] || ("forge_" + entity);
+    },
+
+    list: function (entity, query) {
+        if (this.mode === "API") {
+            // Hook point: return fetch(this.apiBaseUrl + "/" + entity).then(r => r.json());
+        }
+        var key = this.getEntityKey(entity);
+        var data = safeGetJSON(key, []);
+        if (query && typeof query === "object") {
+            return data.filter(function (item) {
+                for (var prop in query) {
+                    if (item[prop] !== query[prop]) return false;
+                }
+                return true;
+            });
+        }
+        return data;
+    },
+
+    get: function (entity, id) {
+        if (this.mode === "API") {
+            // Hook point: return fetch(this.apiBaseUrl + "/" + entity + "/" + id).then(r => r.json());
+        }
+        var items = this.list(entity);
+        var needle = String(id).toLowerCase().trim();
+        for (var i = 0; i < items.length; i++) {
+            var it = items[i];
+            if ((it.id && String(it.id).toLowerCase() === needle) ||
+                (it.name && String(it.name).toLowerCase() === needle) ||
+                (it.partName && String(it.partName).toLowerCase() === needle)) {
+                return it;
+            }
+        }
+        return null;
+    },
+
+    save: function (entity, item, isNew) {
+        if (this.mode === "API") {
+            // Hook point: return fetch(...);
+        }
+        var key = this.getEntityKey(entity);
+        var items = this.list(entity);
+        var action = isNew ? "CREATE" : "UPDATE";
+        var existingIdx = -1;
+
+        if (item.id) {
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].id === item.id) {
+                    existingIdx = i;
+                    break;
+                }
+            }
+        }
+
+        if (existingIdx !== -1) {
+            items[existingIdx] = Object.assign({}, items[existingIdx], item);
+            action = "UPDATE";
+        } else {
+            items.unshift(item);
+            action = "CREATE";
+        }
+
+        safeSetJSON(key, items);
+        syncLegacyKey(entity, items);
+        ForgeSync.broadcast(entity, action, { id: item.id });
+        updateDockAlertsCount();
+        return item;
+    },
+
+    remove: function (entity, id) {
+        if (this.mode === "API") {
+            // Hook point: return fetch(...);
+        }
+        var key = this.getEntityKey(entity);
+        var items = this.list(entity);
+        var filtered = items.filter(function (it) { return it.id !== id; });
+        safeSetJSON(key, filtered);
+        syncLegacyKey(entity, filtered);
+        ForgeSync.broadcast(entity, "DELETE", { id: id });
+        updateDockAlertsCount();
+        return true;
+    },
+
+    logActivity: function (target, action, badgeClass) {
+        logActivity(target, action, badgeClass);
+    }
+};
+
+function syncLegacyKey(entity, data) {
+    var legacyMap = {
+        equipment: "iemrs_equipment",
+        workorders: "iemrs_workorders",
+        maintenance: "iemrs_maintenance",
+        technicians: "iemrs_workforce",
+        workforce: "iemrs_workforce",
+        inventory: "iemrs_inventory",
+        activity: "iemrs_activities"
+    };
+    var legKey = legacyMap[entity];
+    if (legKey) {
+        safeSetJSON(legKey, data);
+    }
+}
+
+/**
+ * ForgeSync: Live multi-tab synchronization via BroadcastChannel
+ * with storage event fallback for cross-terminal state propagation.
+ */
+var ForgeSync = (function () {
+    var channel = null;
+    var channelName = "forge_telemetry_sync";
+    var subscribers = [];
+
+    function init() {
+        if (typeof window.BroadcastChannel !== "undefined") {
+            try {
+                channel = new BroadcastChannel(channelName);
+                channel.onmessage = function (event) {
+                    handleSyncMessage(event.data);
+                };
+            } catch (e) {
+                console.warn("[ForgeSync] BroadcastChannel unavailable, using storage fallback:", e);
+            }
+        }
+
+        window.addEventListener("storage", function (e) {
+            if (e.key && (e.key.indexOf("forge_") === 0 || e.key.indexOf("iemrs_") === 0)) {
+                var cleanEntity = e.key.replace("forge_", "").replace("iemrs_", "");
+                handleSyncMessage({
+                    type: "MUTATION",
+                    entity: cleanEntity,
+                    action: "STORAGE_SYNC",
+                    timestamp: Date.now()
+                });
+            }
+        });
+    }
+
+    function broadcast(entity, action, meta) {
+        var payload = {
+            type: "MUTATION",
+            entity: entity,
+            action: action || "UPDATE",
+            meta: meta || {},
+            timestamp: Date.now()
+        };
+
+        if (channel) {
+            try {
+                channel.postMessage(payload);
+            } catch (err) {
+                console.warn("[ForgeSync] BroadcastChannel postMessage failed:", err);
+            }
+        }
+    }
+
+    function handleSyncMessage(data) {
+        if (!data || data.type !== "MUTATION") return;
+
+        // 1. Notify external subscribers
+        for (var i = 0; i < subscribers.length; i++) {
+            try {
+                subscribers[i](data);
+            } catch (err) {
+                console.error("[ForgeSync] Subscriber error:", err);
+            }
+        }
+
+        // 2. Refresh dock alerts count
+        updateDockAlertsCount();
+
+        // 3. Show non-intrusive live sync toast
+        var entityName = (data.entity || "SYSTEM").toUpperCase();
+        var actionName = (data.action || "SYNCED").toUpperCase();
+        showSyncToast(entityName + " " + actionName + " // Live Multi-Terminal Sync");
+
+        // 4. Trigger auto-refresh of active module table or dashboard
+        triggerModuleAutoRefresh(data.entity);
+    }
+
+    function subscribe(cb) {
+        if (typeof cb === "function") {
+            subscribers.push(cb);
+        }
+    }
+
+    return {
+        init: init,
+        broadcast: broadcast,
+        subscribe: subscribe
+    };
+})();
+
+function initForgeSync() {
+    ForgeSync.init();
+}
+
+/**
+ * Subtle shop-floor toast notification for live cross-terminal synchronization
+ */
+function showSyncToast(message) {
+    var existing = document.querySelector(".forge-sync-toast");
+    if (existing) {
+        existing.remove();
+    }
+    var toast = document.createElement("div");
+    toast.className = "forge-sync-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.innerHTML = '<span class="sync-pulse-dot" aria-hidden="true"></span><span>' + escapeHTML(message) + '</span>';
+    document.body.appendChild(toast);
+
+    setTimeout(function () {
+        if (toast && toast.parentNode) {
+            toast.style.transition = "opacity 0.4s ease, transform 0.4s ease";
+            toast.style.opacity = "0";
+            toast.style.transform = "translateY(10px)";
+            setTimeout(function () {
+                if (toast && toast.parentNode) toast.remove();
+            }, 400);
+        }
+    }, 3200);
+}
+
+/**
+ * Master Control Dock urgent alerts counter updater
+ */
+function updateDockAlertsCount() {
+    var btn = document.getElementById("dockAlertsBtn");
+    if (!btn) return;
+
+    var workorders = getWorkOrdersList();
+    var inventory = getInventoryList();
+    var urgentCount = 0;
+
+    for (var i = 0; i < workorders.length; i++) {
+        var wo = workorders[i];
+        var p = (wo.priority || "").toLowerCase();
+        var s = (wo.status || "").toLowerCase();
+        if ((p === "high" || p === "critical" || p === "emergency") && s !== "completed" && s !== "cancelled") {
+            urgentCount++;
+        }
+    }
+    for (var j = 0; j < inventory.length; j++) {
+        var part = inventory[j];
+        var qty = Number(part.quantity);
+        var min = Number(part.minimumStock !== undefined ? part.minimumStock : part.minStock);
+        if (qty <= min) {
+            urgentCount++;
+        }
+    }
+
+    var badge = document.getElementById("dockAlertsBadge");
+    if (urgentCount > 0) {
+        if (badge) {
+            badge.textContent = urgentCount;
+        } else {
+            var newBadge = document.createElement("span");
+            newBadge.className = "dock-badge";
+            newBadge.id = "dockAlertsBadge";
+            newBadge.textContent = urgentCount;
+            btn.appendChild(newBadge);
+        }
+        btn.setAttribute("title", "Urgent Alerts: " + urgentCount + " active items");
+        btn.setAttribute("aria-label", "Urgent alerts (" + urgentCount + ")");
+    } else {
+        if (badge) badge.remove();
+        btn.setAttribute("title", "Urgent Alerts: 0 active items");
+        btn.setAttribute("aria-label", "Urgent alerts (0)");
+    }
+}
+
+/**
+ * Triggers safe module re-rendering if current active page matches mutation
+ */
+function triggerModuleAutoRefresh(entity) {
+    if (typeof refreshDashboard === "function") {
+        try { refreshDashboard(); } catch (e) {}
+    }
+    if (typeof loadEquipmentData === "function") {
+        try { loadEquipmentData(); } catch (e) {}
+    }
+    if (typeof loadWorkOrdersData === "function") {
+        try { loadWorkOrdersData(); } catch (e) {}
+    }
+    if (typeof loadMaintenanceData === "function") {
+        try { loadMaintenanceData(); } catch (e) {}
+    }
+    if (typeof loadInventoryData === "function") {
+        try { loadInventoryData(); } catch (e) {}
+    }
+    if (typeof loadWorkforceData === "function") {
+        try { loadWorkforceData(); } catch (e) {}
+    }
+}
+
+// ==========================================================================
+// UNIVERSAL CSV EXPORT UTILITY
+// ==========================================================================
+function exportTableToCSV(filename, rows) {
+    if (!rows || !rows.length) {
+        showAlert("No data available to export.", "warning");
+        return;
+    }
+
+    var csvContent = "";
+    if (typeof rows[0] === "object" && !Array.isArray(rows[0])) {
+        var headers = Object.keys(rows[0]);
+        csvContent += headers.map(function (h) { return '"' + String(h).replace(/"/g, '""') + '"'; }).join(",") + "\r\n";
+        rows.forEach(function (row) {
+            var line = headers.map(function (h) {
+                var val = row[h] === null || row[h] === undefined ? "" : String(row[h]);
+                return '"' + val.replace(/"/g, '""') + '"';
+            }).join(",");
+            csvContent += line + "\r\n";
+        });
+    } else {
+        rows.forEach(function (row) {
+            var line = row.map(function (val) {
+                var str = val === null || val === undefined ? "" : String(val);
+                return '"' + str.replace(/"/g, '""') + '"';
+            }).join(",");
+            csvContent += line + "\r\n";
+        });
+    }
+
+    var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename || "forge_export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showAlert("CSV export downloaded: " + (filename || "forge_export.csv"), "success");
+}
+
+// ==========================================================================
+// ASSET 360° TECHNICAL DOSSIER SLIDE-OVER INSPECTOR
+// ==========================================================================
+function initAssetDossier() {
+    if (document.getElementById("forgeAssetDossier")) return;
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "forge-drawer-backdrop";
+    backdrop.id = "forgeAssetDossierBackdrop";
+    backdrop.style.display = "none";
+    backdrop.addEventListener("click", closeAssetDossier);
+    document.body.appendChild(backdrop);
+
+    var drawer = document.createElement("div");
+    drawer.className = "forge-slide-drawer";
+    drawer.id = "forgeAssetDossier";
+    drawer.setAttribute("role", "dialog");
+    drawer.setAttribute("aria-modal", "true");
+    drawer.setAttribute("aria-labelledby", "dossierTitle");
+    drawer.style.display = "none";
+
+    drawer.innerHTML =
+        '<div class="drawer-header">' +
+            '<div>' +
+                '<div class="text-gold font-mono small" style="font-size:0.7rem; letter-spacing:0.8px;">ASSET 360° TECHNICAL DOSSIER</div>' +
+                '<h5 class="drawer-title" id="dossierTitle">[EQ000] Industrial Machinery Asset</h5>' +
+            '</div>' +
+            '<button type="button" class="drawer-close-btn" id="dossierCloseBtn" aria-label="Close Asset Dossier">&times;</button>' +
+        '</div>' +
+        '<div class="drawer-body" id="dossierBody">' +
+        '</div>';
+
+    document.body.appendChild(drawer);
+
+    document.getElementById("dossierCloseBtn").addEventListener("click", closeAssetDossier);
+}
+
+function openAssetDossier(eqIdOrName) {
+    if (!eqIdOrName) return;
+    initAssetDossier();
+
+    var equipmentList = getEquipmentList();
+    var needle = String(eqIdOrName).trim().toLowerCase();
+    var eq = null;
+    for (var i = 0; i < equipmentList.length; i++) {
+        var item = equipmentList[i];
+        if ((item.id && item.id.toLowerCase() === needle) || (item.name && item.name.toLowerCase() === needle)) {
+            eq = item;
+            break;
+        }
+    }
+
+    if (!eq) {
+        showAlert("Asset record '" + eqIdOrName + "' not found.", "warning");
+        return;
+    }
+
+    var drawer = document.getElementById("forgeAssetDossier");
+    var backdrop = document.getElementById("forgeAssetDossierBackdrop");
+    var body = document.getElementById("dossierBody");
+    var title = document.getElementById("dossierTitle");
+    if (!drawer || !backdrop || !body || !title) return;
+
+    // Relational data aggregation
+    var allWorkOrders = getWorkOrdersList();
+    var linkedOrders = allWorkOrders.filter(function (wo) {
+        return (wo.equipmentId && wo.equipmentId.toLowerCase() === eq.id.toLowerCase()) ||
+               (wo.equipment && wo.equipment.toLowerCase() === eq.name.toLowerCase());
+    });
+
+    var allMaintenance = getMaintenanceList();
+    var linkedMaint = allMaintenance.filter(function (m) {
+        return (m.equipmentId && m.equipmentId.toLowerCase() === eq.id.toLowerCase()) ||
+               (m.equipment && m.equipment.toLowerCase() === eq.name.toLowerCase());
+    });
+
+    var allFaults = getFaultsList();
+    var linkedFaults = allFaults.filter(function (f) {
+        return (f.equipmentId && f.equipmentId.toLowerCase() === eq.id.toLowerCase()) ||
+               (f.equipmentName && f.equipmentName.toLowerCase() === eq.name.toLowerCase()) ||
+               (f.equipment && f.equipment.toLowerCase() === eq.name.toLowerCase());
+    });
+
+    var allActivities = getActivityList();
+    var linkedActivities = allActivities.filter(function (a) {
+        var targetStr = (a.target || a.item || "").toLowerCase();
+        var actStr = (a.action || a.activity || "").toLowerCase();
+        return targetStr.includes(eq.name.toLowerCase()) || targetStr.includes(eq.id.toLowerCase()) ||
+               actStr.includes(eq.name.toLowerCase()) || actStr.includes(eq.id.toLowerCase());
+    });
+
+    // Health score calculation
+    var healthScore = 98;
+    var healthClass = "text-success";
+    if (eq.status === "Faulty") {
+        healthScore = 32;
+        healthClass = "text-danger";
+    } else if (eq.status === "Maintenance") {
+        healthScore = 64;
+        healthClass = "text-warning";
+    } else if (linkedOrders.some(function (o) { return o.status !== "Completed" && o.status !== "Cancelled"; })) {
+        healthScore = 86;
+        healthClass = "text-warning";
+    }
+
+    var statusBadgeClass = "badge-operational";
+    if (eq.status === "Maintenance") statusBadgeClass = "badge-maintenance";
+    else if (eq.status === "Faulty") statusBadgeClass = "badge-faulty";
+
+    title.innerHTML = '<span class="font-mono text-gold">[' + escapeHTML(eq.id) + ']</span> ' + escapeHTML(eq.name);
+
+    var role = getActiveRole();
+    var actionButtonsHtml = "";
+    if (role === "Operator") {
+        actionButtonsHtml = '<button type="button" class="btn btn-sm btn-danger font-mono w-100" onclick="closeAssetDossier(); openQuickFaultModal(\'' + escapeHTML(eq.name) + '\');">⚠️ Report Machine Incident</button>';
+    } else if (role === "Technician") {
+        actionButtonsHtml = '<a href="workorders.html?search=' + encodeURIComponent(eq.id) + '" class="btn btn-sm btn-primary font-mono w-100">📋 View Work Orders in Dispatch</a>';
+    } else {
+        actionButtonsHtml =
+            '<div class="d-flex gap-2">' +
+                '<a href="workorders.html?action=new&eq=' + encodeURIComponent(eq.name) + '" class="btn btn-sm btn-primary font-mono flex-fill">+ Dispatch Work Order</a>' +
+                '<a href="equipment.html?id=' + encodeURIComponent(eq.id) + '" class="btn btn-sm btn-outline-secondary font-mono flex-fill">Edit Asset</a>' +
+            '</div>';
+    }
+
+    var woListHtml = "";
+    if (linkedOrders.length === 0) {
+        woListHtml = '<div class="text-muted small py-2 font-mono">No active or historical work orders logged for this unit.</div>';
+    } else {
+        linkedOrders.forEach(function (wo) {
+            var pBadge = wo.priority === "High" ? "badge-high" : (wo.priority === "Medium" ? "badge-medium" : "badge-low");
+            var sBadge = wo.status === "Completed" ? "badge-completed" : (wo.status === "Waiting for Parts" ? "badge-waiting" : "badge-in-progress");
+            woListHtml +=
+                '<div class="dossier-item-card">' +
+                    '<div>' +
+                        '<div class="d-flex align-items-center gap-2 mb-1">' +
+                            '<span class="font-mono font-weight-bold" style="color:var(--primary); font-size:0.8rem;">' + escapeHTML(wo.id) + '</span>' +
+                            '<span class="badge-status ' + pBadge + '" style="font-size:0.65rem;">' + escapeHTML(wo.priority) + '</span>' +
+                            '<span class="badge-status ' + sBadge + '" style="font-size:0.65rem;">' + escapeHTML(wo.status) + '</span>' +
+                        '</div>' +
+                        '<div style="font-size:0.82rem; color:var(--text-primary); font-weight:600;">' + escapeHTML(wo.problem || wo.description) + '</div>' +
+                        '<div class="text-muted small mt-1 font-mono">Tech: ' + escapeHTML(wo.technician || "Unassigned") + ' • Date: ' + escapeHTML(wo.date || wo.scheduledDate) + '</div>' +
+                    '</div>' +
+                    '<div class="d-flex flex-column gap-1">' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary font-mono" style="font-size:0.68rem; padding:2px 6px;" onclick="openJobTravelerModal(\'' + escapeHTML(wo.id) + '\')">🖨 Job Sheet</button>' +
+                        '<a href="workorders.html?id=' + encodeURIComponent(wo.id) + '" class="btn btn-sm btn-secondary font-mono text-center" style="font-size:0.68rem; padding:2px 6px;">Open</a>' +
+                    '</div>' +
+                '</div>';
+        });
+    }
+
+    var maintListHtml = "";
+    if (linkedMaint.length === 0) {
+        maintListHtml = '<div class="text-muted small py-2 font-mono">No scheduled preventive maintenance records.</div>';
+    } else {
+        linkedMaint.forEach(function (m) {
+            var mBadge = m.status === "Completed" ? "badge-completed" : "badge-scheduled";
+            maintListHtml +=
+                '<div class="dossier-item-card">' +
+                    '<div>' +
+                        '<div class="d-flex align-items-center gap-2 mb-1">' +
+                            '<span class="font-mono font-weight-bold" style="color:var(--primary); font-size:0.8rem;">' + escapeHTML(m.id) + '</span>' +
+                            '<span class="badge-status ' + mBadge + '" style="font-size:0.65rem;">' + escapeHTML(m.status) + '</span>' +
+                            '<span class="badge bg-secondary font-mono" style="font-size:0.65rem;">' + escapeHTML(m.type) + '</span>' +
+                        '</div>' +
+                        '<div class="text-muted small font-mono">Scheduled: ' + escapeHTML(m.scheduledDate) + ' • Specialist: ' + escapeHTML(m.technician) + '</div>' +
+                    '</div>' +
+                '</div>';
+        });
+    }
+
+    var historyHtml = "";
+    if (linkedFaults.length === 0 && linkedActivities.length === 0) {
+        historyHtml = '<div class="text-muted small py-2 font-mono">Zero breakdown incidents or recent operational alerts recorded.</div>';
+    } else {
+        linkedFaults.forEach(function (f) {
+            historyHtml +=
+                '<div class="dossier-item-card" style="border-left: 3px solid var(--danger);">' +
+                    '<div>' +
+                        '<div class="d-flex align-items-center gap-2 mb-1">' +
+                            '<span class="badge-status badge-faulty" style="font-size:0.65rem;">INCIDENT</span>' +
+                            '<span class="font-mono text-gold" style="font-size:0.75rem;">' + escapeHTML(f.id) + '</span>' +
+                            '<span class="text-muted small font-mono">' + escapeHTML(f.createdAt ? f.createdAt.split("T")[0] : "Recent") + '</span>' +
+                        '</div>' +
+                        '<div style="font-size:0.8rem;">' + escapeHTML(f.description) + '</div>' +
+                    '</div>' +
+                '</div>';
+        });
+        linkedActivities.slice(0, 5).forEach(function (a) {
+            historyHtml +=
+                '<div class="dossier-item-card">' +
+                    '<div>' +
+                        '<div class="d-flex align-items-center gap-2 mb-1">' +
+                            '<span class="text-muted small font-mono">' + escapeHTML(a.timestamp || a.time) + '</span>' +
+                            '<span class="badge bg-secondary font-mono" style="font-size:0.65rem;">' + escapeHTML(a.actor || a.user) + '</span>' +
+                        '</div>' +
+                        '<div style="font-size:0.8rem;">' + escapeHTML(a.action || a.activity) + '</div>' +
+                    '</div>' +
+                '</div>';
+        });
+    }
+
+    body.innerHTML =
+        // 1. Asset Nameplate & Telemetry
+        '<div class="drawer-section">' +
+            '<div class="drawer-section-title">' +
+                '<span>NAMEPLATE & TELEMETRY</span>' +
+                '<span class="badge-status ' + statusBadgeClass + '">' + escapeHTML(eq.status) + '</span>' +
+            '</div>' +
+            '<div class="dossier-grid">' +
+                '<div class="dossier-stat-box">' +
+                    '<div class="dossier-stat-label">EQUIPMENT ID</div>' +
+                    '<div class="dossier-stat-value font-mono text-gold">' + escapeHTML(eq.id) + '</div>' +
+                '</div>' +
+                '<div class="dossier-stat-box">' +
+                    '<div class="dossier-stat-label">HEALTH SCORE</div>' +
+                    '<div class="dossier-stat-value font-mono ' + healthClass + '">' + healthScore + '%</div>' +
+                '</div>' +
+                '<div class="dossier-stat-box">' +
+                    '<div class="dossier-stat-label">LOCATION / BAY</div>' +
+                    '<div class="dossier-stat-value">' + escapeHTML(eq.location || "BAY 04") + '</div>' +
+                '</div>' +
+                '<div class="dossier-stat-box">' +
+                    '<div class="dossier-stat-label">EQUIPMENT TYPE</div>' +
+                    '<div class="dossier-stat-value">' + escapeHTML(eq.type || "Machinery") + '</div>' +
+                '</div>' +
+                '<div class="dossier-stat-box">' +
+                    '<div class="dossier-stat-label">LAST SERVICE</div>' +
+                    '<div class="dossier-stat-value font-mono" style="font-size:0.85rem;">' + escapeHTML(eq.lastMaintenance || eq.lastMaintenanceDate || "N/A") + '</div>' +
+                '</div>' +
+                '<div class="dossier-stat-box">' +
+                    '<div class="dossier-stat-label">NEXT PM DUE</div>' +
+                    '<div class="dossier-stat-value font-mono" style="font-size:0.85rem;">' + escapeHTML(eq.nextMaintenance || "N/A") + '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="mt-3">' + actionButtonsHtml + '</div>' +
+        '</div>' +
+
+        // 2. Work Orders
+        '<div class="drawer-section">' +
+            '<div class="drawer-section-title">' +
+                '<span>ACTIVE & HISTORICAL WORK ORDERS</span>' +
+                '<span class="badge bg-secondary font-mono">' + linkedOrders.length + ' ORDERS</span>' +
+            '</div>' +
+            woListHtml +
+        '</div>' +
+
+        // 3. Maintenance Schedules
+        '<div class="drawer-section">' +
+            '<div class="drawer-section-title">' +
+                '<span>PREVENTIVE MAINTENANCE SCHEDULE</span>' +
+                '<span class="badge bg-secondary font-mono">' + linkedMaint.length + ' TASKS</span>' +
+            '</div>' +
+            maintListHtml +
+        '</div>' +
+
+        // 4. Incident & Activity History
+        '<div class="drawer-section">' +
+            '<div class="drawer-section-title">' +
+                '<span>AUDIT TRAIL & INCIDENT LOG</span>' +
+                '<span class="badge bg-secondary font-mono">ISO-55000</span>' +
+            '</div>' +
+            historyHtml +
+        '</div>';
+
+    backdrop.style.display = "block";
+    drawer.style.display = "flex";
+    setTimeout(function () {
+        drawer.classList.add("active");
+        drawer.classList.add("open");
+        backdrop.classList.add("active");
+        backdrop.classList.add("show");
+    }, 10);
+
+    var closeBtn = document.getElementById("dossierCloseBtn");
+    if (closeBtn) closeBtn.focus();
+}
+
+function closeAssetDossier() {
+    var drawer = document.getElementById("forgeAssetDossier");
+    var backdrop = document.getElementById("forgeAssetDossierBackdrop");
+    if (!drawer) return;
+    drawer.classList.remove("active");
+    drawer.classList.remove("open");
+    if (backdrop) {
+        backdrop.classList.remove("active");
+        backdrop.classList.remove("show");
+    }
+    setTimeout(function () {
+        drawer.style.display = "none";
+        if (backdrop) backdrop.style.display = "none";
+    }, 280);
+}
+
+// ==========================================================================
+// WORK ORDER JOB TRAVELER MODAL & LOTO SAFETY CLEARANCE
+// ==========================================================================
+function initJobTravelerModal() {
+    if (document.getElementById("forgeJobTravelerModal")) return;
+
+    var modal = document.createElement("div");
+    modal.className = "modal fade";
+    modal.id = "forgeJobTravelerModal";
+    modal.tabIndex = -1;
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "jobTravelerTitle");
+
+    modal.innerHTML =
+        '<div class="modal-dialog modal-lg modal-dialog-scrollable">' +
+            '<div class="modal-content">' +
+                '<div class="modal-header d-flex justify-content-between align-items-center">' +
+                    '<div>' +
+                        '<div class="text-gold font-mono small" style="font-size:0.75rem;">SHOP-FLOOR DOCUMENTATION // LOTO</div>' +
+                        '<h5 class="modal-title font-mono" id="jobTravelerTitle">Work Order Job Traveler</h5>' +
+                    '</div>' +
+                    '<div class="d-flex align-items-center gap-2">' +
+                        '<button type="button" class="btn btn-sm btn-primary font-mono" onclick="window.print()">🖨 Print Job Sheet</button>' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="modal-body p-4" id="forgeJobTravelerContainer">' +
+                '</div>' +
+                '<div class="modal-footer d-flex justify-content-between">' +
+                    '<span class="text-muted small font-mono">FORGE INDUSTRIAL OS &bull; PHYSICAL SHOP-FLOOR DISPATCH SPEC</span>' +
+                    '<div class="d-flex gap-2">' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary font-mono" data-bs-dismiss="modal">Close</button>' +
+                        '<button type="button" class="btn btn-sm btn-primary font-mono" onclick="window.print()">🖨 Print Job Sheet</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    document.body.appendChild(modal);
+}
+
+function openJobTravelerModal(woId) {
+    if (!woId) return;
+    initJobTravelerModal();
+
+    var wo = getWorkOrderById(woId);
+    if (!wo) {
+        var list = getWorkOrdersList();
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].id === woId) { wo = list[i]; break; }
+        }
+    }
+    if (!wo) {
+        showAlert("Work Order '" + woId + "' not found.", "warning");
+        return;
+    }
+
+    var eq = getEquipmentById(wo.equipment) || { id: "EQ-GEN", name: wo.equipment, location: "Production Floor", type: "Industrial Asset" };
+    var inventory = getInventoryList();
+    var availableStock = 0;
+    if (wo.requiredPart) {
+        var pObj = inventory.find(function (p) { return (p.name || p.partName) === wo.requiredPart; });
+        if (pObj) availableStock = pObj.quantity;
+    }
+
+    var container = document.getElementById("forgeJobTravelerContainer");
+    if (!container) return;
+
+    var priorityBadgeClass = "badge-low";
+    if (wo.priority === "High") priorityBadgeClass = "badge-high";
+    else if (wo.priority === "Medium") priorityBadgeClass = "badge-medium";
+
+    var docHtml =
+        '<div class="job-traveler-doc">' +
+            // Document Header
+            '<div class="job-doc-header">' +
+                '<div>' +
+                    '<div class="job-doc-company">FORGE INDUSTRIAL SYSTEMS // SHOP-FLOOR MAINTENANCE DISPATCH</div>' +
+                    '<h4 class="job-doc-title">WORK ORDER JOB TRAVELER & LOTO SAFETY CLEARANCE</h4>' +
+                    '<div class="font-mono text-muted small mt-1">STANDARD OPERATING PROCEDURE // ISO-55000 & OSHA COMPLIANT</div>' +
+                '</div>' +
+                '<div class="text-end">' +
+                    '<div class="font-mono font-weight-bold" style="font-size: 1.15rem; color: var(--primary);">' + escapeHTML(wo.id) + '</div>' +
+                    '<div class="badge-status ' + priorityBadgeClass + ' mt-1">' + escapeHTML(wo.priority).toUpperCase() + ' PRIORITY</div>' +
+                    '<div class="font-mono text-muted small mt-1">DISPATCHED: ' + escapeHTML(wo.date || wo.scheduledDate || "2026-09-20") + '</div>' +
+                '</div>' +
+            '</div>' +
+
+            // Target Machine Specifications
+            '<div class="drawer-section mb-3">' +
+                '<div class="drawer-section-title">TARGET EQUIPMENT SPECIFICATIONS</div>' +
+                '<div class="dossier-grid">' +
+                    '<div class="dossier-stat-box"><div class="dossier-stat-label">MACHINE ASSET</div><div class="dossier-stat-value font-mono">' + escapeHTML(eq.name) + ' (' + escapeHTML(eq.id) + ')</div></div>' +
+                    '<div class="dossier-stat-box"><div class="dossier-stat-label">PLANT LOCATION</div><div class="dossier-stat-value">' + escapeHTML(eq.location || "BAY 04") + '</div></div>' +
+                    '<div class="dossier-stat-box"><div class="dossier-stat-label">ASSET CLASSIFICATION</div><div class="dossier-stat-value">' + escapeHTML(eq.type || "Industrial Machine") + '</div></div>' +
+                    '<div class="dossier-stat-box"><div class="dossier-stat-label">ASSIGNED TECHNICIAN</div><div class="dossier-stat-value font-mono text-gold">' + escapeHTML(wo.technician || "Unassigned") + '</div></div>' +
+                '</div>' +
+            '</div>' +
+
+            // Incident Scope / Directive
+            '<div class="drawer-section mb-3">' +
+                '<div class="drawer-section-title">INCIDENT SCOPE & DIAGNOSTIC DIRECTIVE</div>' +
+                '<div style="font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); font-weight: 600;">' +
+                    escapeHTML(wo.problem || wo.description || "Routine maintenance and overhaul inspection.") +
+                '</div>' +
+                (wo.notes ? '<div class="text-muted small mt-2 font-mono">Special Directives: ' + escapeHTML(wo.notes) + '</div>' : '') +
+            '</div>' +
+
+            // Bill of Materials
+            '<div class="drawer-section mb-3">' +
+                '<div class="drawer-section-title">REQUIRED REPLACEMENT PARTS & BILL OF MATERIALS</div>' +
+                (wo.requiredPart ?
+                    '<table class="table table-sm font-mono" style="font-size:0.8rem; margin-bottom:0;">' +
+                        '<thead><tr><th>PART SKU / NAME</th><th class="text-center">REQUIRED</th><th class="text-center">WAREHOUSE STOCK</th><th class="text-center">STAGED</th></tr></thead>' +
+                        '<tbody>' +
+                            '<tr>' +
+                                '<td><strong>' + escapeHTML(wo.requiredPart) + '</strong></td>' +
+                                '<td class="text-center">' + (wo.requiredQuantity || 1) + ' pcs</td>' +
+                                '<td class="text-center ' + (availableStock >= (wo.requiredQuantity || 1) ? 'text-success' : 'text-danger') + '">' + availableStock + ' pcs ' + (availableStock >= (wo.requiredQuantity || 1) ? '✓ Available' : '⚠️ Low/Hold') + '</td>' +
+                                '<td class="text-center"><input type="checkbox" ' + (availableStock >= (wo.requiredQuantity || 1) ? 'checked' : '') + '></td>' +
+                            '</tr>' +
+                        '</tbody>' +
+                    '</table>'
+                : '<div class="text-muted small font-mono">Zero external replacement parts required. Consumables & standard tools only.</div>') +
+            '</div>' +
+
+            // Industrial LOTO Safety Verification Checklist
+            '<div class="loto-box">' +
+                '<div class="loto-header">⚠️ MANDATORY LOCKOUT / TAGOUT (LOTO) & SAFETY VERIFICATION</div>' +
+                '<div class="loto-item"><input type="checkbox" id="loto_elec" checked> <label for="loto_elec"><strong>1. Electrical Isolation:</strong> Main circuit breaker opened, locked out with hasp, and tag applied.</label></div>' +
+                '<div class="loto-item"><input type="checkbox" id="loto_hyd" checked> <label for="loto_hyd"><strong>2. Kinetic/Fluid Energy Release:</strong> Hydraulic/pneumatic pressure bled to zero; mechanical stops engaged.</label></div>' +
+                '<div class="loto-item"><input type="checkbox" id="loto_zero" checked> <label for="loto_zero"><strong>3. Zero-Energy Test:</strong> Attempted restart at operator panel confirmed complete de-energization.</label></div>' +
+                '<div class="loto-item"><input type="checkbox" id="loto_area" checked> <label for="loto_area"><strong>4. Area Clearance:</strong> Warning barriers placed around Bay 04; unauthorized personnel cleared.</label></div>' +
+                '<div class="loto-item"><input type="checkbox" id="loto_ppe" checked> <label for="loto_ppe"><strong>5. PPE Compliance:</strong> Steel-toe boots, eye protection, and insulated safety gloves worn.</label></div>' +
+            '</div>' +
+
+            // Sign-off signature blocks
+            '<div class="signoff-grid">' +
+                '<div>' +
+                    '<div class="signoff-line"></div>' +
+                    '<div class="signoff-label">TECHNICIAN EXECUTION SIGNATURE</div>' +
+                    '<div class="font-mono small mt-1">' + escapeHTML(wo.technician || "Lead Specialist") + ' &mdash; Cert: ISO-9001</div>' +
+                '</div>' +
+                '<div>' +
+                    '<div class="signoff-line"></div>' +
+                    '<div class="signoff-label">SHIFT SUPERVISOR LOTO CLEARANCE</div>' +
+                    '<div class="font-mono small mt-1">Shift 01 Supervisor &mdash; Clearance Granted</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    container.innerHTML = docHtml;
+
+    var modalEl = document.getElementById("forgeJobTravelerModal");
+    var modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modalInst.show();
+}
+
+// ==========================================================================
+// ISO-55000 PLANT ACTIVITY & SHIFT HANDOVER LOG DRAWER
+// ==========================================================================
+function initAuditDrawer() {
+    if (document.getElementById("forgeAuditDrawer")) return;
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "forge-drawer-backdrop";
+    backdrop.id = "forgeAuditDrawerBackdrop";
+    backdrop.style.display = "none";
+    backdrop.addEventListener("click", closeAuditDrawer);
+    document.body.appendChild(backdrop);
+
+    var drawer = document.createElement("div");
+    drawer.className = "forge-slide-drawer";
+    drawer.id = "forgeAuditDrawer";
+    drawer.setAttribute("role", "dialog");
+    drawer.setAttribute("aria-modal", "true");
+    drawer.setAttribute("aria-labelledby", "auditDrawerTitle");
+    drawer.style.display = "none";
+
+    drawer.innerHTML =
+        '<div class="drawer-header">' +
+            '<div>' +
+                '<div class="text-gold font-mono small" style="font-size:0.7rem; letter-spacing:0.8px;">PLANT AUDIT TRAIL // ISO-55000</div>' +
+                '<h5 class="drawer-title" id="auditDrawerTitle">Shift Handover & Operations Log</h5>' +
+            '</div>' +
+            '<button type="button" class="drawer-close-btn" id="auditDrawerCloseBtn" aria-label="Close Audit Drawer">&times;</button>' +
+        '</div>' +
+        '<div class="p-3 border-bottom" style="border-color: var(--border-color) !important; background-color: var(--surface-elevated);">' +
+            '<div class="d-flex gap-2 mb-2">' +
+                '<input type="text" id="auditSearchInput" class="form-control form-control-sm font-mono" placeholder="Filter audit trail by keyword...">' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary font-mono" id="auditExportCsvBtn" title="Export audit trail to CSV">Export CSV</button>' +
+            '</div>' +
+            '<div class="d-flex gap-1 flex-wrap" id="auditCatFilterGroup">' +
+                '<button type="button" class="btn btn-sm btn-secondary active font-mono audit-cat-btn" data-cat="ALL" style="font-size:0.68rem; padding:2px 8px;">ALL</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary font-mono audit-cat-btn" data-cat="FAULTS" style="font-size:0.68rem; padding:2px 8px;">FAULTS</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary font-mono audit-cat-btn" data-cat="WORK ORDERS" style="font-size:0.68rem; padding:2px 8px;">WORK ORDERS</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary font-mono audit-cat-btn" data-cat="INVENTORY" style="font-size:0.68rem; padding:2px 8px;">INVENTORY</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary font-mono audit-cat-btn" data-cat="SYSTEM" style="font-size:0.68rem; padding:2px 8px;">SYSTEM</button>' +
+            '</div>' +
+        '</div>' +
+        '<div class="drawer-body" id="auditDrawerList">' +
+        '</div>';
+
+    document.body.appendChild(drawer);
+
+    document.getElementById("auditDrawerCloseBtn").addEventListener("click", closeAuditDrawer);
+
+    var searchInput = document.getElementById("auditSearchInput");
+    if (searchInput) {
+        searchInput.addEventListener("input", function () {
+            var activeBtn = document.querySelector(".audit-cat-btn.active");
+            var cat = activeBtn ? activeBtn.getAttribute("data-cat") : "ALL";
+            renderAuditDrawerEntries(cat, searchInput.value);
+        });
+    }
+
+    var catBtns = drawer.querySelectorAll(".audit-cat-btn");
+    catBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            catBtns.forEach(function (b) {
+                b.classList.remove("active");
+                b.classList.remove("btn-secondary");
+                b.classList.add("btn-outline-secondary");
+            });
+            btn.classList.add("active");
+            btn.classList.remove("btn-outline-secondary");
+            btn.classList.add("btn-secondary");
+
+            var cat = btn.getAttribute("data-cat");
+            var sVal = searchInput ? searchInput.value : "";
+            renderAuditDrawerEntries(cat, sVal);
+        });
+    });
+
+    var exportBtn = document.getElementById("auditExportCsvBtn");
+    if (exportBtn) {
+        exportBtn.addEventListener("click", function () {
+            var activities = getActivityList();
+            var rows = activities.map(function (a) {
+                return {
+                    "Activity ID": a.id || "",
+                    "Timestamp": a.timestamp || a.time || "",
+                    "Actor / Role": a.actor || a.user || "",
+                    "Action Description": a.action || a.activity || "",
+                    "Target Asset / Part": a.target || a.item || "",
+                    "Status Tag": a.badgeClass || a.badge || ""
+                };
+            });
+            exportTableToCSV("forge_shift_audit_log_" + new Date().toISOString().split("T")[0] + ".csv", rows);
+        });
+    }
+}
+
+function openAuditDrawer() {
+    initAuditDrawer();
+    var drawer = document.getElementById("forgeAuditDrawer");
+    var backdrop = document.getElementById("forgeAuditDrawerBackdrop");
+    if (!drawer || !backdrop) return;
+
+    renderAuditDrawerEntries("ALL", "");
+
+    backdrop.style.display = "block";
+    drawer.style.display = "flex";
+    setTimeout(function () {
+        drawer.classList.add("active");
+        drawer.classList.add("open");
+        backdrop.classList.add("active");
+        backdrop.classList.add("show");
+    }, 10);
+
+    var closeBtn = document.getElementById("auditDrawerCloseBtn");
+    if (closeBtn) closeBtn.focus();
+}
+
+function closeAuditDrawer() {
+    var drawer = document.getElementById("forgeAuditDrawer");
+    var backdrop = document.getElementById("forgeAuditDrawerBackdrop");
+    if (!drawer) return;
+    drawer.classList.remove("active");
+    drawer.classList.remove("open");
+    if (backdrop) {
+        backdrop.classList.remove("active");
+        backdrop.classList.remove("show");
+    }
+    setTimeout(function () {
+        drawer.style.display = "none";
+        if (backdrop) backdrop.style.display = "none";
+    }, 280);
+}
+
+function renderAuditDrawerEntries(filterCat, searchKeyword) {
+    var listContainer = document.getElementById("auditDrawerList");
+    if (!listContainer) return;
+
+    var activities = getActivityList();
+    var q = (searchKeyword || "").toLowerCase().trim();
+    var cat = filterCat || "ALL";
+
+    var filtered = activities.filter(function (act) {
+        var str = ((act.actor || act.user || "") + " " + (act.action || act.activity || "") + " " + (act.target || act.item || "")).toLowerCase();
+        if (q && str.indexOf(q) === -1) return false;
+
+        if (cat === "FAULTS") {
+            return str.includes("fault") || str.includes("breakdown") || str.includes("incident");
+        } else if (cat === "WORK ORDERS") {
+            return str.includes("wo-") || str.includes("work order") || str.includes("ticket");
+        } else if (cat === "INVENTORY") {
+            return str.includes("stock") || str.includes("filter") || str.includes("parts") || str.includes("consumed") || str.includes("restock");
+        } else if (cat === "SYSTEM") {
+            return str.includes("system") || str.includes("demo") || str.includes("baseline");
+        }
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        listContainer.innerHTML = '<div class="text-muted small py-4 text-center font-mono">No matching shift activity log entries found.</div>';
+        return;
+    }
+
+    var html = "";
+    filtered.forEach(function (act) {
+        var time = act.timestamp || act.time || "Recent";
+        var user = act.actor || act.user || "System";
+        var action = act.action || act.activity || "";
+        var target = act.target || act.item || "";
+
+        html +=
+            '<div class="dossier-item-card">' +
+                '<div style="flex:1;">' +
+                    '<div class="d-flex justify-content-between align-items-center mb-1">' +
+                        '<span class="font-mono text-muted" style="font-size:0.68rem;">' + escapeHTML(time) + '</span>' +
+                        '<span class="badge bg-secondary font-mono" style="font-size:0.65rem;">' + escapeHTML(user) + '</span>' +
+                    '</div>' +
+                    '<div style="font-size:0.82rem; font-weight:600; color:var(--text-primary);">' + escapeHTML(action) + '</div>' +
+                    (target ? '<div class="text-gold font-mono small mt-1" style="font-size:0.72rem;">Target: ' + escapeHTML(target) + '</div>' : '') +
+                '</div>' +
+            '</div>';
+    });
+
+    listContainer.innerHTML = html;
+}
+
+// ==========================================================================
+// KEYBOARD SHORTCUTS REFERENCE CHEAT-SHEET MODAL (?)
+// ==========================================================================
+function initKeyboardShortcutsModal() {
+    if (document.getElementById("forgeShortcutsModal")) return;
+
+    var modal = document.createElement("div");
+    modal.className = "modal fade";
+    modal.id = "forgeShortcutsModal";
+    modal.tabIndex = -1;
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "shortcutsModalTitle");
+
+    modal.innerHTML =
+        '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+                '<div class="modal-header">' +
+                    '<div>' +
+                        '<div class="text-gold font-mono small" style="font-size:0.75rem;">KEYBOARD NAVIGATION // ERGONOMICS</div>' +
+                        '<h5 class="modal-title font-mono" id="shortcutsModalTitle">Industrial Keyboard Shortcuts</h5>' +
+                    '</div>' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                '</div>' +
+                '<div class="modal-body py-3">' +
+                    '<div class="shortcut-category-title">GLOBAL NAVIGATION & INTERFACE</div>' +
+                    '<div class="shortcut-row"><span>Command Palette (Search records & actions)</span><span class="shortcut-keys"><span class="shortcut-kbd">Ctrl</span><span class="shortcut-kbd">K</span></span></div>' +
+                    '<div class="shortcut-row"><span>Toggle Navigation Rail (Sidebar)</span><span class="shortcut-keys"><span class="shortcut-kbd">[</span></span></div>' +
+                    '<div class="shortcut-row"><span>Toggle Dark / Light Theme</span><span class="shortcut-keys"><span class="shortcut-kbd">T</span></span></div>' +
+                    '<div class="shortcut-row"><span>Keyboard Shortcut Reference</span><span class="shortcut-keys"><span class="shortcut-kbd">?</span></span></div>' +
+                    '<div class="shortcut-row"><span>Dismiss Modal / Slide-over Drawer</span><span class="shortcut-keys"><span class="shortcut-kbd">Esc</span></span></div>' +
+
+                    '<div class="shortcut-category-title mt-3">OPERATIONAL QUICK ACCESS</div>' +
+                    '<div class="shortcut-row"><span>Jump to Operations Dashboard</span><span class="shortcut-keys"><span class="shortcut-kbd">D</span></span></div>' +
+                    '<div class="shortcut-row"><span>Create New Work Order (Admin)</span><span class="shortcut-keys"><span class="shortcut-kbd">N</span></span></div>' +
+                    '<div class="shortcut-row"><span>Work Orders Dispatch Console (Tech)</span><span class="shortcut-keys"><span class="shortcut-kbd">L</span></span></div>' +
+                    '<div class="shortcut-row"><span>Report Breakdown Incident (Operator)</span><span class="shortcut-keys"><span class="shortcut-kbd">F</span></span></div>' +
+                '</div>' +
+                '<div class="modal-footer">' +
+                    '<button type="button" class="btn btn-sm btn-secondary font-mono" data-bs-dismiss="modal">Close</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    document.body.appendChild(modal);
+}
+
+function openKeyboardShortcutsModal() {
+    initKeyboardShortcutsModal();
+    var modalEl = document.getElementById("forgeShortcutsModal");
+    if (!modalEl) return;
+    var modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modalInst.show();
+}
+
+// ==========================================================================
+// UNIVERSAL EVENT DELEGATION FOR ASSET 360° DOSSIER
+// ==========================================================================
+function initUniversalDossierTriggers() {
+    document.addEventListener("click", function (e) {
+        var trigger = e.target.closest("[data-action='view-dossier'], [data-equipment-id], .badge-eq-dossier");
+        if (trigger) {
+            // Prevent interference with regular buttons without explicit data-action
+            if (trigger.tagName === "INPUT" || (trigger.tagName === "BUTTON" && !trigger.hasAttribute("data-action"))) {
+                return;
+            }
+            e.preventDefault();
+            var eqId = trigger.getAttribute("data-equipment-id") || trigger.textContent.trim();
+            if (eqId) {
+                openAssetDossier(eqId);
+            }
+        }
+    });
+}
+
 
 

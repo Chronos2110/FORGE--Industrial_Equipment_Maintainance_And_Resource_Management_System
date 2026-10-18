@@ -43,6 +43,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 7. Handle URL parameters (?action=new, ?id=PRT-101)
     handleUrlParams();
+
+    // 8. Bind Export CSV button
+    let exportBtn = document.getElementById("exportInventoryCsvBtn");
+    if (exportBtn) exportBtn.addEventListener("click", exportInventoryCSV);
 });
 
 // Load records from localStorage
@@ -421,4 +425,49 @@ function handleRestockSubmit(event) {
     filterAndRenderTable();
     updateKpiCards();
 }
+
+// Export Filtered Spares Inventory Table to CSV
+function exportInventoryCSV() {
+    let query = (document.getElementById("searchInput") ? document.getElementById("searchInput").value : "").toLowerCase().trim();
+    let category = document.getElementById("categoryFilter") ? document.getElementById("categoryFilter").value : "All";
+    let statusFilter = document.getElementById("statusFilter") ? document.getElementById("statusFilter").value : "All";
+
+    let filtered = inventoryList.filter(function (item) {
+        let matchesQuery = !query ||
+            item.id.toLowerCase().includes(query) ||
+            item.name.toLowerCase().includes(query) ||
+            item.category.toLowerCase().includes(query) ||
+            item.supplier.toLowerCase().includes(query);
+
+        let matchesCategory = (category === "All") || (item.category === category);
+        let minStock = item.minimumStock !== undefined ? item.minimumStock : item.minStock;
+        let itemStatus = "In Stock";
+        if (item.quantity === 0) itemStatus = "Out of Stock";
+        else if (item.quantity <= minStock) itemStatus = "Low Stock";
+
+        let matchesStatus = (statusFilter === "All") || (itemStatus === statusFilter);
+
+        return matchesQuery && matchesCategory && matchesStatus;
+    });
+
+    let rows = filtered.map(function (p) {
+        let minStock = p.minimumStock !== undefined ? p.minimumStock : p.minStock;
+        let itemStatus = "In Stock";
+        if (p.quantity === 0) itemStatus = "Out of Stock";
+        else if (p.quantity <= minStock) itemStatus = "Low Stock";
+
+        return {
+            "Part SKU": p.id,
+            "Part Name": p.name || p.partName,
+            "Category": p.category,
+            "Quantity on Hand": p.quantity,
+            "Minimum Stock Level": minStock,
+            "Stock Status": itemStatus,
+            "Approved Supplier": p.supplier || "Warehouse"
+        };
+    });
+
+    exportTableToCSV("forge_inventory_spares_" + new Date().toISOString().split("T")[0] + ".csv", rows);
+}
+
 

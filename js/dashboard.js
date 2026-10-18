@@ -221,7 +221,7 @@ function loadUpcomingMaintenance() {
         var tr = document.createElement("tr");
         var sc = statusBadgeClass(item.status);
         tr.innerHTML =
-            "<td><strong>" + escapeHTML(item.equipment) + "</strong></td>" +
+            "<td><a href='javascript:void(0)' data-action='view-dossier' data-equipment-id='" + escapeHTML(item.equipment) + "' class='badge-eq-dossier' title='Open 360° Technical Dossier' style='color:var(--text-primary); font-weight:700; text-decoration:underline; cursor:pointer;'><strong>" + escapeHTML(item.equipment) + "</strong></a></td>" +
             "<td><span class='badge bg-light text-dark border' style='font-size:0.72rem;'>" + escapeHTML(item.type) + "</span></td>" +
             "<td>" + escapeHTML(item.technician || "Unassigned") + "</td>" +
             "<td>" + escapeHTML(item.scheduledDate) + "</td>" +
@@ -273,7 +273,7 @@ function loadOpenWorkOrders() {
 
         tr.innerHTML =
             "<td><strong>" + escapeHTML(o.id) + "</strong></td>" +
-            "<td>" + escapeHTML(o.equipment) + "</td>" +
+            "<td><a href='javascript:void(0)' data-action='view-dossier' data-equipment-id='" + escapeHTML(o.equipment) + "' class='badge-eq-dossier' title='Open 360° Technical Dossier' style='color:var(--text-primary); font-weight:700; text-decoration:underline; cursor:pointer;'>" + escapeHTML(o.equipment) + "</a></td>" +
             "<td><span class='badge-priority " + priBadge + "'>" + escapeHTML(o.priority) + "</span></td>" +
             "<td>" + escapeHTML(o.technician || "Unassigned") + "</td>" +
             "<td><span class='badge-status " + sc + "'>" + escapeHTML(o.status) + "</span></td>" +
@@ -632,7 +632,7 @@ function loadOperatorDashboard() {
 
                 tr.innerHTML =
                     "<td class='font-mono'><strong>" + escapeHTML(row.id) + "</strong></td>" +
-                    "<td><strong>" + escapeHTML(row.equipment) + "</strong></td>" +
+                    "<td><a href='javascript:void(0)' data-action='view-dossier' data-equipment-id='" + escapeHTML(row.equipment) + "' class='badge-eq-dossier' title='Open 360° Technical Dossier' style='color:var(--text-primary); font-weight:700; text-decoration:underline; cursor:pointer;'><strong>" + escapeHTML(row.equipment) + "</strong></a></td>" +
                     "<td><span class='text-muted small'>" + escapeHTML(row.symptom) + "</span></td>" +
                     "<td><span class='badge-priority " + priBadge + "'>" + escapeHTML(row.priority) + "</span></td>" +
                     "<td><span class='badge-status " + sc + "'>" + escapeHTML(row.status) + "</span>" +

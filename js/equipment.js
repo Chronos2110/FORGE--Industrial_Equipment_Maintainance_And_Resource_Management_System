@@ -33,6 +33,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 6. Handle URL parameters (?action=new, ?id=EQ001)
     handleUrlParams();
+
+    // 7. Bind Export CSV button
+    let exportBtn = document.getElementById("exportEquipmentCsvBtn");
+    if (exportBtn) exportBtn.addEventListener("click", exportEquipmentCSV);
 });
 
 // Load data from localStorage
@@ -117,20 +121,23 @@ function filterAndRenderTable() {
         }
 
         var role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+        var dossierBtn = "<button type='button' class='btn-action-view' data-action='view-dossier' data-equipment-id='" + escapeHTML(eq.id) + "' title='Open 360° Technical Dossier' style='background:var(--surface-elevated);border:1px solid var(--border-color);color:var(--text-primary);padding:3px 7px;font-size:0.72rem;font-weight:600;'>Dossier</button>";
         var actionsHtml = "";
+
         if (role === "Operator" || role === "Technician") {
-            actionsHtml = "<span class='badge bg-secondary font-mono' style='font-size:0.7rem;'>READ-ONLY</span>";
+            actionsHtml = "<div class='btn-action-group justify-content-center'>" + dossierBtn + "</div>";
         } else {
             actionsHtml =
                 "  <div class='btn-action-group justify-content-center'>" +
+                dossierBtn +
                 "    <button type='button' class='btn-action-edit' onclick='editEquipment(\"" + escapeHTML(eq.id) + "\")'>Edit</button>" +
                 "    <button type='button' class='btn-action-delete' onclick='deleteEquipment(\"" + escapeHTML(eq.id) + "\")'>Delete</button>" +
                 "  </div>";
         }
 
         tr.innerHTML =
-            "<td class='font-mono'><strong>" + escapeHTML(eq.id) + "</strong></td>" +
-            "<td><strong>" + escapeHTML(eq.name) + "</strong></td>" +
+            "<td class='font-mono'><a href='javascript:void(0)' data-action='view-dossier' data-equipment-id='" + escapeHTML(eq.id) + "' class='badge-eq-dossier' title='Open 360° Technical Dossier' style='color:var(--primary); font-weight:700; text-decoration:underline; cursor:pointer;'><strong>" + escapeHTML(eq.id) + "</strong></a></td>" +
+            "<td><a href='javascript:void(0)' data-action='view-dossier' data-equipment-id='" + escapeHTML(eq.id) + "' class='badge-eq-dossier' title='Open 360° Technical Dossier' style='color:var(--text-primary); font-weight:700; text-decoration:none; cursor:pointer;'><strong>" + escapeHTML(eq.name) + "</strong></a></td>" +
             "<td>" + escapeHTML(eq.type) + "</td>" +
             "<td>" + escapeHTML(eq.location) + "</td>" +
             "<td><span class='badge-status " + badgeClass + "'>" + escapeHTML(eq.status) + "</span></td>" +
@@ -306,5 +313,35 @@ function deleteEquipment(id) {
             updateKpiCards();
         }
     });
+}
+
+// Export Filtered Equipment Table to CSV
+function exportEquipmentCSV() {
+    var query = (document.getElementById("searchInput") ? document.getElementById("searchInput").value : "").toLowerCase().trim();
+    var filterStatus = document.getElementById("statusFilter") ? document.getElementById("statusFilter").value : "All";
+
+    var filtered = equipmentList.filter(function (item) {
+        var matchesQuery = !query ||
+            item.id.toLowerCase().includes(query) ||
+            item.name.toLowerCase().includes(query) ||
+            item.type.toLowerCase().includes(query) ||
+            item.location.toLowerCase().includes(query);
+        var matchesStatus = (filterStatus === "All") || (item.status === filterStatus);
+        return matchesQuery && matchesStatus;
+    });
+
+    var rows = filtered.map(function (eq) {
+        return {
+            "Equipment ID": eq.id,
+            "Equipment Name": eq.name,
+            "Machinery Type": eq.type,
+            "Location / Bay": eq.location,
+            "Operational Status": eq.status,
+            "Last Serviced": eq.lastMaintenance || eq.lastMaintenanceDate || "N/A",
+            "Next PM Due": eq.nextMaintenance || "N/A"
+        };
+    });
+
+    exportTableToCSV("forge_equipment_register_" + new Date().toISOString().split("T")[0] + ".csv", rows);
 }
 

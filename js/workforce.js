@@ -31,6 +31,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 6. Handle URL parameters for deep-linking
     handleUrlParams();
+
+    // 7. Bind Export CSV button
+    let exportBtn = document.getElementById("exportWorkforceCsvBtn");
+    if (exportBtn) exportBtn.addEventListener("click", exportWorkforceCSV);
 });
 
 // Deep link handling for Command Palette / Control Dock queries
@@ -321,4 +325,37 @@ function deleteTechnician(id) {
         }
     });
 }
+
+// Export Filtered Workforce Roster to CSV
+function exportWorkforceCSV() {
+    let query = (document.getElementById("searchInput") ? document.getElementById("searchInput").value : "").toLowerCase().trim();
+    let availabilityVal = document.getElementById("availabilityFilter") ? document.getElementById("availabilityFilter").value : "All";
+
+    let filtered = workforceList.filter(function (t) {
+        let matchesQuery = !query ||
+            t.id.toLowerCase().includes(query) ||
+            t.name.toLowerCase().includes(query) ||
+            (t.specialization || t.skill || "").toLowerCase().includes(query) ||
+            (t.certifications || t.certification || "").toLowerCase().includes(query);
+
+        let matchesAvailability = (availabilityVal === "All") || (t.availability === availabilityVal);
+
+        return matchesQuery && matchesAvailability;
+    });
+
+    let rows = filtered.map(function (t) {
+        let activeOrders = (typeof calculateActiveWorkload === "function") ? calculateActiveWorkload(t.name) : 0;
+        return {
+            "Technician ID": t.id,
+            "Specialist Name": t.name,
+            "Primary Specialization": t.specialization || t.skill || "",
+            "Certifications": t.certifications || t.certification || "ISO Standards",
+            "Availability Status": t.availability,
+            "Active Workload (Orders)": activeOrders
+        };
+    });
+
+    exportTableToCSV("forge_workforce_roster_" + new Date().toISOString().split("T")[0] + ".csv", rows);
+}
+
 

@@ -54,6 +54,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 9. Read URL parameters for deep-linking (?action=new, ?id=WO-301)
     handleUrlParams();
+
+    // 10. Bind Export CSV button
+    let exportBtn = document.getElementById("exportWorkOrdersCsvBtn");
+    if (exportBtn) exportBtn.addEventListener("click", exportWorkOrdersCSV);
 });
 
 // Load records from localStorage
@@ -265,11 +269,14 @@ function filterAndRenderTable() {
 
         // Action buttons
         var role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+        let jobSheetBtn = "<button type='button' class='btn-action-view' onclick='openJobTravelerModal(\"" + escapeHTML(o.id) + "\")' title='Open Shop-Floor Job Sheet / LOTO Traveler' style='background:var(--surface-elevated);border:1px solid var(--border-color);color:var(--text-primary);padding:3px 7px;font-size:0.72rem;font-weight:600;'>🖨 Job Sheet</button>";
         let actionsHtml = "";
+
         if (role === "Operator") {
-            actionsHtml = "<span class='badge bg-secondary font-mono' style='font-size:0.7rem;'>READ-ONLY</span>";
+            actionsHtml = "<div class='btn-action-group justify-content-center'>" + jobSheetBtn + "</div>";
         } else {
             actionsHtml = "<div class='btn-action-group justify-content-center'>";
+            actionsHtml += jobSheetBtn;
             if (isWaiting) {
                 actionsHtml += "<button type='button' class='btn-action-resume' onclick='resumeWorkOrder(\"" + escapeHTML(o.id) + "\")'>Resume</button>";
             }
@@ -283,7 +290,7 @@ function filterAndRenderTable() {
 
         tr.innerHTML =
             "<td class='font-mono'><strong>" + escapeHTML(o.id) + "</strong></td>" +
-            "<td><strong>" + escapeHTML(o.equipment) + "</strong></td>" +
+            "<td><a href='javascript:void(0)' data-action='view-dossier' data-equipment-id='" + escapeHTML(o.equipment) + "' class='badge-eq-dossier' title='Open 360° Technical Dossier' style='color:var(--primary); font-weight:700; text-decoration:underline; cursor:pointer;'><strong>" + escapeHTML(o.equipment) + "</strong></a></td>" +
             "<td>" + detailsHtml + "</td>" +
             "<td>" + escapeHTML(o.technician) + "</td>" +
             "<td><span class='badge-status " + priorityBadgeClass + "'>" + escapeHTML(o.priority) + "</span></td>" +
@@ -594,4 +601,42 @@ function deleteOrder(id) {
         }
     });
 }
+
+// Export Filtered Work Orders Table to CSV
+function exportWorkOrdersCSV() {
+    let query = (document.getElementById("searchInput") ? document.getElementById("searchInput").value : "").toLowerCase().trim();
+    let priorityVal = document.getElementById("priorityFilter") ? document.getElementById("priorityFilter").value : "All";
+    let statusVal = document.getElementById("statusFilter") ? document.getElementById("statusFilter").value : "All";
+
+    let filtered = ordersList.filter(function (order) {
+        let matchesQuery = !query ||
+            order.id.toLowerCase().includes(query) ||
+            order.equipment.toLowerCase().includes(query) ||
+            (order.problem || "").toLowerCase().includes(query) ||
+            (order.technician || "").toLowerCase().includes(query);
+
+        let matchesPriority = (priorityVal === "All") || (order.priority === priorityVal);
+        let matchesStatus = (statusVal === "All") || (order.status === statusVal);
+
+        return matchesQuery && matchesPriority && matchesStatus;
+    });
+
+    let rows = filtered.map(function (o) {
+        return {
+            "Work Order ID": o.id,
+            "Target Equipment": o.equipment,
+            "Incident / Scope": o.problem || o.description || "",
+            "Assigned Technician": o.technician,
+            "Priority": o.priority,
+            "Scheduled Date": o.date || o.scheduledDate || "",
+            "Operational Status": o.status,
+            "Required Spare Part": o.requiredPart || "None",
+            "Quantity Required": o.requiredQuantity || 0,
+            "Bottleneck Reason": o.waitingReason || ""
+        };
+    });
+
+    exportTableToCSV("forge_work_orders_dispatch_" + new Date().toISOString().split("T")[0] + ".csv", rows);
+}
+
 

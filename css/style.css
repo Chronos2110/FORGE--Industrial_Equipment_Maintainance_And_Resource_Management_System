@@ -3292,3 +3292,408 @@ button:disabled {
     cursor: not-allowed;
     opacity: 0.65;
 }
+
+/* ==========================================================================
+   31. MILESTONE 5: ENTERPRISE SLIDE-OVER DRAWERS & RELATIONAL DOSSIERS
+   ========================================================================== */
+.forge-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 1055;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.forge-drawer-backdrop.show,
+.forge-drawer-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.forge-slide-drawer {
+    position: fixed;
+    top: 0;
+    right: -600px;
+    width: 560px;
+    max-width: 92vw;
+    height: 100vh;
+    background-color: var(--card-bg);
+    border-left: 1px solid var(--border-color);
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    color: var(--text-primary);
+}
+.forge-slide-drawer.open,
+.forge-slide-drawer.active {
+    right: 0;
+}
+
+.drawer-header {
+    padding: 16px 22px;
+    background-color: var(--modal-header-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+.drawer-title-group {
+    display: flex;
+    flex-direction: column;
+}
+.drawer-pretitle {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--primary);
+    font-family: 'IBM Plex Mono', monospace;
+}
+.drawer-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin: 0;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.drawer-close-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all var(--transition-fast);
+}
+.drawer-close-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--primary);
+    background-color: var(--surface-elevated);
+}
+
+.drawer-body {
+    padding: 22px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.drawer-section {
+    margin-bottom: 24px;
+    background-color: var(--canvas-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 16px;
+}
+.drawer-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 6px;
+}
+
+/* Dossier Telemetry Cards */
+.dossier-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.dossier-stat-box {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 10px 12px;
+    border-radius: 3px;
+}
+.dossier-stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+}
+.dossier-stat-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.dossier-item-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 10px 14px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color var(--transition-fast);
+}
+.dossier-item-card:hover {
+    border-color: var(--primary);
+}
+
+/* Universal CSV Export Button */
+.btn-export-csv {
+    background-color: var(--surface-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.btn-export-csv:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background-color: var(--card-hover-bg);
+}
+
+/* Shop-Floor Live Sync Toast Notification */
+.forge-sync-toast {
+    position: fixed;
+    bottom: 84px;
+    left: 24px;
+    background-color: #121518;
+    color: #F0F2F5;
+    border: 1px solid var(--primary);
+    padding: 8px 14px;
+    border-radius: 3px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1080;
+    animation: slideUpFade 0.3s ease;
+}
+.sync-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--success);
+    box-shadow: 0 0 8px var(--success);
+    display: inline-block;
+    animation: pulseSync 1.5s infinite;
+}
+@keyframes pulseSync {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Work Order Job Traveler Document & LOTO */
+.job-traveler-doc {
+    background-color: #FFFFFF;
+    color: #111418;
+    padding: 24px;
+    border: 1px solid #D0D5DD;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+[data-theme="dark"] .job-traveler-doc {
+    background-color: #16191D;
+    color: #F0F2F5;
+    border-color: #2D333B;
+}
+
+.job-doc-header {
+    border-bottom: 2px solid #111418;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+[data-theme="dark"] .job-doc-header {
+    border-bottom-color: var(--primary);
+}
+.job-doc-company {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.8px;
+    color: #667085;
+}
+[data-theme="dark"] .job-doc-company { color: #8B949E; }
+.job-doc-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    margin: 4px 0 0;
+    letter-spacing: -0.02em;
+}
+
+.loto-box {
+    background: #FFF9ED;
+    border: 1px solid #F79009;
+    padding: 14px 16px;
+    border-radius: 4px;
+    margin-bottom: 18px;
+}
+[data-theme="dark"] .loto-box {
+    background: #231C14;
+    border-color: #B54708;
+}
+.loto-header {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #B54708;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+[data-theme="dark"] .loto-header { color: #F79009; }
+.loto-item {
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.signoff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 24px;
+    border-top: 1px dashed #D0D5DD;
+    padding-top: 16px;
+}
+[data-theme="dark"] .signoff-grid { border-top-color: #2D333B; }
+.signoff-line {
+    border-bottom: 1px solid #111418;
+    margin-top: 36px;
+    margin-bottom: 4px;
+}
+[data-theme="dark"] .signoff-line { border-bottom-color: #8B949E; }
+.signoff-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+    color: #667085;
+}
+[data-theme="dark"] .signoff-label { color: #8B949E; }
+
+/* Keyboard Shortcut Reference Modal */
+.shortcut-category-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--primary);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 8px;
+}
+.shortcut-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.82rem;
+}
+.shortcut-row:last-child {
+    border-bottom: none;
+}
+.shortcut-keys {
+    display: flex;
+    gap: 4px;
+}
+.shortcut-kbd {
+    background-color: var(--surface-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Print Rules: Optimize Work Order Traveler for physical shop-floor printouts */
+@media print {
+    body {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+    }
+    .sidebar,
+    .topbar,
+    .forge-control-dock,
+    .cmd-palette-backdrop,
+    .modal-backdrop,
+    .forge-drawer-backdrop,
+    .forge-slide-drawer,
+    .btn,
+    .modal-footer,
+    .modal-header .btn-close,
+    .forge-sync-toast,
+    .action-bar,
+    .empty-state {
+        display: none !important;
+    }
+    .modal {
+        position: static !important;
+        display: block !important;
+        overflow: visible !important;
+    }
+    .modal-dialog {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+        max-height: none !important;
+    }
+    .job-traveler-doc {
+        border: none !important;
+        padding: 0 !important;
+        color: #000000 !important;
+        background: transparent !important;
+    }
+    .loto-box {
+        background: #FFFDF5 !important;
+        border: 1px solid #000000 !important;
+        color: #000000 !important;
+    }
+    .loto-header {
+        color: #000000 !important;
+    }
+}

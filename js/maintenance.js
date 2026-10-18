@@ -43,6 +43,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 7. Handle URL parameters (?action=new, ?id=MNT-001)
     handleUrlParams();
+
+    // 8. Bind Export CSV button
+    let exportBtn = document.getElementById("exportMaintenanceCsvBtn");
+    if (exportBtn) exportBtn.addEventListener("click", exportMaintenanceCSV);
 });
 
 // Load records from localStorage
@@ -211,7 +215,7 @@ function filterAndRenderTable() {
 
         tr.innerHTML =
             "<td class='font-mono'><strong>" + escapeHTML(m.id) + "</strong>" + woBadge + "</td>" +
-            "<td><strong>" + escapeHTML(m.equipment) + "</strong></td>" +
+            "<td><a href='javascript:void(0)' data-action='view-dossier' data-equipment-id='" + escapeHTML(m.equipment) + "' class='badge-eq-dossier' title='Open 360° Technical Dossier' style='color:var(--primary); font-weight:700; text-decoration:underline; cursor:pointer;'><strong>" + escapeHTML(m.equipment) + "</strong></a></td>" +
             "<td><span class='badge-status " + typeBadgeClass + "'>" + escapeHTML(m.type) + "</span></td>" +
             "<td>" + escapeHTML(m.technician) + "</td>" +
             "<td class='font-mono'>" + dateHtml + "</td>" +
@@ -483,4 +487,38 @@ function deleteMaintenance(id) {
         }
     });
 }
+
+// Export Filtered Maintenance Table to CSV
+function exportMaintenanceCSV() {
+    let query = (document.getElementById("searchInput") ? document.getElementById("searchInput").value : "").toLowerCase().trim();
+    let typeVal = document.getElementById("typeFilter") ? document.getElementById("typeFilter").value : "All";
+    let statusVal = document.getElementById("statusFilter") ? document.getElementById("statusFilter").value : "All";
+
+    let filtered = maintenanceList.filter(function (m) {
+        let matchesQuery = !query ||
+            m.id.toLowerCase().includes(query) ||
+            m.equipment.toLowerCase().includes(query) ||
+            m.technician.toLowerCase().includes(query);
+
+        let matchesType = (typeVal === "All") || (m.type === typeVal);
+        let matchesStatus = (statusVal === "All") || (m.status === statusVal);
+
+        return matchesQuery && matchesType && matchesStatus;
+    });
+
+    let rows = filtered.map(function (m) {
+        return {
+            "Schedule ID": m.id,
+            "Target Machine": m.equipment,
+            "Maintenance Type": m.type,
+            "Lead Specialist": m.technician,
+            "Scheduled Date": m.scheduledDate,
+            "Execution Status": m.status,
+            "Linked Work Order": m.workOrderId || "None"
+        };
+    });
+
+    exportTableToCSV("forge_maintenance_schedules_" + new Date().toISOString().split("T")[0] + ".csv", rows);
+}
+
 
