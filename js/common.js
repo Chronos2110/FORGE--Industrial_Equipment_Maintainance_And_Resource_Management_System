@@ -18,6 +18,10 @@ document.addEventListener("DOMContentLoaded", function () {
     initCommon();
     enforceRouteGuard();
     applyRolePermissions();
+    initSidebarShell();
+    initTopbarShell();
+    initControlDock();
+    initCommandPalette();
 });
 
 // ==========================================================================
@@ -226,6 +230,12 @@ function applyTheme(theme) {
         lBtnL.setAttribute("aria-pressed", String(theme === "light"));
         lBtnD.setAttribute("aria-pressed", String(theme === "dark"));
     }
+
+    // Sync dock theme icon
+    var dockThemeIcon = document.getElementById("dockThemeIcon");
+    if (dockThemeIcon) {
+        dockThemeIcon.textContent = theme === "dark" ? "☀" : "🌙";
+    }
 }
 
 // ==========================================================================
@@ -267,9 +277,10 @@ function applyRolePermissions() {
         document.querySelectorAll(".operator-only").forEach(function (el) { el.classList.add("d-none"); });
 
     } else if (role === "Operator") {
-        document.querySelectorAll(".btn-action-delete").forEach(function (el) { el.classList.add("d-none"); });
-        document.querySelectorAll(".btn-action-edit").forEach(function (el) { el.classList.add("d-none"); });
-        var ids = ["addNewEquipmentBtn", "addNewTechBtn", "addNewMaintBtn", "addNewPartBtn", "addNewOrderBtn"];
+        document.querySelectorAll(".btn-action-delete, .btn-action-edit, .btn-action-reschedule, .btn-action-resume, .btn-action-restock").forEach(function (el) {
+            el.classList.add("d-none");
+        });
+        var ids = ["addNewEquipmentBtn", "addNewTechBtn", "addNewMaintBtn", "addNewPartBtn", "addNewOrderBtn", "btnAutoAssignWO", "btnAutoAssignMaint"];
         ids.forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.classList.add("d-none");
@@ -277,6 +288,23 @@ function applyRolePermissions() {
         document.querySelectorAll(".admin-only").forEach(function (el) { el.classList.add("d-none"); });
         document.querySelectorAll(".technician-only").forEach(function (el) { el.classList.add("d-none"); });
         document.querySelectorAll(".operator-only").forEach(function (el) { el.classList.remove("d-none"); });
+
+        // Add Operator Read-Only Indicator badge if on an operational page
+        var currentPath = window.location.pathname.toLowerCase();
+        var isRestrictedModule = currentPath.indexOf("workorders") !== -1 ||
+                                 currentPath.indexOf("maintenance") !== -1 ||
+                                 currentPath.indexOf("inventory") !== -1 ||
+                                 currentPath.indexOf("equipment") !== -1;
+        if (isRestrictedModule && !document.getElementById("operatorReadonlyBadge")) {
+            var targetContainer = document.querySelector(".action-bar") || document.querySelector(".topbar-left");
+            if (targetContainer) {
+                var roBadge = document.createElement("div");
+                roBadge.id = "operatorReadonlyBadge";
+                roBadge.className = "operator-readonly-pill";
+                roBadge.innerHTML = '<span class="badge bg-secondary font-mono">OPERATOR READ-ONLY</span> <span class="text-muted small ms-1">(Modifications locked)</span>';
+                targetContainer.appendChild(roBadge);
+            }
+        }
     }
 }
 
@@ -840,4 +868,945 @@ function getActivityList() {
     return JSON.parse(localStorage.getItem("forge_activity")) ||
            JSON.parse(localStorage.getItem("iemrs_activities")) || [];
 }
+
+// ==========================================================================
+// MILESTONE 2: APPLICATION SHELL & NAVIGATION OVERHAUL
+// ==========================================================================
+
+var PAGE_CONTEXT_MAP = {
+    "dashboard.html":   { section: "OPERATIONS", label: "COMMAND DASHBOARD", tag: "BAY 04" },
+    "equipment.html":   { section: "OPERATIONS", label: "ASSET REGISTRY",    tag: "BAY 04" },
+    "maintenance.html": { section: "OPERATIONS", label: "PREVENTIVE OPS",    tag: "BAY 04" },
+    "workorders.html":  { section: "OPERATIONS", label: "DISPATCH CONSOLE",  tag: "BAY 04" },
+    "workforce.html":   { section: "RESOURCES",  label: "ROSTER & SKILLS",   tag: "BAY 04" },
+    "inventory.html":   { section: "RESOURCES",  label: "SPARES WAREHOUSE",  tag: "BAY 04" },
+    "analytics.html":   { section: "INSIGHTS",   label: "SYSTEM TELEMETRY",  tag: "BAY 04" }
+};
+
+var NAV_ICON_MAP = {
+    "dashboard":   "⊞",
+    "equipment":   "⚙",
+    "maintenance": "🛠",
+    "workorders":  "📋",
+    "work orders": "📋",
+    "workforce":   "👥",
+    "inventory":   "📦",
+    "analytics":   "📈",
+    "faults":      "⚠️"
+};
+
+// ==========================================================================
+// SIDEBAR SHELL: Collapsible Desktop Rail & Off-canvas Mobile/Tablet Drawer
+// ==========================================================================
+function initSidebarShell() {
+    var dashboard = document.querySelector(".dashboard");
+    var sidebar = document.querySelector(".sidebar");
+    if (!dashboard || !sidebar) return;
+
+    // A. Augment sidebar links with icons & data-tooltip
+    sidebar.querySelectorAll(".sidebar-nav a:not(.logout)").forEach(function (link) {
+        if (!link.querySelector(".nav-icon")) {
+            var rawText = link.textContent.trim();
+            var lowerText = rawText.toLowerCase();
+            var icon = "▸";
+            for (var key in NAV_ICON_MAP) {
+                if (lowerText.indexOf(key) !== -1) {
+                    icon = NAV_ICON_MAP[key];
+                    break;
+                }
+            }
+            link.setAttribute("data-tooltip", rawText);
+            link.innerHTML = '<span class="nav-icon" aria-hidden="true">' + icon + '</span><span class="nav-text">' + escapeHTML(rawText) + '</span>';
+        }
+    });
+
+    // B. Augment sidebar brand with close button (for mobile drawer)
+    var sidebarBrand = sidebar.querySelector(".sidebar-brand");
+    if (sidebarBrand && !sidebar.querySelector(".sidebar-close-btn")) {
+        var h2 = sidebarBrand.querySelector("h2");
+        var brandSub = sidebarBrand.querySelector(".brand-sub");
+        if (h2 && !sidebarBrand.querySelector(".sidebar-brand-left")) {
+            var brandLeft = document.createElement("div");
+            brandLeft.className = "sidebar-brand-left";
+            var h2Title = h2.textContent.trim();
+            brandLeft.innerHTML = '<h2><span class="brand-text">' + escapeHTML(h2Title) + '</span></h2>';
+            if (brandSub) brandLeft.appendChild(brandSub);
+            sidebarBrand.innerHTML = "";
+            sidebarBrand.appendChild(brandLeft);
+
+            var closeBtn = document.createElement("button");
+            closeBtn.className = "sidebar-close-btn";
+            closeBtn.id = "sidebarCloseBtn";
+            closeBtn.setAttribute("type", "button");
+            closeBtn.setAttribute("aria-label", "Close navigation drawer");
+            closeBtn.innerHTML = "&times;";
+            sidebarBrand.appendChild(closeBtn);
+
+            closeBtn.addEventListener("click", closeMobileSidebar);
+        }
+    }
+
+    // C. Inject backdrop for tablet/mobile drawer if absent
+    if (!document.getElementById("sidebarBackdrop")) {
+        var backdrop = document.createElement("div");
+        backdrop.className = "sidebar-backdrop";
+        backdrop.id = "sidebarBackdrop";
+        backdrop.setAttribute("aria-hidden", "true");
+        dashboard.appendChild(backdrop);
+        backdrop.addEventListener("click", closeMobileSidebar);
+    }
+
+    // D. Persist collapsed or expanded state for desktop
+    var isDesktop = window.innerWidth >= 993;
+    var savedCollapsed = localStorage.getItem("forge_sidebar_collapsed") === "true";
+    if (isDesktop && savedCollapsed) {
+        dashboard.classList.add("sidebar-collapsed");
+    }
+
+    // E. Handle responsive resize boundaries
+    window.addEventListener("resize", function () {
+        if (window.innerWidth >= 993) {
+            dashboard.classList.remove("sidebar-mobile-open");
+            if (localStorage.getItem("forge_sidebar_collapsed") === "true") {
+                dashboard.classList.add("sidebar-collapsed");
+            }
+        } else {
+            dashboard.classList.remove("sidebar-collapsed");
+        }
+    });
+
+    // F. Global Escape key listener to close mobile drawer
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && dashboard.classList.contains("sidebar-mobile-open")) {
+            closeMobileSidebar();
+        }
+    });
+}
+
+function toggleSidebar() {
+    var dashboard = document.querySelector(".dashboard");
+    if (!dashboard) return;
+    if (window.innerWidth >= 993) {
+        var isNowCollapsed = dashboard.classList.toggle("sidebar-collapsed");
+        localStorage.setItem("forge_sidebar_collapsed", isNowCollapsed ? "true" : "false");
+    } else {
+        if (dashboard.classList.contains("sidebar-mobile-open")) {
+            closeMobileSidebar();
+        } else {
+            openMobileSidebar();
+        }
+    }
+}
+
+function openMobileSidebar() {
+    var dashboard = document.querySelector(".dashboard");
+    if (!dashboard) return;
+    dashboard.classList.add("sidebar-mobile-open");
+    var firstLink = dashboard.querySelector(".sidebar-nav a:not([style*='display: none'])");
+    if (firstLink) firstLink.focus();
+}
+
+function closeMobileSidebar() {
+    var dashboard = document.querySelector(".dashboard");
+    if (!dashboard) return;
+    dashboard.classList.remove("sidebar-mobile-open");
+    var toggleBtn = document.getElementById("sidebarToggleBtn");
+    if (toggleBtn) toggleBtn.focus();
+}
+
+// ==========================================================================
+// TOPBAR SHELL: Context Strip, Search Trigger, Semantic ARIA Standards
+// ==========================================================================
+function initTopbarShell() {
+    var topbar = document.querySelector(".topbar");
+    if (!topbar) return;
+
+    var topbarLeft = topbar.querySelector(".topbar-left");
+    var topbarRight = topbar.querySelector(".topbar-right");
+
+    // A. Inject sidebar toggle button in topbarLeft if missing
+    if (topbarLeft && !document.getElementById("sidebarToggleBtn")) {
+        var toggleBtn = document.createElement("button");
+        toggleBtn.className = "btn-sidebar-toggle";
+        toggleBtn.id = "sidebarToggleBtn";
+        toggleBtn.setAttribute("type", "button");
+        toggleBtn.setAttribute("aria-label", "Toggle navigation rail");
+        toggleBtn.setAttribute("title", "Toggle navigation rail ([)");
+        toggleBtn.innerHTML = '<span class="toggle-icon" aria-hidden="true">☰</span>';
+        topbarLeft.insertBefore(toggleBtn, topbarLeft.firstChild);
+
+        toggleBtn.addEventListener("click", toggleSidebar);
+    }
+
+    // B. Inject industrial context strip
+    if (topbarLeft && !topbarLeft.querySelector(".topbar-context-strip")) {
+        var currentPath = window.location.pathname.toLowerCase();
+        var ctx = { section: "OPERATIONS", label: "COMMAND CONSOLE", tag: "BAY 04" };
+        for (var pKey in PAGE_CONTEXT_MAP) {
+            if (currentPath.indexOf(pKey) !== -1) {
+                ctx = PAGE_CONTEXT_MAP[pKey];
+                break;
+            }
+        }
+
+        var h3 = topbarLeft.querySelector("h3");
+        var subtitle = topbarLeft.querySelector(".topbar-subtitle");
+
+        var titleGroup = document.createElement("div");
+        titleGroup.className = "topbar-title-group";
+
+        var contextStrip = document.createElement("div");
+        contextStrip.className = "topbar-context-strip";
+        contextStrip.innerHTML =
+            '<span class="context-tag">' + ctx.tag + '</span>' +
+            '<span aria-hidden="true">//</span>' +
+            '<span class="context-section">' + ctx.section + '</span>' +
+            '<span aria-hidden="true">//</span>' +
+            '<span class="context-module">' + ctx.label + '</span>';
+
+        titleGroup.appendChild(contextStrip);
+        if (h3) {
+            titleGroup.appendChild(h3);
+        }
+        if (subtitle) {
+            titleGroup.appendChild(subtitle);
+        }
+        topbarLeft.appendChild(titleGroup);
+    }
+
+    // C. Inject Command Palette search trigger button
+    if (!document.getElementById("topbarSearchTrigger")) {
+        var isMac = (navigator.platform || "").toUpperCase().indexOf("MAC") >= 0;
+        var shortcutText = isMac ? "⌘K" : "Ctrl+K";
+
+        var searchTrigger = document.createElement("button");
+        searchTrigger.className = "topbar-search-btn";
+        searchTrigger.id = "topbarSearchTrigger";
+        searchTrigger.setAttribute("type", "button");
+        searchTrigger.setAttribute("aria-label", "Search records or jump to... (" + shortcutText + ")");
+        searchTrigger.innerHTML =
+            '<span class="search-ico" aria-hidden="true">⌕</span>' +
+            '<span class="search-text">Search records or jump to...</span>' +
+            '<span class="search-shortcut">' + shortcutText + '</span>';
+
+        if (topbarRight) {
+            topbar.insertBefore(searchTrigger, topbarRight);
+        } else {
+            topbar.appendChild(searchTrigger);
+        }
+
+        searchTrigger.addEventListener("click", function () {
+            openCommandPalette();
+        });
+    }
+
+    // D. Refine topbar accessibility
+    var roleBadge = topbar.querySelector(".role-badge");
+    if (roleBadge) {
+        var role = getActiveRole();
+        roleBadge.setAttribute("aria-label", "Active session role: " + role);
+        roleBadge.setAttribute("tabindex", "0");
+    }
+}
+
+// ==========================================================================
+// FORGE CONTROL DOCK (Bespoke Industrial Instrument Bar)
+// ==========================================================================
+function initControlDock() {
+    if (document.getElementById("forgeControlDock")) return;
+    if (!document.querySelector(".dashboard")) return;
+
+    var role = getActiveRole();
+    var currentTheme = localStorage.getItem("forge_theme") || "light";
+
+    // Compute live urgent counts
+    var workorders = getWorkOrdersList();
+    var inventory = getInventoryList();
+    var urgentCount = 0;
+    for (var i = 0; i < workorders.length; i++) {
+        var wo = workorders[i];
+        var p = (wo.priority || "").toLowerCase();
+        var s = (wo.status || "").toLowerCase();
+        if ((p === "high" || p === "critical" || p === "emergency") && s !== "completed") {
+            urgentCount++;
+        }
+    }
+    for (var j = 0; j < inventory.length; j++) {
+        var part = inventory[j];
+        if (Number(part.quantity) <= Number(part.minimumStock)) {
+            urgentCount++;
+        }
+    }
+
+    // Role-specific action config
+    var actionConfig = {
+        icon: "+",
+        label: "CREATE WO",
+        title: "Create Work Order (Shortcut: N)",
+        handler: function () {
+            if (window.location.pathname.toLowerCase().indexOf("workorders") !== -1) {
+                var btn = document.getElementById("addNewOrderBtn");
+                if (btn) btn.click();
+            } else {
+                window.location.href = "workorders.html?action=new";
+            }
+        }
+    };
+    if (role === "Technician") {
+        actionConfig = {
+            icon: "🛠",
+            label: "LOG WO",
+            title: "Log or Update Work Order (Shortcut: L)",
+            handler: function () {
+                window.location.href = "workorders.html";
+            }
+        };
+    } else if (role === "Operator") {
+        actionConfig = {
+            icon: "⚠️",
+            label: "FAULT",
+            title: "Report Equipment Breakdown (Shortcut: F)",
+            handler: function () {
+                openQuickFaultModal();
+            }
+        };
+    }
+
+    var isMac = (navigator.platform || "").toUpperCase().indexOf("MAC") >= 0;
+    var kbdSearch = isMac ? "⌘K" : "^K";
+
+    var dock = document.createElement("div");
+    dock.className = "forge-control-dock";
+    dock.id = "forgeControlDock";
+    dock.setAttribute("role", "toolbar");
+    dock.setAttribute("aria-label", "FORGE Industrial Control Dock");
+
+    var isDash = window.location.pathname.toLowerCase().indexOf("dashboard") !== -1;
+
+    dock.innerHTML =
+        '<button class="dock-btn" id="dockSearchBtn" type="button" title="Search records or actions (' + (isMac ? 'Cmd+K' : 'Ctrl+K') + ')" aria-label="Search records">' +
+            '<span class="dock-icon" aria-hidden="true">⌕</span>' +
+            '<span class="dock-label">SEARCH</span>' +
+            '<span class="dock-shortcut">' + kbdSearch + '</span>' +
+        '</button>' +
+        '<span class="dock-divider" aria-hidden="true"></span>' +
+        '<a href="dashboard.html" class="dock-btn ' + (isDash ? 'active' : '') + '" id="dockDashBtn" title="Jump to Operations Dashboard (D)" aria-label="Dashboard">' +
+            '<span class="dock-icon" aria-hidden="true">⊞</span>' +
+            '<span class="dock-label">DASH</span>' +
+            '<span class="dock-shortcut">D</span>' +
+        '</a>' +
+        '<button class="dock-btn dock-btn-primary" id="dockActionBtn" type="button" title="' + actionConfig.title + '" aria-label="' + actionConfig.label + '">' +
+            '<span class="dock-icon" aria-hidden="true">' + actionConfig.icon + '</span>' +
+            '<span class="dock-label">' + actionConfig.label + '</span>' +
+        '</button>' +
+        '<button class="dock-btn" id="dockAlertsBtn" type="button" title="Urgent Alerts: ' + urgentCount + ' active items" aria-label="Urgent alerts (' + urgentCount + ')">' +
+            '<span class="dock-icon" style="color:var(--danger);" aria-hidden="true">⚡</span>' +
+            '<span class="dock-label">ALERTS</span>' +
+            (urgentCount > 0 ? '<span class="dock-badge" id="dockAlertsBadge">' + urgentCount + '</span>' : '') +
+        '</button>' +
+        '<span class="dock-divider" aria-hidden="true"></span>' +
+        '<button class="dock-btn" id="dockSidebarBtn" type="button" title="Toggle Sidebar Rail ([)" aria-label="Toggle Sidebar">' +
+            '<span class="dock-icon" aria-hidden="true">⫷</span>' +
+            '<span class="dock-shortcut">[</span>' +
+        '</button>' +
+        '<button class="dock-btn" id="dockThemeBtn" type="button" title="Toggle Theme (T)" aria-label="Toggle Theme">' +
+            '<span class="dock-icon" id="dockThemeIcon" aria-hidden="true">' + (currentTheme === "dark" ? "☀" : "🌙") + '</span>' +
+            '<span class="dock-shortcut">T</span>' +
+        '</button>';
+
+    document.body.appendChild(dock);
+
+    // Event listeners
+    document.getElementById("dockSearchBtn").addEventListener("click", function () { openCommandPalette(); });
+    document.getElementById("dockActionBtn").addEventListener("click", actionConfig.handler);
+    document.getElementById("dockAlertsBtn").addEventListener("click", function () {
+        if (urgentCount > 0) {
+            showAlert("Urgent Items: " + urgentCount + " high-priority work orders / low stock items.", "warning");
+            setTimeout(function () { window.location.href = "workorders.html"; }, 800);
+        } else {
+            showAlert("All systems nominal. Zero active urgent alerts.", "success");
+        }
+    });
+    document.getElementById("dockSidebarBtn").addEventListener("click", toggleSidebar);
+    document.getElementById("dockThemeBtn").addEventListener("click", function () {
+        var current = localStorage.getItem("forge_theme") || "light";
+        applyTheme(current === "dark" ? "light" : "dark");
+    });
+}
+
+// ==========================================================================
+// OPERATOR QUICK FAULT MODAL DIALOG
+// ==========================================================================
+function openQuickFaultModal(preselectedEqName) {
+    var modalEl = document.getElementById("forgeQuickFaultModal");
+    if (!modalEl) {
+        modalEl = document.createElement("div");
+        modalEl.className = "modal fade";
+        modalEl.id = "forgeQuickFaultModal";
+        modalEl.tabIndex = -1;
+        modalEl.setAttribute("aria-labelledby", "forgeQuickFaultModalLabel");
+        modalEl.setAttribute("aria-hidden", "true");
+        modalEl.innerHTML =
+            '<div class="modal-dialog modal-dialog-centered">' +
+                '<div class="modal-content">' +
+                    '<div class="modal-header">' +
+                        '<div>' +
+                            '<div class="text-gold font-mono small" style="font-size:0.75rem; letter-spacing:0.5px;">INCIDENT DISPATCH // OPERATOR</div>' +
+                            '<h5 class="modal-title" id="forgeQuickFaultModalLabel">Report Equipment Breakdown</h5>' +
+                        '</div>' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                    '</div>' +
+                    '<form id="forgeQuickFaultForm">' +
+                        '<div class="modal-body">' +
+                            '<div class="mb-3">' +
+                                '<label for="quickFaultEquipment" class="form-label">Impacted Machinery</label>' +
+                                '<select id="quickFaultEquipment" class="form-select" required>' +
+                                    '<option value="">-- Select Target Equipment --</option>' +
+                                '</select>' +
+                            '</div>' +
+                            '<div class="mb-3">' +
+                                '<label for="quickFaultPriority" class="form-label">Severity Level</label>' +
+                                '<select id="quickFaultPriority" class="form-select" required>' +
+                                    '<option value="High" selected>High (Production Stoppage)</option>' +
+                                    '<option value="Critical">Critical (Immediate Danger)</option>' +
+                                    '<option value="Medium">Medium (Degraded Performance)</option>' +
+                                    '<option value="Low">Low (Minor Inspection)</option>' +
+                                '</select>' +
+                            '</div>' +
+                            '<div class="mb-3">' +
+                                '<label for="quickFaultDescription" class="form-label">Diagnostics / Symptom Description</label>' +
+                                '<textarea id="quickFaultDescription" class="form-control" rows="3" placeholder="Describe abnormal noise, overheating, fluid leak, error code, or stoppage..." required></textarea>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="modal-footer">' +
+                            '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>' +
+                            '<button type="submit" class="btn btn-primary">Dispatch Incident Report</button>' +
+                        '</div>' +
+                    '</form>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(modalEl);
+
+        document.getElementById("forgeQuickFaultForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+            var eqSelect = document.getElementById("quickFaultEquipment");
+            var eqVal = eqSelect.value;
+            var eqOpt = eqSelect.options[eqSelect.selectedIndex];
+            var eqId = eqOpt ? eqOpt.getAttribute("data-id") : "";
+            var pri = document.getElementById("quickFaultPriority").value;
+            var desc = document.getElementById("quickFaultDescription").value.trim();
+
+            if (!eqVal || !desc) return;
+
+            // Generate IDs
+            var faults = JSON.parse(localStorage.getItem("forge_faults")) || [];
+            var faultId = "FLT-00" + (faults.length + 1);
+            var workorders = JSON.parse(localStorage.getItem("forge_workorders")) ||
+                             JSON.parse(localStorage.getItem("iemrs_workorders")) || [];
+            var woId = "WO-" + (300 + workorders.length + 1);
+
+            // Auto-assign technician with matching skill
+            var techResult = autoAssignTechnician(eqVal);
+            var techName = (techResult && techResult.name) ? techResult.name : "Unassigned";
+            var techId = (techResult && techResult.technician) ? techResult.technician.id : "";
+
+            // 1. Create fault record
+            var newFault = {
+                id: faultId,
+                equipmentId: eqId,
+                equipmentName: eqVal,
+                reportedBy: "Operator",
+                description: desc,
+                priority: pri,
+                status: "Converted to WO",
+                createdAt: new Date().toISOString(),
+                workOrderId: woId
+            };
+            faults.unshift(newFault);
+            localStorage.setItem("forge_faults", JSON.stringify(faults));
+
+            // 2. Create corresponding work order
+            var newWO = {
+                id: woId,
+                equipmentId: eqId,
+                equipment: eqVal,
+                faultId: faultId,
+                technicianId: techId,
+                technician: techName,
+                priority: pri,
+                status: techName !== "Unassigned" ? "Assigned" : "Scheduled",
+                date: new Date().toISOString().split("T")[0],
+                scheduledDate: new Date().toISOString().split("T")[0],
+                expectedResumeDate: "",
+                description: desc,
+                problem: desc,
+                requiredPartId: "",
+                requiredPart: "",
+                requiredQuantity: 0,
+                waitingReason: "",
+                notes: "Operator reported incident via Control Dock"
+            };
+            workorders.unshift(newWO);
+            localStorage.setItem("forge_workorders", JSON.stringify(workorders));
+            localStorage.setItem("iemrs_workorders", JSON.stringify(workorders));
+
+            // 3. Update equipment status to Faulty
+            var eqList = getEquipmentList();
+            for (var k = 0; k < eqList.length; k++) {
+                if (eqList[k].name === eqVal || eqList[k].id === eqId) {
+                    eqList[k].status = "Faulty";
+                    break;
+                }
+            }
+            localStorage.setItem("forge_equipment", JSON.stringify(eqList));
+            localStorage.setItem("iemrs_equipment", JSON.stringify(eqList));
+
+            // 4. Log activity
+            logActivity(eqVal, "Operator reported fault " + faultId + " → Dispatched " + woId + " (" + pri + " Priority)", "badge-danger");
+
+            // Close modal
+            var inst = bootstrap.Modal.getInstance(modalEl);
+            if (inst) inst.hide();
+
+            showAlert("Incident " + faultId + " reported. Work Order " + woId + " dispatched to " + techName + ".", "success");
+
+            // If on dashboard or related page, reload
+            setTimeout(function () {
+                var p = window.location.pathname.toLowerCase();
+                if (p.indexOf("dashboard") !== -1 || p.indexOf("workorders") !== -1 || p.indexOf("equipment") !== -1) {
+                    window.location.reload();
+                }
+            }, 600);
+        });
+    }
+
+    // Populate equipment select
+    var eqSelect = document.getElementById("quickFaultEquipment");
+    if (eqSelect) {
+        eqSelect.innerHTML = '<option value="">-- Select Target Equipment --</option>';
+        var eqList = getEquipmentList();
+        eqList.forEach(function (eq) {
+            var opt = document.createElement("option");
+            opt.value = eq.name;
+            opt.setAttribute("data-id", eq.id);
+            opt.textContent = eq.name + " (" + eq.type + " - " + (eq.location || "Plant Floor") + ") - " + eq.status;
+            if (preselectedEqName && (eq.name === preselectedEqName || eq.id === preselectedEqName)) {
+                opt.selected = true;
+            }
+            eqSelect.appendChild(opt);
+        });
+    }
+
+    document.getElementById("quickFaultDescription").value = "";
+    document.getElementById("quickFaultPriority").value = "High";
+
+    var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    bsModal.show();
+}
+
+// ==========================================================================
+// ACCESSIBLE COMMAND PALETTE (Ctrl+K / Cmd+K)
+// ==========================================================================
+var cmdPaletteState = {
+    isOpen: false,
+    selectedIndex: 0,
+    items: [],
+    lastFocused: null
+};
+
+function initCommandPalette() {
+    if (document.getElementById("cmdPalette")) return;
+
+    var role = getActiveRole();
+
+    var paletteBackdrop = document.createElement("div");
+    paletteBackdrop.className = "cmd-palette-backdrop";
+    paletteBackdrop.id = "cmdPalette";
+    paletteBackdrop.style.display = "none";
+    paletteBackdrop.setAttribute("role", "dialog");
+    paletteBackdrop.setAttribute("aria-modal", "true");
+    paletteBackdrop.setAttribute("aria-label", "Command Palette");
+
+    paletteBackdrop.innerHTML =
+        '<div class="cmd-palette-modal">' +
+            '<div class="cmd-palette-header">' +
+                '<span class="cmd-search-icon" aria-hidden="true">⌕</span>' +
+                '<input type="text" class="cmd-palette-input" id="cmdPaletteInput" placeholder="Search navigation, records, or system actions..." autocomplete="off" spellcheck="false" aria-autocomplete="list">' +
+                '<span class="cmd-esc-badge" aria-hidden="true">ESC</span>' +
+            '</div>' +
+            '<div class="cmd-palette-body" id="cmdPaletteBody" role="listbox"></div>' +
+            '<div class="cmd-palette-footer">' +
+                '<div class="cmd-footer-hints">' +
+                    '<span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>' +
+                    '<span><kbd>↵</kbd> Execute</span>' +
+                    '<span><kbd>ESC</kbd> Close</span>' +
+                '</div>' +
+                '<span class="cmd-footer-role" id="cmdFooterRole">ROLE: ' + role.toUpperCase() + '</span>' +
+            '</div>' +
+        '</div>';
+
+    document.body.appendChild(paletteBackdrop);
+
+    var input = document.getElementById("cmdPaletteInput");
+
+    // Backdrop click dismisses
+    paletteBackdrop.addEventListener("click", function (e) {
+        if (e.target === paletteBackdrop) {
+            closeCommandPalette();
+        }
+    });
+
+    // Input filter
+    input.addEventListener("input", function () {
+        renderCommandPaletteResults(input.value.trim());
+    });
+
+    // Keyboard navigation inside palette & global hotkeys
+    document.addEventListener("keydown", function (e) {
+        var isMac = (navigator.platform || "").toUpperCase().indexOf("MAC") >= 0;
+        var isCmdK = (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === "k";
+
+        if (isCmdK) {
+            e.preventDefault();
+            if (cmdPaletteState.isOpen) {
+                closeCommandPalette();
+            } else {
+                openCommandPalette();
+            }
+            return;
+        }
+
+        if (cmdPaletteState.isOpen) {
+            if (e.key === "Escape") {
+                e.preventDefault();
+                closeCommandPalette();
+            } else if (e.key === "ArrowDown") {
+                e.preventDefault();
+                navigateCommandPalette(1);
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                navigateCommandPalette(-1);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                executeCommandPaletteItem(cmdPaletteState.selectedIndex);
+            }
+            return;
+        }
+
+        // Global shortcuts when not inside an editable element
+        var activeEl = document.activeElement;
+        var activeTag = (activeEl && activeEl.tagName) ? activeEl.tagName.toUpperCase() : "";
+        var isEditable = !!(activeEl && (
+            activeTag === "INPUT" ||
+            activeTag === "TEXTAREA" ||
+            activeTag === "SELECT" ||
+            activeEl.isContentEditable ||
+            activeEl.getAttribute("contenteditable") === "true"
+        ));
+        if (isEditable) {
+            return;
+        }
+
+        var key = e.key.toLowerCase();
+        if (key === "[") {
+            e.preventDefault();
+            toggleSidebar();
+        } else if (key === "t") {
+            e.preventDefault();
+            var cur = localStorage.getItem("forge_theme") || "light";
+            applyTheme(cur === "dark" ? "light" : "dark");
+        } else if (key === "d") {
+            if (window.location.pathname.toLowerCase().indexOf("dashboard") === -1) {
+                e.preventDefault();
+                window.location.href = "dashboard.html";
+            }
+        } else if (key === "n") {
+            // New Work Order shortcut (Admin)
+            e.preventDefault();
+            if (window.location.pathname.toLowerCase().indexOf("workorders") !== -1) {
+                var btn = document.getElementById("addNewOrderBtn");
+                if (btn && btn.style.display !== "none" && !btn.classList.contains("d-none")) {
+                    btn.click();
+                }
+            } else if (role === "Administrator") {
+                window.location.href = "workorders.html?action=new";
+            }
+        } else if (key === "l") {
+            // Log / Update Work Order shortcut (Technician)
+            e.preventDefault();
+            if (window.location.pathname.toLowerCase().indexOf("workorders") === -1) {
+                window.location.href = "workorders.html";
+            }
+        } else if (key === "f") {
+            // Report Fault shortcut (Operator)
+            e.preventDefault();
+            openQuickFaultModal();
+        }
+    });
+
+    // Handle deep linked actions, e.g. ?action=new
+    if (window.location.search.indexOf("action=new") !== -1) {
+        setTimeout(function () {
+            var btn = document.getElementById("addNewOrderBtn");
+            if (btn) btn.click();
+        }, 350);
+    }
+}
+
+function openCommandPalette() {
+    var palette = document.getElementById("cmdPalette");
+    var input = document.getElementById("cmdPaletteInput");
+    if (!palette || !input) return;
+
+    cmdPaletteState.lastFocused = document.activeElement;
+    cmdPaletteState.isOpen = true;
+    cmdPaletteState.selectedIndex = 0;
+    palette.style.display = "flex";
+    input.value = "";
+
+    renderCommandPaletteResults("");
+    input.focus();
+}
+
+function closeCommandPalette() {
+    var palette = document.getElementById("cmdPalette");
+    if (!palette) return;
+
+    palette.style.display = "none";
+    cmdPaletteState.isOpen = false;
+    cmdPaletteState.items = [];
+
+    if (cmdPaletteState.lastFocused && typeof cmdPaletteState.lastFocused.focus === "function") {
+        cmdPaletteState.lastFocused.focus();
+    }
+}
+
+function getCommandPaletteData() {
+    var role = getActiveRole();
+    var navItems = [];
+    var recordItems = [];
+    var actionItems = [];
+
+    // 1. Navigation items (role-filtered)
+    var allowedNav = ROLE_NAV_ACCESS[role] || ROLE_NAV_ACCESS["Operator"];
+    var allNav = [
+        { id: "nav-dash",  category: "Navigation", icon: "⊞", title: "Operations Dashboard", meta: "Module // Overview", href: "dashboard.html", key: "dashboard" },
+        { id: "nav-eq",    category: "Navigation", icon: "⚙", title: "Equipment Registry", meta: "Module // Operations", href: "equipment.html", key: "equipment" },
+        { id: "nav-maint", category: "Navigation", icon: "🛠", title: "Maintenance Schedules", meta: "Module // Operations", href: "maintenance.html", key: "maintenance" },
+        { id: "nav-wo",    category: "Navigation", icon: "📋", title: "Work Orders Dispatch", meta: "Module // Operations", href: "workorders.html", key: "workorders" },
+        { id: "nav-wf",    category: "Navigation", icon: "👥", title: "Workforce & Roster", meta: "Module // Resources", href: "workforce.html", key: "workforce" },
+        { id: "nav-inv",   category: "Navigation", icon: "📦", title: "Spares Inventory", meta: "Module // Resources", href: "inventory.html", key: "inventory" },
+        { id: "nav-an",    category: "Navigation", icon: "📈", title: "System Analytics", meta: "Module // Insights", href: "analytics.html", key: "analytics" }
+    ];
+
+    allNav.forEach(function (n) {
+        if (allowedNav.indexOf(n.key) !== -1) {
+            navItems.push({
+                category: "Navigation",
+                icon: n.icon,
+                title: n.title,
+                meta: n.meta,
+                action: function () { window.location.href = n.href; }
+            });
+        }
+    });
+
+    // 2. Operational Records
+    // Equipment
+    var eqList = getEquipmentList();
+    for (var e = 0; e < eqList.length; e++) {
+        var eq = eqList[e];
+        recordItems.push({
+            category: "Operational Records",
+            icon: "⚙",
+            title: "[" + eq.id + "] " + eq.name,
+            meta: (eq.status || "Unknown").toUpperCase() + " • " + (eq.location || "BAY 04"),
+            action: (function (targetEq) {
+                return function () { window.location.href = "equipment.html"; };
+            })(eq)
+        });
+    }
+
+    // Work Orders
+    var woList = getWorkOrdersList();
+    for (var w = 0; w < woList.length; w++) {
+        var wo = woList[w];
+        recordItems.push({
+            category: "Operational Records",
+            icon: "📋",
+            title: "[" + wo.id + "] " + (wo.title || wo.description || "Work Order"),
+            meta: (wo.priority || "Normal").toUpperCase() + " • " + (wo.status || "Pending"),
+            action: (function (targetWo) {
+                return function () { window.location.href = "workorders.html"; };
+            })(wo)
+        });
+    }
+
+    // Inventory Parts
+    var invList = getInventoryList();
+    for (var p = 0; p < invList.length; p++) {
+        var prt = invList[p];
+        recordItems.push({
+            category: "Operational Records",
+            icon: "📦",
+            title: "[" + prt.id + "] " + (prt.partName || prt.name || "Spare Part"),
+            meta: "QTY: " + prt.quantity + " • MIN: " + prt.minimumStock,
+            action: (function (targetPart) {
+                return function () { window.location.href = "inventory.html"; };
+            })(prt)
+        });
+    }
+
+    // 3. System Actions
+    var currentTheme = localStorage.getItem("forge_theme") || "light";
+    actionItems.push({
+        category: "System Actions",
+        icon: currentTheme === "dark" ? "☀" : "🌙",
+        title: "Toggle Theme (" + (currentTheme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode") + ")",
+        meta: "SYSTEM // THEME",
+        action: function () {
+            applyTheme(currentTheme === "dark" ? "light" : "dark");
+            closeCommandPalette();
+        }
+    });
+
+    // Role switch actions
+    var roles = ["Administrator", "Technician", "Operator"];
+    roles.forEach(function (r) {
+        if (r !== role) {
+            actionItems.push({
+                category: "System Actions",
+                icon: "👤",
+                title: "Switch Role: " + r,
+                meta: "SYSTEM // RBAC",
+                action: function () {
+                    sessionStorage.setItem("forge_role", r);
+                    sessionStorage.setItem("iemrs_role", r);
+                    closeCommandPalette();
+                    showAlert("Switched to " + r + " view.", "info");
+                    setTimeout(function () { window.location.reload(); }, 300);
+                }
+            });
+        }
+    });
+
+    if (role === "Administrator") {
+        actionItems.push({
+            category: "System Actions",
+            icon: "+",
+            title: "Create New Work Order",
+            meta: "ACTION // DISPATCH",
+            action: function () {
+                closeCommandPalette();
+                if (window.location.pathname.toLowerCase().indexOf("workorders") !== -1) {
+                    var btn = document.getElementById("addNewOrderBtn");
+                    if (btn) btn.click();
+                } else {
+                    window.location.href = "workorders.html?action=new";
+                }
+            }
+        });
+    }
+
+    return { navigation: navItems, records: recordItems, actions: actionItems };
+}
+
+function renderCommandPaletteResults(query) {
+    var body = document.getElementById("cmdPaletteBody");
+    if (!body) return;
+
+    var data = getCommandPaletteData();
+    var q = query.toLowerCase().trim();
+
+    var filteredNav = data.navigation.filter(function (it) {
+        return !q || it.title.toLowerCase().indexOf(q) !== -1 || it.meta.toLowerCase().indexOf(q) !== -1;
+    });
+
+    var filteredRecords = data.records.filter(function (it) {
+        return !q || it.title.toLowerCase().indexOf(q) !== -1 || it.meta.toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 10);
+
+    var filteredActions = data.actions.filter(function (it) {
+        return !q || it.title.toLowerCase().indexOf(q) !== -1 || it.meta.toLowerCase().indexOf(q) !== -1;
+    });
+
+    var allFiltered = [];
+    var html = "";
+
+    function renderGroup(title, items) {
+        if (items.length === 0) return "";
+        var gHtml = '<div class="cmd-group-title">' + title + '</div>';
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var globalIdx = allFiltered.length;
+            allFiltered.push(item);
+            var isSelected = globalIdx === cmdPaletteState.selectedIndex;
+            gHtml +=
+                '<div class="cmd-item ' + (isSelected ? 'selected' : '') + '" data-index="' + globalIdx + '" role="option" aria-selected="' + isSelected + '">' +
+                    '<div class="cmd-item-left">' +
+                        '<span class="cmd-item-icon" aria-hidden="true">' + item.icon + '</span>' +
+                        '<span class="cmd-item-title">' + escapeHTML(item.title) + '</span>' +
+                    '</div>' +
+                    '<span class="cmd-item-meta">' + escapeHTML(item.meta) + '</span>' +
+                '</div>';
+        }
+        return gHtml;
+    }
+
+    html += renderGroup("Navigation", filteredNav);
+    html += renderGroup("Operational Records", filteredRecords);
+    html += renderGroup("System Actions", filteredActions);
+
+    if (allFiltered.length === 0) {
+        html = '<div class="cmd-empty">NO MATCHING INDUSTRIAL RECORDS FOUND</div>';
+    }
+
+    body.innerHTML = html;
+    cmdPaletteState.items = allFiltered;
+
+    if (cmdPaletteState.selectedIndex >= allFiltered.length) {
+        cmdPaletteState.selectedIndex = 0;
+        updateSelectedCommandItem();
+    }
+
+    body.querySelectorAll(".cmd-item").forEach(function (el) {
+        el.addEventListener("click", function () {
+            var idx = parseInt(el.getAttribute("data-index"), 10);
+            executeCommandPaletteItem(idx);
+        });
+    });
+}
+
+function navigateCommandPalette(delta) {
+    if (cmdPaletteState.items.length === 0) return;
+    cmdPaletteState.selectedIndex = (cmdPaletteState.selectedIndex + delta + cmdPaletteState.items.length) % cmdPaletteState.items.length;
+    updateSelectedCommandItem();
+}
+
+function updateSelectedCommandItem() {
+    var body = document.getElementById("cmdPaletteBody");
+    if (!body) return;
+    var items = body.querySelectorAll(".cmd-item");
+    items.forEach(function (el, idx) {
+        if (idx === cmdPaletteState.selectedIndex) {
+            el.classList.add("selected");
+            el.setAttribute("aria-selected", "true");
+            el.scrollIntoView({ block: "nearest" });
+        } else {
+            el.classList.remove("selected");
+            el.setAttribute("aria-selected", "false");
+        }
+    });
+}
+
+function executeCommandPaletteItem(idx) {
+    if (idx >= 0 && idx < cmdPaletteState.items.length) {
+        var item = cmdPaletteState.items[idx];
+        closeCommandPalette();
+        if (item && typeof item.action === "function") {
+            item.action();
+        }
+    }
+}
+
 

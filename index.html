@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FORGE — Built to Keep Industry Moving</title>
+    <title>FORGE — Industrial Equipment Maintenance & Resource Management</title>
+    <meta name="description" content="FORGE centralizes equipment tracking, preventive maintenance, work order dispatch, technician allocation, and spare parts inventory for manufacturing operations.">
     <!-- Apply theme before render to prevent flash (default: light) -->
     <script>
         (function () {
@@ -15,71 +16,187 @@
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom Industrial Stylesheet -->
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=5.1">
 </head>
 
 <body>
 
-    <!-- Minimal Industrial Sticky Header -->
-    <header class="landing-nav d-flex justify-content-between align-items-center">
+    <!-- Sticky Industrial Header -->
+    <header class="landing-nav">
         <a href="index.html" class="landing-brand">FORGE</a>
 
-        <ul class="landing-links">
+        <ul class="landing-links" id="landingNavLinks">
             <li><a href="#problem">The Problem</a></li>
             <li><a href="#workflow">Workflow</a></li>
             <li><a href="#platform">Platform</a></li>
             <li><a href="#intelligence">Intelligence</a></li>
         </ul>
 
-        <div class="d-flex align-items-center gap-3">
+        <div class="landing-nav-actions">
             <div class="theme-toggle" id="landingThemeToggle" role="group" aria-label="Theme selector">
                 <button class="theme-toggle-btn" id="landingThemeBtnLight" title="Switch to Light Mode" aria-pressed="true">&#9728; Light</button>
                 <span class="theme-toggle-divider" aria-hidden="true"></span>
                 <button class="theme-toggle-btn" id="landingThemeBtnDark" title="Switch to Dark Mode" aria-pressed="false">&#9790; Dark</button>
             </div>
-            <a href="login.html" class="btn btn-sm btn-outline-primary fw-semibold">Sign In</a>
+            <a href="login.html" class="btn btn-sm btn-outline-primary fw-semibold d-none d-md-inline-block">Sign In</a>
             <a href="login.html" class="btn btn-sm btn-primary">ENTER FORGE &rarr;</a>
+            <button class="landing-hamburger" id="landingHamburger" aria-label="Toggle navigation">
+                <span></span><span></span><span></span>
+            </button>
         </div>
     </header>
 
     <!-- SECTION 1: HERO -->
     <section class="landing-hero">
         <div class="container-xl">
-            <div class="hero-tagline">
-                <span>PLANT OPERATION & RESOURCE DISPATCH</span>
+            <div class="hero-content">
+                <div class="hero-tagline">
+                    <span>PLANT OPERATION & RESOURCE DISPATCH</span>
+                </div>
+
+                <h1 class="hero-title">
+                    BUILT TO KEEP<br>
+                    <span>INDUSTRY</span> MOVING.
+                </h1>
+
+                <p class="hero-lead">
+                    A centralized maintenance management platform for tracking equipment health, dispatching work orders, coordinating technician schedules, and monitoring critical spare parts inventory.
+                </p>
+
+                <div class="hero-actions">
+                    <a href="login.html" class="btn-hero-primary">ENTER FORGE &rarr;</a>
+                    <a href="#platform" class="btn-hero-secondary">EXPLORE PLATFORM</a>
+                </div>
             </div>
 
-            <h1 class="hero-title">
-                BUILT TO KEEP<br>
-                <span>INDUSTRY</span> MOVING.
-            </h1>
-
-            <p class="hero-lead">
-                A centralized maintenance management platform for equipment, work orders, technicians and critical resources.
-            </p>
-
-            <div class="hero-actions">
-                <a href="login.html" class="btn-hero-primary">ENTER FORGE &rarr;</a>
-                <a href="#platform" class="btn-hero-secondary">EXPLORE PLATFORM</a>
+            <!-- Product Visual: CSS-only realistic FORGE dashboard preview -->
+            <div class="hero-visual" aria-label="FORGE Live Dispatch Console Preview">
+                <div class="hero-visual-topbar">
+                    <div class="hero-visual-dots">
+                        <div class="hero-visual-dot"></div>
+                        <div class="hero-visual-dot"></div>
+                        <div class="hero-visual-dot"></div>
+                    </div>
+                    <div class="hero-visual-title">FORGE // DISPATCH CONSOLE</div>
+                    <div class="hero-visual-topbar-status">
+                        <span class="topbar-pulse-dot"></span>
+                        <span>BAY 04 // LIVE</span>
+                    </div>
+                </div>
+                <div class="hero-visual-body">
+                    <div class="hero-visual-sidebar">
+                        <div>
+                            <div class="hero-visual-nav-header">// MODULES</div>
+                            <div class="hero-visual-nav-item active">
+                                <span class="nav-ico">&#9638;</span>
+                                <span>Dashboard</span>
+                            </div>
+                            <div class="hero-visual-nav-item">
+                                <span class="nav-ico">&#9881;</span>
+                                <span>Equipment</span>
+                            </div>
+                            <div class="hero-visual-nav-item">
+                                <span class="nav-ico">&#128203;</span>
+                                <span>Work Orders</span>
+                            </div>
+                            <div class="hero-visual-nav-item">
+                                <span class="nav-ico">&#128295;</span>
+                                <span>Maintenance</span>
+                            </div>
+                            <div class="hero-visual-nav-item">
+                                <span class="nav-ico">&#128230;</span>
+                                <span>Inventory</span>
+                            </div>
+                            <div class="hero-visual-nav-item">
+                                <span class="nav-ico">&#128101;</span>
+                                <span>Workforce</span>
+                            </div>
+                        </div>
+                        <div class="hero-visual-sidebar-role">
+                            <span class="role-pill">ROLE: ADMIN</span>
+                        </div>
+                    </div>
+                    <div class="hero-visual-main">
+                        <div class="hero-visual-main-header">
+                            <span class="hero-visual-view-title">ACTIVE WORK ORDERS</span>
+                            <span class="hero-visual-view-tag">AUTO-DISPATCH</span>
+                        </div>
+                        <div class="hero-visual-kpis">
+                            <div class="hero-visual-kpi">
+                                <div class="hero-visual-kpi-label">CRITICAL WO</div>
+                                <div class="hero-visual-kpi-value kpi-danger">02</div>
+                                <div class="hero-visual-kpi-sub">FLT-001, FLT-002</div>
+                            </div>
+                            <div class="hero-visual-kpi">
+                                <div class="hero-visual-kpi-label">IN PROGRESS</div>
+                                <div class="hero-visual-kpi-value kpi-warning">02</div>
+                                <div class="hero-visual-kpi-sub">WO-301, WO-302</div>
+                            </div>
+                            <div class="hero-visual-kpi">
+                                <div class="hero-visual-kpi-label">PARTS ALERT</div>
+                                <div class="hero-visual-kpi-value kpi-gold">03</div>
+                                <div class="hero-visual-kpi-sub">&lt; MIN SAFETY</div>
+                            </div>
+                        </div>
+                        <div class="hero-visual-table">
+                            <div class="hero-visual-table-header">
+                                <span class="col-id">WO ID</span>
+                                <span class="col-eq">ASSET</span>
+                                <span class="col-tech">DISPATCHED</span>
+                                <span class="col-st">STATUS</span>
+                            </div>
+                            <div class="hero-visual-table-row">
+                                <span class="col-id">WO-301</span>
+                                <span class="col-eq">Compressor 04</span>
+                                <span class="col-tech">V. Patel</span>
+                                <span class="col-st"><span class="hero-vbadge badge-in-prog">IN PROGRESS</span></span>
+                            </div>
+                            <div class="hero-visual-table-row">
+                                <span class="col-id">WO-302</span>
+                                <span class="col-eq">Hydraulic Press 02</span>
+                                <span class="col-tech">S. Jenkins</span>
+                                <span class="col-st"><span class="hero-vbadge badge-waiting">PARTS HOLD</span></span>
+                            </div>
+                            <div class="hero-visual-table-row">
+                                <span class="col-id">WO-303</span>
+                                <span class="col-eq">Lathe Machine 03</span>
+                                <span class="col-tech">D. Chen</span>
+                                <span class="col-st"><span class="hero-vbadge badge-assigned">ASSIGNED</span></span>
+                            </div>
+                            <div class="hero-visual-table-row">
+                                <span class="col-id">WO-305</span>
+                                <span class="col-eq">CNC Machine 01</span>
+                                <span class="col-tech">R. Kumar</span>
+                                <span class="col-st"><span class="hero-vbadge badge-scheduled">SCHEDULED</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <!-- Restrained Real-Time Operational Telemetry Bar -->
+        <!-- Telemetry — Honest System Facts from Seed Architecture -->
+        <div class="container-xl">
             <div class="hero-telemetry-grid">
                 <div class="hero-telemetry-item">
-                    <div class="telemetry-label">Active Machinery Monitored</div>
-                    <div class="telemetry-val gold">52 Units</div>
+                    <div class="telemetry-label">RBAC Security</div>
+                    <div class="telemetry-val gold">3 Active Roles</div>
+                    <div class="telemetry-sub">Admin &bull; Technician &bull; Operator</div>
                 </div>
                 <div class="hero-telemetry-item">
-                    <div class="telemetry-label">Operational Reliability Rate</div>
-                    <div class="telemetry-val">99.4%</div>
+                    <div class="telemetry-label">Workflow Pipeline</div>
+                    <div class="telemetry-val">5 Lifecycle States</div>
+                    <div class="telemetry-sub">Scheduled &rarr; Parts Hold &rarr; Closed</div>
                 </div>
                 <div class="hero-telemetry-item">
-                    <div class="telemetry-label">Automated Skill Assignment</div>
-                    <div class="telemetry-val">100% Deterministic</div>
+                    <div class="telemetry-label">Demo Asset Registry</div>
+                    <div class="telemetry-val">6 Seed Units</div>
+                    <div class="telemetry-sub">CNC, Presses, Compressors, Pumps</div>
                 </div>
                 <div class="hero-telemetry-item">
-                    <div class="telemetry-label">Inventory Reservation Loop</div>
-                    <div class="telemetry-val gold">Zero Stockout Lag</div>
+                    <div class="telemetry-label">Inventory Watchdog</div>
+                    <div class="telemetry-val gold">6 Critical SKUs</div>
+                    <div class="telemetry-sub">Real-Time Min-Threshold Alerts</div>
                 </div>
             </div>
         </div>
@@ -144,14 +261,14 @@
             <span class="section-eyebrow">DETERMINISTIC LIFECYCLE</span>
             <h2 class="section-heading">The FORGE Workflow</h2>
             <p class="section-subtext">
-                Rigorous operational state machines govern every service intervention, from automated fault detection to verified repair and resource decrement.
+                Rigorous operational state machines govern every service intervention, from fault detection to verified repair and resource decrement.
             </p>
 
             <!-- Primary Lifecycle Track -->
             <div class="lifecycle-container mb-4">
                 <div class="lifecycle-header">
                     <span class="lifecycle-title">Primary Operational Track</span>
-                    <span class="badge bg-secondary font-mono">ISO-55000 ASSET LIFECYCLE</span>
+                    <span class="badge bg-secondary font-mono">ASSET LIFECYCLE</span>
                 </div>
 
                 <div class="lifecycle-track">
@@ -189,7 +306,7 @@
                         <span>SPARE PARTS BOTTLENECK</span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2 flex-wrap font-mono" style="font-size:0.78rem;">
+                    <div class="d-flex align-items-center gap-2 flex-wrap font-mono" style="font-size:0.76rem;">
                         <span class="badge-status badge-in-progress">In Progress</span>
                         <span class="text-gold">&rarr;</span>
                         <span class="badge-status badge-waiting">Waiting for Parts</span>
@@ -203,8 +320,8 @@
 
             <div class="row g-4 mt-1">
                 <div class="col-md-6">
-                    <div class="p-3 bg-industrial-surface border border-industrial">
-                        <h6 class="text-gold font-mono mb-2" style="font-size:0.8rem;">AUTOMATIC STATUS SYNCHRONIZATION</h6>
+                    <div class="p-3 bg-industrial-surface border border-industrial" style="border-radius: 3px;">
+                        <h6 class="text-gold font-mono mb-2" style="font-size:0.76rem; letter-spacing: 0.5px;">AUTOMATIC STATUS SYNCHRONIZATION</h6>
                         <p class="text-muted small mb-0">
                             Whenever a work order transitions to <em>In Progress</em> or <em>Waiting for Parts</em>, the underlying machinery status is automatically synchronized to <em>Maintenance</em> across the factory floor. Upon completion, the machine returns to <em>Operational</em> status immediately.
                         </p>
@@ -212,8 +329,8 @@
                 </div>
 
                 <div class="col-md-6">
-                    <div class="p-3 bg-industrial-surface border border-industrial">
-                        <h6 class="text-gold font-mono mb-2" style="font-size:0.8rem;">DYNAMIC WORKLOAD BALANCING</h6>
+                    <div class="p-3 bg-industrial-surface border border-industrial" style="border-radius: 3px;">
+                        <h6 class="text-gold font-mono mb-2" style="font-size:0.76rem; letter-spacing: 0.5px;">DYNAMIC WORKLOAD BALANCING</h6>
                         <p class="text-muted small mb-0">
                             Technicians tied up with active orders have their workload tracked dynamically. When a task transitions to <em>Waiting for Parts</em>, the technician's active workload count decreases, enabling temporary dispatch to other urgent jobs.
                         </p>
@@ -288,7 +405,7 @@
                             <div class="module-code">MOD-04 // PERSONNEL ROSTER</div>
                             <h4>Workforce</h4>
                             <p>
-                                Certified technician registry, specialization domains, ISO certifications, real-time availability states, and active order counts.
+                                Certified technician registry, specialization domains, real-time availability states, and active order counts for workload balancing.
                             </p>
                         </div>
                         <div class="module-meta">
@@ -320,7 +437,7 @@
                             <div class="module-code">MOD-06 // INTELLIGENCE</div>
                             <h4>Analytics</h4>
                             <p>
-                                Quantitative efficiency indices, plant equipment reliability percentages, failure distribution bars, and warehouse consumption audit feeds.
+                                Quantitative efficiency indices, equipment reliability percentages, failure distribution bars, and warehouse consumption audit feeds.
                             </p>
                         </div>
                         <div class="module-meta">
@@ -382,34 +499,76 @@
     </section>
 
     <!-- SECTION 6: FINAL CTA -->
-    <section class="landing-cta">
+    <section class="landing-cta" id="cta">
         <div class="container-xl">
-            <h2>KEEP YOUR OPERATION MOVING.</h2>
-            <p>
-                Centralize your machinery registry, workforce coordination, and preventive maintenance schedule with FORGE.
-            </p>
-            <a href="login.html" class="btn-hero-primary" style="font-size:1.05rem; padding:14px 36px;">
-                ENTER FORGE &rarr;
-            </a>
+            <div class="landing-cta-frame">
+                <div class="cta-terminal-tag">SYSTEM ACCESS &bull; SEEDED ENVIRONMENT READY</div>
+                <h2>KEEP YOUR OPERATION MOVING.</h2>
+                <p>
+                    Centralize your machinery registry, workforce coordination, and preventive maintenance schedule with FORGE.
+                </p>
+                <div class="landing-cta-actions">
+                    <a href="login.html" class="btn-hero-primary cta-btn-main">
+                        ENTER FORGE &rarr;
+                    </a>
+                    <a href="#platform" class="btn-hero-secondary cta-btn-sub">
+                        EXPLORE PLATFORM
+                    </a>
+                </div>
+            </div>
         </div>
     </section>
 
     <!-- Footer -->
     <footer class="landing-footer">
-        <div>
-            <strong>FORGE</strong> &mdash; Industrial Equipment Maintenance & Resource Management System
-        </div>
-        <div>
-            <span>ENTERPRISE STANDARDS COMPLIANT &bull; ZERO EXTERNAL DEPENDENCIES</span>
+        <div class="container-xl">
+            <div class="landing-footer-inner">
+                <div>
+                    <div class="landing-footer-brand">FORGE</div>
+                    <p class="landing-footer-desc">
+                        Industrial Equipment Maintenance & Resource Management System. Built with HTML5, CSS3, Bootstrap 5, and Vanilla JavaScript.
+                    </p>
+                </div>
+                <div>
+                    <div class="landing-footer-heading">Platform</div>
+                    <ul class="landing-footer-links">
+                        <li><a href="pages/equipment.html">Equipment</a></li>
+                        <li><a href="pages/maintenance.html">Maintenance</a></li>
+                        <li><a href="pages/workorders.html">Work Orders</a></li>
+                        <li><a href="pages/inventory.html">Inventory</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="landing-footer-heading">Operations</div>
+                    <ul class="landing-footer-links">
+                        <li><a href="pages/dashboard.html">Dashboard</a></li>
+                        <li><a href="pages/workforce.html">Workforce</a></li>
+                        <li><a href="pages/analytics.html">Analytics</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="landing-footer-heading">System</div>
+                    <ul class="landing-footer-links">
+                        <li><a href="login.html">Sign In</a></li>
+                        <li><a href="#workflow">Lifecycle</a></li>
+                        <li><a href="#intelligence">Intelligence</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="landing-footer-bottom">
+                <span>&copy; 2026 FORGE &mdash; Web Programming Lab Project</span>
+                <span>ZERO EXTERNAL DEPENDENCIES &bull; CLIENT-SIDE PERSISTENCE</span>
+            </div>
         </div>
     </footer>
 
     <!-- Bootstrap 5 Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Landing Page Theme Toggle Logic -->
+    <!-- Landing Page Scripts -->
     <script>
         (function () {
+            // Theme toggle
             var currentTheme = localStorage.getItem("forge_theme") || "light";
             var btnLight = document.getElementById("landingThemeBtnLight");
             var btnDark = document.getElementById("landingThemeBtnDark");
@@ -439,6 +598,33 @@
                     syncLandingToggle("dark");
                 });
             }
+
+            // Mobile hamburger toggle
+            var hamburger = document.getElementById("landingHamburger");
+            var navLinks = document.getElementById("landingNavLinks");
+            if (hamburger && navLinks) {
+                hamburger.addEventListener("click", function () {
+                    navLinks.classList.toggle("mobile-open");
+                });
+
+                // Close on link click
+                navLinks.querySelectorAll("a").forEach(function (link) {
+                    link.addEventListener("click", function () {
+                        navLinks.classList.remove("mobile-open");
+                    });
+                });
+            }
+
+            // Smooth scroll for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+                anchor.addEventListener("click", function (e) {
+                    var target = document.querySelector(this.getAttribute("href"));
+                    if (target) {
+                        e.preventDefault();
+                        target.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                });
+            });
         })();
     </script>
 
