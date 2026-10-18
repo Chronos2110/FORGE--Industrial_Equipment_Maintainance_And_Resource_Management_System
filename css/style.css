@@ -748,7 +748,7 @@ a { transition: color var(--transition-fast); }
    9. PAGE CONTAINER
    ========================================================================== */
 .page-container {
-    padding: 24px 28px 40px;
+    padding: 24px 28px 112px;
     flex: 1;
     background-color: var(--canvas-bg);
 }
@@ -1391,11 +1391,15 @@ a { transition: color var(--transition-fast); }
     background-color: var(--modal-bg);
     color: var(--text-primary);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
 }
 .modal-header {
     background-color: var(--modal-header-bg);
     border-bottom: 1px solid var(--border-color);
     padding: 16px 22px;
+    flex-shrink: 0;
 }
 .modal-header .modal-title {
     font-size: 1rem;
@@ -1411,6 +1415,8 @@ a { transition: color var(--transition-fast); }
     padding: 22px;
     color: var(--text-primary);
     background-color: var(--modal-bg);
+    overflow-y: auto;
+    max-height: calc(100vh - 180px);
 }
 .modal-body .form-label {
     font-size: 0.76rem;
@@ -3236,4 +3242,53 @@ a { transition: color var(--transition-fast); }
     .dock-icon {
         font-size: 1rem;
     }
+}
+
+/* ==========================================================================
+   30. WCAG 2.1 AA FOCUS VISIBILITY & INDUSTRIAL ERGONOMICS
+   ========================================================================== */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.dock-btn:focus-visible,
+.btn-action-edit:focus-visible,
+.btn-action-delete:focus-visible,
+.btn-action-reschedule:focus-visible,
+.btn-action-resume:focus-visible,
+.sidebar-nav a:focus-visible,
+.theme-toggle-btn:focus-visible,
+.role-badge:focus-visible,
+.topbar-search-btn:focus-visible,
+.btn-sidebar-toggle:focus-visible {
+    outline: 2px solid var(--primary) !important;
+    outline-offset: 2px !important;
+}
+
+/* Data Table Ergonomics: Prevent awkward wrapping of monospace codes and badges */
+.table th,
+.table td {
+    vertical-align: middle;
+}
+.table td.font-mono,
+.table th.font-mono,
+.font-mono strong,
+.badge-status,
+.btn-action-group,
+.badge-priority,
+.badge-rescheduled,
+.badge-ready-resume {
+    white-space: nowrap;
+}
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 3px;
+}
+
+/* Modal form input double-submit indicator */
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
 }

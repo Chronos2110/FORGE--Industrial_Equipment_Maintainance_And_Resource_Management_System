@@ -9,20 +9,25 @@ let workforceModalInstance = null;
 document.addEventListener("DOMContentLoaded", function () {
     // 1. Initialize modal instance
     let modalEl = document.getElementById("workforceModal");
-    workforceModalInstance = new bootstrap.Modal(modalEl);
+    if (modalEl && typeof bootstrap !== "undefined") workforceModalInstance = new bootstrap.Modal(modalEl);
 
     // 2. Load data
     loadWorkforceData();
 
     // 3. Bind search and filter events
-    document.getElementById("searchInput").addEventListener("input", filterAndRenderTable);
-    document.getElementById("availabilityFilter").addEventListener("change", filterAndRenderTable);
+    let sInput = document.getElementById("searchInput");
+    if (sInput) sInput.addEventListener("input", filterAndRenderTable);
+
+    let aFilter = document.getElementById("availabilityFilter");
+    if (aFilter) aFilter.addEventListener("change", filterAndRenderTable);
 
     // 4. Add button click
-    document.getElementById("addNewTechBtn").addEventListener("click", resetForm);
+    let addBtn = document.getElementById("addNewTechBtn");
+    if (addBtn) addBtn.addEventListener("click", resetForm);
 
     // 5. Form submit
-    document.getElementById("workforceForm").addEventListener("submit", handleFormSubmit);
+    let wfForm = document.getElementById("workforceForm");
+    if (wfForm) wfForm.addEventListener("submit", handleFormSubmit);
 
     // 6. Handle URL parameters for deep-linking
     handleUrlParams();
@@ -201,6 +206,13 @@ function resetForm() {
 function handleFormSubmit(event) {
     event.preventDefault();
 
+    let submitBtn = event.target ? event.target.querySelector("button[type='submit']") : null;
+    if (submitBtn) {
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        setTimeout(() => { if (submitBtn) submitBtn.disabled = false; }, 1000);
+    }
+
     let editIndexVal = parseInt(document.getElementById("editIndex").value);
     let id = document.getElementById("techId").value.trim();
     let name = document.getElementById("techName").value.trim();
@@ -211,6 +223,7 @@ function handleFormSubmit(event) {
 
     if (!id || !name || !skill || !certification || !availability) {
         showAlert("Please fill in all required fields.", "danger");
+        if (submitBtn) submitBtn.disabled = false;
         return;
     }
 
@@ -219,6 +232,7 @@ function handleFormSubmit(event) {
         for (let i = 0; i < workforceList.length; i++) {
             if (workforceList[i].id.toUpperCase() === id.toUpperCase()) {
                 showAlert("Technician ID already exists. Please choose a unique ID.", "danger");
+                if (submitBtn) submitBtn.disabled = false;
                 return;
             }
         }
@@ -282,21 +296,29 @@ function editTechnician(id) {
     workforceModalInstance.show();
 }
 
-// Delete Technician
+// Delete Technician after styled confirmation
 function deleteTechnician(id) {
-    let confirmed = confirm("Are you sure you want to remove technician [" + id + "] from roster?");
-    if (!confirmed) return;
-
     let target = workforceList.find(t => t.id === id);
-    workforceList = workforceList.filter(t => t.id !== id);
-    localStorage.setItem("forge_technicians", JSON.stringify(workforceList));
+    let targetName = target ? target.name : id;
 
-    if (target) {
-        logActivity(target.name, "Technician " + id + " removed from roster", "badge-faulty");
-    }
+    forgeConfirm({
+        title: "REMOVE TECHNICIAN FROM ROSTER",
+        message: "Are you sure you want to remove specialist [" + id + " — " + targetName + "] from active plant personnel?",
+        confirmText: "Remove Specialist",
+        confirmBtnClass: "btn-danger",
+        onConfirm: function () {
+            workforceList = workforceList.filter(t => t.id !== id);
+            localStorage.setItem("forge_technicians", JSON.stringify(workforceList));
+            localStorage.setItem("iemrs_workforce", JSON.stringify(workforceList));
 
-    showAlert("Technician " + id + " removed.", "danger");
-    filterAndRenderTable();
-    updateKpiCards();
+            if (target) {
+                logActivity(target.name, "Technician " + id + " removed from roster", "badge-faulty");
+            }
+
+            showAlert("Technician " + id + " removed.", "danger");
+            filterAndRenderTable();
+            updateKpiCards();
+        }
+    });
 }
 

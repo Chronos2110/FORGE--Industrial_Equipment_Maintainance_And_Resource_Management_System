@@ -10,31 +10,36 @@ let restockModalInstance = null;
 document.addEventListener("DOMContentLoaded", function () {
     // 1. Initialize modal instance
     let modalEl = document.getElementById("inventoryModal");
-    inventoryModalInstance = new bootstrap.Modal(modalEl);
+    if (modalEl && typeof bootstrap !== "undefined") inventoryModalInstance = new bootstrap.Modal(modalEl);
 
     // 1b. Initialize restock modal
     let restockEl = document.getElementById("restockModal");
-    restockModalInstance = new bootstrap.Modal(restockEl);
+    if (restockEl && typeof bootstrap !== "undefined") restockModalInstance = new bootstrap.Modal(restockEl);
 
     // 2. Load data
     loadInventoryData();
 
     // 3. Bind search and filter events
-    document.getElementById("searchInput").addEventListener("input", filterAndRenderTable);
-    document.getElementById("categoryFilter").addEventListener("change", filterAndRenderTable);
+    let sInput = document.getElementById("searchInput");
+    if (sInput) sInput.addEventListener("input", filterAndRenderTable);
+
+    let cFilter = document.getElementById("categoryFilter");
+    if (cFilter) cFilter.addEventListener("change", filterAndRenderTable);
+
     let statusFilterEl = document.getElementById("statusFilter");
-    if (statusFilterEl) {
-        statusFilterEl.addEventListener("change", filterAndRenderTable);
-    }
+    if (statusFilterEl) statusFilterEl.addEventListener("change", filterAndRenderTable);
 
     // 4. Add button click
-    document.getElementById("addNewPartBtn").addEventListener("click", resetForm);
+    let addBtn = document.getElementById("addNewPartBtn");
+    if (addBtn) addBtn.addEventListener("click", resetForm);
 
     // 5. Form submit
-    document.getElementById("inventoryForm").addEventListener("submit", handleFormSubmit);
+    let invForm = document.getElementById("inventoryForm");
+    if (invForm) invForm.addEventListener("submit", handleFormSubmit);
 
     // 6. Restock form submit
-    document.getElementById("restockForm").addEventListener("submit", handleRestockSubmit);
+    let restockForm = document.getElementById("restockForm");
+    if (restockForm) restockForm.addEventListener("submit", handleRestockSubmit);
 
     // 7. Handle URL parameters (?action=new, ?id=PRT-101)
     handleUrlParams();
@@ -226,16 +231,30 @@ function resetForm() {
 function handleFormSubmit(event) {
     event.preventDefault();
 
+    let submitBtn = event.target ? event.target.querySelector("button[type='submit']") : null;
+    if (submitBtn) {
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        setTimeout(() => { if (submitBtn) submitBtn.disabled = false; }, 1000);
+    }
+
     let editIndexVal = parseInt(document.getElementById("editIndex").value);
     let id = document.getElementById("partId").value.trim();
     let name = document.getElementById("partName").value.trim();
     let category = document.getElementById("partCategory").value;
     let supplier = document.getElementById("partSupplier").value.trim();
-    let quantity = parseInt(document.getElementById("partQuantity").value);
-    let minStock = parseInt(document.getElementById("partMinStock").value);
+    let quantity = parseInt(document.getElementById("partQuantity").value, 10);
+    let minStock = parseInt(document.getElementById("partMinStock").value, 10);
 
     if (!id || !name || !category || !supplier || isNaN(quantity) || isNaN(minStock)) {
         showAlert("Please fill in all fields with valid numbers.", "danger");
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+    }
+
+    if (quantity < 0 || minStock < 0) {
+        showAlert("Quantity and safety stock thresholds cannot be negative numbers.", "danger");
+        if (submitBtn) submitBtn.disabled = false;
         return;
     }
 
@@ -247,6 +266,7 @@ function handleFormSubmit(event) {
         for (let i = 0; i < inventoryList.length; i++) {
             if (inventoryList[i].id.toUpperCase() === id.toUpperCase()) {
                 showAlert("Part ID already exists. Please choose a unique ID.", "danger");
+                if (submitBtn) submitBtn.disabled = false;
                 return;
             }
         }
@@ -285,6 +305,7 @@ function handleFormSubmit(event) {
     }
 
     localStorage.setItem("forge_inventory", JSON.stringify(inventoryList));
+    localStorage.setItem("iemrs_inventory", JSON.stringify(inventoryList));
 
     inventoryModalInstance.hide();
     filterAndRenderTable();
@@ -318,22 +339,30 @@ function editPart(id) {
     inventoryModalInstance.show();
 }
 
-// Delete Part
+// Delete Part after styled confirmation
 function deletePart(id) {
-    let confirmed = confirm("Are you sure you want to remove part [" + id + "] from inventory?");
-    if (!confirmed) return;
-
     let target = inventoryList.find(p => p.id === id);
-    inventoryList = inventoryList.filter(p => p.id !== id);
-    localStorage.setItem("forge_inventory", JSON.stringify(inventoryList));
+    let targetName = target ? target.name : id;
 
-    if (target) {
-        logActivity(target.name, "Spare part " + id + " removed from inventory", "badge-faulty");
-    }
+    forgeConfirm({
+        title: "REMOVE SPARE PART",
+        message: "Are you sure you want to remove part [" + id + " — " + targetName + "] from central warehouse inventory?",
+        confirmText: "Delete Part",
+        confirmBtnClass: "btn-danger",
+        onConfirm: function () {
+            inventoryList = inventoryList.filter(p => p.id !== id);
+            localStorage.setItem("forge_inventory", JSON.stringify(inventoryList));
+            localStorage.setItem("iemrs_inventory", JSON.stringify(inventoryList));
 
-    showAlert("Spare part " + id + " removed.", "danger");
-    filterAndRenderTable();
-    updateKpiCards();
+            if (target) {
+                logActivity(target.name, "Spare part " + id + " removed from inventory", "badge-faulty");
+            }
+
+            showAlert("Spare part " + id + " removed.", "danger");
+            filterAndRenderTable();
+            updateKpiCards();
+        }
+    });
 }
 
 // Open Restock Modal

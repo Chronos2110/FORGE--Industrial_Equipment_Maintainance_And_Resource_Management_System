@@ -9,22 +9,27 @@ let equipmentModalInstance = null;
 document.addEventListener("DOMContentLoaded", function () {
     // 1. Initialize modal instance
     let modalElement = document.getElementById("equipmentModal");
-    equipmentModalInstance = new bootstrap.Modal(modalElement);
+    if (modalElement && typeof bootstrap !== "undefined") {
+        equipmentModalInstance = new bootstrap.Modal(modalElement);
+    }
 
     // 2. Load data from localStorage
     loadEquipmentData();
 
     // 3. Bind search and filter events
-    document.getElementById("searchInput").addEventListener("input", filterAndRenderTable);
-    document.getElementById("statusFilter").addEventListener("change", filterAndRenderTable);
+    let searchInput = document.getElementById("searchInput");
+    if (searchInput) searchInput.addEventListener("input", filterAndRenderTable);
 
-    // 4. Bind Add Equipment button to clear form
-    document.getElementById("addNewEquipmentBtn").addEventListener("click", function () {
-        resetForm();
-    });
+    let statusFilter = document.getElementById("statusFilter");
+    if (statusFilter) statusFilter.addEventListener("change", filterAndRenderTable);
+
+    // 4. Bind Add Equipment button
+    let addBtn = document.getElementById("addNewEquipmentBtn");
+    if (addBtn) addBtn.addEventListener("click", resetForm);
 
     // 5. Bind form submit for Add / Edit
-    document.getElementById("equipmentForm").addEventListener("submit", handleFormSubmit);
+    let formEl = document.getElementById("equipmentForm");
+    if (formEl) formEl.addEventListener("submit", handleFormSubmit);
 
     // 6. Handle URL parameters (?action=new, ?id=EQ001)
     handleUrlParams();
@@ -181,6 +186,13 @@ function resetForm() {
 function handleFormSubmit(event) {
     event.preventDefault();
 
+    let submitBtn = event.target ? event.target.querySelector("button[type='submit']") : null;
+    if (submitBtn) {
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        setTimeout(() => { if (submitBtn) submitBtn.disabled = false; }, 1000);
+    }
+
     let editIndexVal = parseInt(document.getElementById("editIndex").value);
     let id = document.getElementById("eqId").value.trim();
     let name = document.getElementById("eqName").value.trim();
@@ -192,6 +204,7 @@ function handleFormSubmit(event) {
 
     if (!id || !name || !type || !location || !status || !lastMaint || !nextMaint) {
         showAlert("Please fill in all required fields.", "danger");
+        if (submitBtn) submitBtn.disabled = false;
         return;
     }
 
@@ -200,6 +213,7 @@ function handleFormSubmit(event) {
         for (let i = 0; i < equipmentList.length; i++) {
             if (equipmentList[i].id.toUpperCase() === id.toUpperCase()) {
                 showAlert("Equipment ID already exists. Please choose a unique ID.", "danger");
+                if (submitBtn) submitBtn.disabled = false;
                 return;
             }
         }
@@ -268,21 +282,29 @@ function editEquipment(id) {
     equipmentModalInstance.show();
 }
 
-// Delete specified Equipment after confirmation
+// Delete specified Equipment after styled confirmation
 function deleteEquipment(id) {
-    let confirmed = confirm("Are you sure you want to delete equipment [" + id + "] from registry?");
-    if (!confirmed) return;
+    var target = equipmentList.find(e => e.id === id);
+    var targetName = target ? target.name : id;
 
-    let target = equipmentList.find(e => e.id === id);
-    equipmentList = equipmentList.filter(e => e.id !== id);
-    localStorage.setItem("forge_equipment", JSON.stringify(equipmentList));
+    forgeConfirm({
+        title: "DELETE ASSET REGISTRATION",
+        message: "Are you sure you want to remove equipment [" + id + " — " + targetName + "] from the master plant registry? This cannot be undone.",
+        confirmText: "Delete Asset",
+        confirmBtnClass: "btn-danger",
+        onConfirm: function () {
+            equipmentList = equipmentList.filter(e => e.id !== id);
+            localStorage.setItem("forge_equipment", JSON.stringify(equipmentList));
+            localStorage.setItem("iemrs_equipment", JSON.stringify(equipmentList));
 
-    if (target) {
-        logActivity(target.name, "Equipment " + id + " removed from plant registry", "badge-faulty");
-    }
+            if (target) {
+                logActivity(target.name, "Equipment " + id + " removed from plant registry", "badge-faulty");
+            }
 
-    showAlert("Equipment " + id + " deleted from registry.", "danger");
-    filterAndRenderTable();
-    updateKpiCards();
+            showAlert("Equipment " + id + " deleted from registry.", "danger");
+            filterAndRenderTable();
+            updateKpiCards();
+        }
+    });
 }
 

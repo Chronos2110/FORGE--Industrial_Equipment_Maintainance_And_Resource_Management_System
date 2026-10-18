@@ -11,31 +11,37 @@ let maintRescheduleModalInstance = null;
 document.addEventListener("DOMContentLoaded", function () {
     // 1. Initialize modal instances
     let modalElement = document.getElementById("maintenanceModal");
-    maintenanceModalInstance = new bootstrap.Modal(modalElement);
+    if (modalElement && typeof bootstrap !== "undefined") maintenanceModalInstance = new bootstrap.Modal(modalElement);
 
     let reschedEl = document.getElementById("rescheduleModal");
-    maintRescheduleModalInstance = new bootstrap.Modal(reschedEl);
+    if (reschedEl && typeof bootstrap !== "undefined") maintRescheduleModalInstance = new bootstrap.Modal(reschedEl);
 
     // 2. Load data from localStorage
     loadMaintenanceData();
 
     // 3. Bind search and filter events
-    document.getElementById("searchInput").addEventListener("input", filterAndRenderTable);
-    document.getElementById("typeFilter").addEventListener("change", filterAndRenderTable);
-    document.getElementById("statusFilter").addEventListener("change", filterAndRenderTable);
+    let sInput = document.getElementById("searchInput");
+    if (sInput) sInput.addEventListener("input", filterAndRenderTable);
+
+    let tFilter = document.getElementById("typeFilter");
+    if (tFilter) tFilter.addEventListener("change", filterAndRenderTable);
+
+    let stFilter = document.getElementById("statusFilter");
+    if (stFilter) stFilter.addEventListener("change", filterAndRenderTable);
 
     // 4. Bind Add button
-    document.getElementById("addNewMaintBtn").addEventListener("click", resetForm);
+    let addBtn = document.getElementById("addNewMaintBtn");
+    if (addBtn) addBtn.addEventListener("click", resetForm);
 
     // 5. Bind form submit
-    document.getElementById("maintenanceForm").addEventListener("submit", handleFormSubmit);
+    let mForm = document.getElementById("maintenanceForm");
+    if (mForm) mForm.addEventListener("submit", handleFormSubmit);
 
     // 6. Reschedule form submit
-    document.getElementById("rescheduleForm").addEventListener("submit", handleRescheduleSubmit);
+    let reschedForm = document.getElementById("rescheduleForm");
+    if (reschedForm) reschedForm.addEventListener("submit", handleRescheduleSubmit);
 
-    // 7. Auto-Assign button is wired via inline onclick on the HTML button
-
-    // 8. Handle URL parameters (?action=new, ?id=MNT-001)
+    // 7. Handle URL parameters (?action=new, ?id=MNT-001)
     handleUrlParams();
 });
 
@@ -263,6 +269,13 @@ function resetForm() {
 function handleFormSubmit(event) {
     event.preventDefault();
 
+    let submitBtn = event.target ? event.target.querySelector("button[type='submit']") : null;
+    if (submitBtn) {
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        setTimeout(() => { if (submitBtn) submitBtn.disabled = false; }, 1000);
+    }
+
     let editIndexVal = parseInt(document.getElementById("editIndex").value);
     let id = document.getElementById("maintId").value.trim();
     let equipment = document.getElementById("maintEquipment").value.trim();
@@ -273,6 +286,7 @@ function handleFormSubmit(event) {
 
     if (!id || !equipment || !type || !technician || !scheduledDate || !status) {
         showAlert("Please fill in all required fields.", "danger");
+        if (submitBtn) submitBtn.disabled = false;
         return;
     }
 
@@ -281,6 +295,7 @@ function handleFormSubmit(event) {
         for (let i = 0; i < maintenanceList.length; i++) {
             if (maintenanceList[i].id.toUpperCase() === id.toUpperCase()) {
                 showAlert("Maintenance ID already exists. Please choose a unique ID.", "danger");
+                if (submitBtn) submitBtn.disabled = false;
                 return;
             }
         }
@@ -443,21 +458,29 @@ function handleRescheduleSubmit(event) {
     filterAndRenderTable();
 }
 
-// Delete Record
+// Delete Record after styled confirmation
 function deleteMaintenance(id) {
-    let confirmed = confirm("Are you sure you want to delete maintenance schedule [" + id + "]?");
-    if (!confirmed) return;
-
     let target = maintenanceList.find(m => m.id === id);
-    maintenanceList = maintenanceList.filter(m => m.id !== id);
-    localStorage.setItem("forge_maintenance", JSON.stringify(maintenanceList));
+    let targetName = target ? (target.equipment + " (" + target.type + ")") : id;
 
-    if (target) {
-        logActivity(target.equipment, "Maintenance schedule " + id + " removed", "badge-faulty");
-    }
+    forgeConfirm({
+        title: "CANCEL / DELETE SCHEDULE",
+        message: "Are you sure you want to remove maintenance schedule [" + id + " — " + targetName + "]?",
+        confirmText: "Delete Schedule",
+        confirmBtnClass: "btn-danger",
+        onConfirm: function () {
+            maintenanceList = maintenanceList.filter(m => m.id !== id);
+            localStorage.setItem("forge_maintenance", JSON.stringify(maintenanceList));
+            localStorage.setItem("iemrs_maintenance", JSON.stringify(maintenanceList));
 
-    showAlert("Maintenance record " + id + " removed.", "danger");
-    filterAndRenderTable();
-    updateKpiCards();
+            if (target) {
+                logActivity(target.equipment, "Maintenance schedule " + id + " removed", "badge-faulty");
+            }
+
+            showAlert("Maintenance record " + id + " removed.", "danger");
+            filterAndRenderTable();
+            updateKpiCards();
+        }
+    });
 }
 

@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
     initTopbarShell();
     initControlDock();
     initCommandPalette();
+    initAccessibilityHardening();
 });
 
 // ==========================================================================
@@ -790,11 +791,38 @@ function initDefaultData() {
 }
 
 // ==========================================================================
+// Safe Storage Parsing & Writing Helpers
+// ==========================================================================
+function safeGetJSON(key, fallback) {
+    if (fallback === undefined) fallback = [];
+    try {
+        var raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        var val = JSON.parse(raw);
+        return (val !== null && val !== undefined) ? val : fallback;
+    } catch (e) {
+        console.warn("[FORGE] Malformed storage JSON for key '" + key + "', using fallback:", e);
+        return fallback;
+    }
+}
+
+function safeSetJSON(key, val) {
+    try {
+        localStorage.setItem(key, JSON.stringify(val));
+        return true;
+    } catch (e) {
+        console.error("[FORGE] Failed to save storage key '" + key + "':", e);
+        return false;
+    }
+}
+
+// ==========================================================================
 // Relational 3NF Query & Foreign Key Resolution Helpers
 // ==========================================================================
 function getEquipmentList() {
-    return JSON.parse(localStorage.getItem("forge_equipment")) ||
-           JSON.parse(localStorage.getItem("iemrs_equipment")) || [];
+    var list = safeGetJSON("forge_equipment", null);
+    if (!list) list = safeGetJSON("iemrs_equipment", []);
+    return list;
 }
 
 function getEquipmentById(id) {
@@ -813,8 +841,9 @@ function getEquipmentName(idOrName) {
 }
 
 function getTechniciansList() {
-    return JSON.parse(localStorage.getItem("forge_technicians")) ||
-           JSON.parse(localStorage.getItem("iemrs_workforce")) || [];
+    var list = safeGetJSON("forge_technicians", null);
+    if (!list) list = safeGetJSON("iemrs_workforce", []);
+    return list;
 }
 
 function getTechnicianById(id) {
@@ -833,8 +862,9 @@ function getTechnicianName(idOrName) {
 }
 
 function getInventoryList() {
-    return JSON.parse(localStorage.getItem("forge_inventory")) ||
-           JSON.parse(localStorage.getItem("iemrs_inventory")) || [];
+    var list = safeGetJSON("forge_inventory", null);
+    if (!list) list = safeGetJSON("iemrs_inventory", []);
+    return list;
 }
 
 function getPartById(id) {
@@ -853,8 +883,9 @@ function getPartName(idOrName) {
 }
 
 function getWorkOrdersList() {
-    return JSON.parse(localStorage.getItem("forge_workorders")) ||
-           JSON.parse(localStorage.getItem("iemrs_workorders")) || [];
+    var list = safeGetJSON("forge_workorders", null);
+    if (!list) list = safeGetJSON("iemrs_workorders", []);
+    return list;
 }
 
 function getWorkOrderById(id) {
@@ -867,8 +898,9 @@ function getWorkOrderById(id) {
 }
 
 function getMaintenanceList() {
-    return JSON.parse(localStorage.getItem("forge_maintenance")) ||
-           JSON.parse(localStorage.getItem("iemrs_maintenance")) || [];
+    var list = safeGetJSON("forge_maintenance", null);
+    if (!list) list = safeGetJSON("iemrs_maintenance", []);
+    return list;
 }
 
 function getMaintenanceById(id) {
@@ -881,7 +913,7 @@ function getMaintenanceById(id) {
 }
 
 function getFaultsList() {
-    return JSON.parse(localStorage.getItem("forge_faults")) || [];
+    return safeGetJSON("forge_faults", []);
 }
 
 function getFaultById(id) {
@@ -894,8 +926,125 @@ function getFaultById(id) {
 }
 
 function getActivityList() {
-    return JSON.parse(localStorage.getItem("forge_activity")) ||
-           JSON.parse(localStorage.getItem("iemrs_activities")) || [];
+    var list = safeGetJSON("forge_activity", null);
+    if (!list) list = safeGetJSON("iemrs_activities", []);
+    return list;
+}
+
+// ==========================================================================
+// Styled FORGE Confirmation Modal (Native confirm() replacement)
+// ==========================================================================
+var _forgeConfirmCallback = null;
+var _forgeCancelCallback = null;
+
+function forgeConfirm(options) {
+    options = options || {};
+    var title = options.title || "Confirm Operation";
+    var message = options.message || "Are you sure you want to proceed with this operational change?";
+    var confirmText = options.confirmText || "Confirm";
+    var cancelText = options.cancelText || "Cancel";
+    var confirmBtnClass = options.confirmBtnClass || "btn-danger";
+    _forgeConfirmCallback = options.onConfirm || null;
+    _forgeCancelCallback = options.onCancel || null;
+
+    var modalEl = document.getElementById("forgeConfirmModal");
+    if (!modalEl) {
+        var wrapper = document.createElement("div");
+        wrapper.innerHTML =
+            '<div class="modal fade" id="forgeConfirmModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="forgeConfirmModalTitle">' +
+              '<div class="modal-dialog modal-dialog-centered modal-sm">' +
+                '<div class="modal-content">' +
+                  '<div class="modal-header border-0 pb-0">' +
+                    '<h5 class="modal-title font-mono" id="forgeConfirmModalTitle" style="font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px;"></h5>' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                  '</div>' +
+                  '<div class="modal-body py-3">' +
+                    '<p id="forgeConfirmModalBody" class="mb-0" style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.5;"></p>' +
+                  '</div>' +
+                  '<div class="modal-footer border-0 pt-0 d-flex justify-content-end gap-2">' +
+                    '<button type="button" class="btn btn-sm btn-secondary font-mono" data-bs-dismiss="modal" id="forgeConfirmCancelBtn"></button>' +
+                    '<button type="button" class="btn btn-sm font-mono" id="forgeConfirmOkBtn"></button>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+        document.body.appendChild(wrapper.firstElementChild);
+        modalEl = document.getElementById("forgeConfirmModal");
+
+        document.getElementById("forgeConfirmOkBtn").addEventListener("click", function () {
+            var inst = bootstrap.Modal.getInstance(modalEl);
+            if (inst) inst.hide();
+            if (typeof _forgeConfirmCallback === "function") {
+                var cb = _forgeConfirmCallback;
+                _forgeConfirmCallback = null;
+                cb();
+            }
+        });
+
+        modalEl.addEventListener("hidden.bs.modal", function () {
+            if (typeof _forgeCancelCallback === "function") {
+                var cb = _forgeCancelCallback;
+                _forgeCancelCallback = null;
+                cb();
+            }
+            _forgeConfirmCallback = null;
+        });
+    }
+
+    document.getElementById("forgeConfirmModalTitle").textContent = title;
+    document.getElementById("forgeConfirmModalBody").textContent = message;
+    var okBtn = document.getElementById("forgeConfirmOkBtn");
+    okBtn.className = "btn btn-sm font-mono " + confirmBtnClass;
+    okBtn.textContent = confirmText;
+    document.getElementById("forgeConfirmCancelBtn").textContent = cancelText;
+
+    var modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modalInst.show();
+}
+
+// ==========================================================================
+// Demo Environment Reset Utility
+// ==========================================================================
+function resetDemoData(skipConfirm) {
+    if (!skipConfirm) {
+        forgeConfirm({
+            title: "RESET DEMO ENVIRONMENT?",
+            message: "This action will restore all equipment, work orders, maintenance schedules, workforce rosters, and inventory to the factory demo baseline. Any custom entries will be reset.",
+            confirmText: "Reset to Baseline",
+            cancelText: "Cancel",
+            confirmBtnClass: "btn-warning fw-bold text-dark",
+            onConfirm: function () {
+                executeDemoReset();
+            }
+        });
+        return;
+    }
+    executeDemoReset();
+}
+
+function executeDemoReset() {
+    var keysToRemove = [
+        "forge_equipment", "iemrs_equipment",
+        "forge_technicians", "iemrs_workforce",
+        "forge_maintenance", "iemrs_maintenance",
+        "forge_workorders", "iemrs_workorders",
+        "forge_inventory", "iemrs_inventory",
+        "forge_faults",
+        "forge_activity", "iemrs_activities"
+    ];
+    keysToRemove.forEach(function (k) {
+        localStorage.removeItem(k);
+    });
+
+    migrateLegacyKeys();
+    initDefaultData();
+    migrateLegacyData();
+    logActivity("System", "Demo environment restored to baseline", "badge-scheduled");
+    showAlert("Demo data successfully restored to factory baseline.", "success");
+
+    setTimeout(function () {
+        window.location.reload();
+    }, 600);
 }
 
 // ==========================================================================
@@ -1129,7 +1278,22 @@ function initTopbarShell() {
         });
     }
 
-    // D. Refine topbar accessibility
+    // D. Refine topbar accessibility & add Reset Demo Data action
+    if (topbarRight && !document.getElementById("topbarResetDemoBtn")) {
+        var resetBtn = document.createElement("button");
+        resetBtn.className = "btn btn-sm btn-outline-secondary font-mono d-none d-sm-inline-flex align-items-center gap-1";
+        resetBtn.id = "topbarResetDemoBtn";
+        resetBtn.setAttribute("type", "button");
+        resetBtn.setAttribute("title", "Restore Factory Demo Baseline");
+        resetBtn.setAttribute("aria-label", "Restore Factory Demo Baseline");
+        resetBtn.style.cssText = "font-size: 0.72rem; padding: 3px 8px; border-color: var(--border-color); color: var(--text-muted);";
+        resetBtn.innerHTML = '<span aria-hidden="true">↺</span> Reset Data';
+        resetBtn.addEventListener("click", function () {
+            resetDemoData(false);
+        });
+        topbarRight.insertBefore(resetBtn, topbarRight.firstChild);
+    }
+
     var roleBadge = topbar.querySelector(".role-badge");
     if (roleBadge) {
         var role = getActiveRole();
@@ -1651,7 +1815,7 @@ function getCommandPaletteData() {
             title: "[" + eq.id + "] " + eq.name,
             meta: (eq.status || "Unknown").toUpperCase() + " • " + (eq.location || "BAY 04"),
             action: (function (targetEq) {
-                return function () { window.location.href = "equipment.html"; };
+                return function () { window.location.href = "equipment.html?id=" + encodeURIComponent(targetEq.id); };
             })(eq)
         });
     }
@@ -1663,10 +1827,10 @@ function getCommandPaletteData() {
         recordItems.push({
             category: "Operational Records",
             icon: "📋",
-            title: "[" + wo.id + "] " + (wo.title || wo.description || "Work Order"),
+            title: "[" + wo.id + "] " + (wo.title || wo.description || wo.problem || "Work Order"),
             meta: (wo.priority || "Normal").toUpperCase() + " • " + (wo.status || "Pending"),
             action: (function (targetWo) {
-                return function () { window.location.href = "workorders.html"; };
+                return function () { window.location.href = "workorders.html?id=" + encodeURIComponent(targetWo.id); };
             })(wo)
         });
     }
@@ -1679,9 +1843,9 @@ function getCommandPaletteData() {
             category: "Operational Records",
             icon: "📦",
             title: "[" + prt.id + "] " + (prt.partName || prt.name || "Spare Part"),
-            meta: "QTY: " + prt.quantity + " • MIN: " + prt.minimumStock,
+            meta: "QTY: " + prt.quantity + " • MIN: " + (prt.minimumStock || prt.minStock || 0),
             action: (function (targetPart) {
-                return function () { window.location.href = "inventory.html"; };
+                return function () { window.location.href = "inventory.html?id=" + encodeURIComponent(targetPart.id); };
             })(prt)
         });
     }
@@ -1696,6 +1860,18 @@ function getCommandPaletteData() {
         action: function () {
             applyTheme(currentTheme === "dark" ? "light" : "dark");
             closeCommandPalette();
+        }
+    });
+
+    // Reset Demo Data System Action
+    actionItems.push({
+        category: "System Actions",
+        icon: "↺",
+        title: "Reset Demo Data (Restore Factory Baseline)",
+        meta: "SYSTEM // BASELINE RESET",
+        action: function () {
+            closeCommandPalette();
+            resetDemoData(false);
         }
     });
 
@@ -1836,6 +2012,54 @@ function executeCommandPaletteItem(idx) {
             item.action();
         }
     }
+}
+
+// ==========================================================================
+// ACCESSIBILITY HARDENING & WCAG 2.1 AA ENFORCEMENT
+// ==========================================================================
+function initAccessibilityHardening() {
+    // 1. Modals: Set role="dialog", aria-modal="true" and focus preservation
+    document.querySelectorAll(".modal").forEach(function (modalEl) {
+        if (!modalEl.getAttribute("role")) {
+            modalEl.setAttribute("role", "dialog");
+        }
+        modalEl.setAttribute("aria-modal", "true");
+
+        var lastActiveElement = null;
+        modalEl.addEventListener("show.bs.modal", function () {
+            lastActiveElement = document.activeElement;
+        });
+        modalEl.addEventListener("shown.bs.modal", function () {
+            var autoFocusInput = modalEl.querySelector("input:not([readonly]):not([type='hidden']), select, textarea, .btn-primary");
+            if (autoFocusInput && typeof autoFocusInput.focus === "function") {
+                try { autoFocusInput.focus(); } catch (e) {}
+            }
+        });
+        modalEl.addEventListener("hidden.bs.modal", function () {
+            if (lastActiveElement && typeof lastActiveElement.focus === "function") {
+                try { lastActiveElement.focus(); } catch (e) {}
+            }
+        });
+    });
+
+    // 2. Buttons: Ensure all icon-only buttons have descriptive aria-label
+    document.querySelectorAll("button").forEach(function (btn) {
+        if (!btn.getAttribute("aria-label") && !btn.textContent.trim()) {
+            var title = btn.getAttribute("title");
+            if (title) {
+                btn.setAttribute("aria-label", title);
+            } else if (btn.classList.contains("btn-close")) {
+                btn.setAttribute("aria-label", "Close dialog");
+            }
+        }
+    });
+
+    // 3. Tables: Add scope="col" to table headers for screen-readers
+    document.querySelectorAll("table th").forEach(function (th) {
+        if (!th.getAttribute("scope")) {
+            th.setAttribute("scope", "col");
+        }
+    });
 }
 
 

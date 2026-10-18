@@ -11,34 +11,46 @@ let rescheduleModalInstance = null;
 document.addEventListener("DOMContentLoaded", function () {
     // 1. Initialize modal instances
     let modalEl = document.getElementById("workOrderModal");
-    orderModalInstance = new bootstrap.Modal(modalEl);
+    if (modalEl && typeof bootstrap !== "undefined") orderModalInstance = new bootstrap.Modal(modalEl);
 
     let reschedEl = document.getElementById("rescheduleModal");
-    rescheduleModalInstance = new bootstrap.Modal(reschedEl);
+    if (reschedEl && typeof bootstrap !== "undefined") rescheduleModalInstance = new bootstrap.Modal(reschedEl);
 
     // 2. Load data
     loadWorkOrdersData();
 
     // 3. Bind search and filter events
-    document.getElementById("searchInput").addEventListener("input", filterAndRenderTable);
-    document.getElementById("priorityFilter").addEventListener("change", filterAndRenderTable);
-    document.getElementById("statusFilter").addEventListener("change", filterAndRenderTable);
+    let sInput = document.getElementById("searchInput");
+    if (sInput) sInput.addEventListener("input", filterAndRenderTable);
+
+    let pFilter = document.getElementById("priorityFilter");
+    if (pFilter) pFilter.addEventListener("change", filterAndRenderTable);
+
+    let stFilter = document.getElementById("statusFilter");
+    if (stFilter) stFilter.addEventListener("change", filterAndRenderTable);
 
     // 4. Add button click
-    document.getElementById("addNewOrderBtn").addEventListener("click", resetForm);
+    let addBtn = document.getElementById("addNewOrderBtn");
+    if (addBtn) addBtn.addEventListener("click", resetForm);
 
     // 5. Form submit
-    document.getElementById("workOrderForm").addEventListener("submit", handleFormSubmit);
+    let woForm = document.getElementById("workOrderForm");
+    if (woForm) woForm.addEventListener("submit", handleFormSubmit);
 
     // 6. Reschedule form submit
-    document.getElementById("rescheduleForm").addEventListener("submit", handleRescheduleSubmit);
+    let reschedForm = document.getElementById("rescheduleForm");
+    if (reschedForm) reschedForm.addEventListener("submit", handleRescheduleSubmit);
 
     // 7. Auto-Assign button
-    document.getElementById("btnAutoAssignWO").addEventListener("click", triggerAutoAssign);
+    let autoBtn = document.getElementById("btnAutoAssignWO");
+    if (autoBtn) autoBtn.addEventListener("click", triggerAutoAssign);
 
     // 8. Part selection stock notice
-    document.getElementById("orderRequiredPart").addEventListener("change", updatePartAvailabilityNotice);
-    document.getElementById("orderRequiredQty").addEventListener("input", updatePartAvailabilityNotice);
+    let partEl = document.getElementById("orderRequiredPart");
+    if (partEl) partEl.addEventListener("change", updatePartAvailabilityNotice);
+
+    let qtyEl = document.getElementById("orderRequiredQty");
+    if (qtyEl) qtyEl.addEventListener("input", updatePartAvailabilityNotice);
 
     // 9. Read URL parameters for deep-linking (?action=new, ?id=WO-301)
     handleUrlParams();
@@ -331,6 +343,13 @@ function resetForm() {
 function handleFormSubmit(event) {
     event.preventDefault();
 
+    let submitBtn = event.target ? event.target.querySelector("button[type='submit']") : null;
+    if (submitBtn) {
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        setTimeout(() => { if (submitBtn) submitBtn.disabled = false; }, 1000);
+    }
+
     let editIndexVal = parseInt(document.getElementById("editIndex").value);
     let id = document.getElementById("orderId").value.trim();
     let equipment = document.getElementById("orderEquipment").value.trim();
@@ -341,13 +360,21 @@ function handleFormSubmit(event) {
     let status = document.getElementById("orderStatus").value;
 
     let requiredPart = document.getElementById("orderRequiredPart").value.trim();
-    let requiredQuantity = parseInt(document.getElementById("orderRequiredQty").value) || 0;
+    let rawQty = parseInt(document.getElementById("orderRequiredQty").value, 10);
+    let requiredQuantity = isNaN(rawQty) ? 0 : rawQty;
     let waitingReason = document.getElementById("orderWaitingReason").value.trim();
     let expectedResumeDate = document.getElementById("orderExpectedResume").value;
     let waitingNotes = document.getElementById("orderWaitingNotes").value.trim();
 
     if (!id || !equipment || !problem || !technician || !priority || !date || !status) {
         showAlert("Please fill in all required fields.", "danger");
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+    }
+
+    if (requiredQuantity < 0) {
+        showAlert("Required spare parts quantity cannot be negative.", "danger");
+        if (submitBtn) submitBtn.disabled = false;
         return;
     }
 
@@ -542,21 +569,29 @@ function consumeSpareParts(partName, quantity, orderId) {
     }
 }
 
-// Delete Order
+// Delete Order after styled confirmation
 function deleteOrder(id) {
-    let confirmed = confirm("Are you sure you want to delete work order [" + id + "]?");
-    if (!confirmed) return;
-
     let target = ordersList.find(o => o.id === id);
-    ordersList = ordersList.filter(o => o.id !== id);
-    localStorage.setItem("forge_workorders", JSON.stringify(ordersList));
+    let targetName = target ? (target.equipment + " — " + (target.problem || target.description || "Work Order")) : id;
 
-    if (target) {
-        logActivity(target.equipment, "Work order " + id + " deleted from records", "badge-faulty");
-    }
+    forgeConfirm({
+        title: "CANCEL / DELETE WORK ORDER",
+        message: "Are you sure you want to permanently delete work order [" + id + "] for " + targetName + "?",
+        confirmText: "Delete Order",
+        confirmBtnClass: "btn-danger",
+        onConfirm: function () {
+            ordersList = ordersList.filter(o => o.id !== id);
+            localStorage.setItem("forge_workorders", JSON.stringify(ordersList));
+            localStorage.setItem("iemrs_workorders", JSON.stringify(ordersList));
 
-    showAlert("Work order " + id + " deleted.", "danger");
-    filterAndRenderTable();
-    updateKpiCards();
+            if (target) {
+                logActivity(target.equipment, "Work order " + id + " deleted from records", "badge-faulty");
+            }
+
+            showAlert("Work order " + id + " deleted.", "danger");
+            filterAndRenderTable();
+            updateKpiCards();
+        }
+    });
 }
 
