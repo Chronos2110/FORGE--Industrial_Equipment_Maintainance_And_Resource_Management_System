@@ -127,8 +127,14 @@ function calculateMaintenanceEfficiency() {
 function renderResourceUsageTable() {
     let inventory = JSON.parse(localStorage.getItem("forge_inventory") || localStorage.getItem("iemrs_inventory")) || [];
     let tbody = document.getElementById("resourceUsageBody");
+    if (!tbody) return;
 
     tbody.innerHTML = "";
+
+    if (inventory.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='5' class='text-center text-muted py-3'>No inventory records available.</td></tr>";
+        return;
+    }
 
     for (let i = 0; i < inventory.length; i++) {
         let item = inventory[i];
@@ -139,18 +145,18 @@ function renderResourceUsageTable() {
 
         let statusBadge = "";
         if (isLow) {
-            statusBadge = "<span class='badge-status badge-low-stock'>Low Stock Alert</span>";
+            statusBadge = "<span class='badge-status badge-low-stock font-mono'>LOW STOCK ALERT</span>";
         } else if (isHigh) {
-            statusBadge = "<span class='badge-status badge-available'>Optimal Reserve</span>";
+            statusBadge = "<span class='badge-status badge-available font-mono'>OPTIMAL RESERVE</span>";
         } else {
-            statusBadge = "<span class='badge-status badge-scheduled'>Normal Usage</span>";
+            statusBadge = "<span class='badge-status badge-scheduled font-mono'>NORMAL USAGE</span>";
         }
 
         tr.innerHTML =
-            "<td><strong>" + escapeHTML(item.name) + "</strong></td>" +
-            "<td><span class='badge bg-light text-dark border'>" + escapeHTML(item.category) + "</span></td>" +
-            "<td>" + escapeHTML(item.quantity) + " units</td>" +
-            "<td>" + escapeHTML(item.minStock) + " units</td>" +
+            "<td><strong>" + escapeHTML(item.name) + "</strong>" + (item.id ? " <small class='text-muted font-mono'>(" + escapeHTML(item.id) + ")</small>" : "") + "</td>" +
+            "<td><span class='badge bg-secondary font-mono'>" + escapeHTML(item.category) + "</span></td>" +
+            "<td class='font-mono'><strong>" + escapeHTML(item.quantity) + "</strong> units</td>" +
+            "<td class='font-mono text-muted'>" + escapeHTML(item.minStock) + " units</td>" +
             "<td>" + statusBadge + "</td>";
 
         tbody.appendChild(tr);
@@ -159,19 +165,33 @@ function renderResourceUsageTable() {
 
 // 5. Render Recent Activities
 function renderRecentActivities() {
-    let activities = JSON.parse(localStorage.getItem("forge_activities") || localStorage.getItem("iemrs_activities")) || [];
+    let activities = JSON.parse(localStorage.getItem("forge_activity") || localStorage.getItem("iemrs_activities")) || [];
     let tbody = document.getElementById("analyticsActivityBody");
+    if (!tbody) return;
 
     tbody.innerHTML = "";
 
-    for (let i = 0; i < activities.length; i++) {
-        let act = activities[i];
+    if (activities.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='3' class='text-center text-muted py-3'>No recent activity events recorded.</td></tr>";
+        return;
+    }
+
+    // Limit to latest 15 activities
+    let displayList = activities.slice(0, 15);
+
+    for (let i = 0; i < displayList.length; i++) {
+        let act = displayList[i];
         let tr = document.createElement("tr");
 
+        let timeStr = act.timestamp || act.time || "Recent";
+        let targetStr = act.target || act.item || act.actor || "System";
+        let descStr = act.action || act.activity || "";
+        let badgeClass = act.badgeClass || "badge-scheduled";
+
         tr.innerHTML =
-            "<td><small class='text-muted'>" + escapeHTML(act.time) + "</small></td>" +
-            "<td><strong>" + escapeHTML(act.item) + "</strong></td>" +
-            "<td>" + escapeHTML(act.activity) + "</td>";
+            "<td class='font-mono text-nowrap'><small class='text-muted'>" + escapeHTML(timeStr) + "</small></td>" +
+            "<td><strong class='font-mono'>" + escapeHTML(targetStr) + "</strong></td>" +
+            "<td>" + (act.badgeClass ? "<span class='badge-status " + badgeClass + " me-1'>LOG</span> " : "") + escapeHTML(descStr) + "</td>";
 
         tbody.appendChild(tr);
     }

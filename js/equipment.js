@@ -25,6 +25,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 5. Bind form submit for Add / Edit
     document.getElementById("equipmentForm").addEventListener("submit", handleFormSubmit);
+
+    // 6. Handle URL parameters (?action=new, ?id=EQ001)
+    handleUrlParams();
 });
 
 // Load data from localStorage
@@ -108,25 +111,62 @@ function filterAndRenderTable() {
             badgeClass = "badge-faulty";
         }
 
+        var role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+        var actionsHtml = "";
+        if (role === "Operator" || role === "Technician") {
+            actionsHtml = "<span class='badge bg-secondary font-mono' style='font-size:0.7rem;'>READ-ONLY</span>";
+        } else {
+            actionsHtml =
+                "  <div class='btn-action-group justify-content-center'>" +
+                "    <button type='button' class='btn-action-edit' onclick='editEquipment(\"" + escapeHTML(eq.id) + "\")'>Edit</button>" +
+                "    <button type='button' class='btn-action-delete' onclick='deleteEquipment(\"" + escapeHTML(eq.id) + "\")'>Delete</button>" +
+                "  </div>";
+        }
+
         tr.innerHTML =
-            "<td><strong>" + escapeHTML(eq.id) + "</strong></td>" +
-            "<td>" + escapeHTML(eq.name) + "</td>" +
+            "<td class='font-mono'><strong>" + escapeHTML(eq.id) + "</strong></td>" +
+            "<td><strong>" + escapeHTML(eq.name) + "</strong></td>" +
             "<td>" + escapeHTML(eq.type) + "</td>" +
             "<td>" + escapeHTML(eq.location) + "</td>" +
             "<td><span class='badge-status " + badgeClass + "'>" + escapeHTML(eq.status) + "</span></td>" +
-            "<td>" + escapeHTML(eq.lastMaintenance) + "</td>" +
-            "<td>" + escapeHTML(eq.nextMaintenance) + "</td>" +
-            "<td class='text-center'>" +
-            "  <div class='btn-action-group justify-content-center'>" +
-            "    <button type='button' class='btn-action-edit' onclick='editEquipment(\"" + escapeHTML(eq.id) + "\")'>Edit</button>" +
-            "    <button type='button' class='btn-action-delete' onclick='deleteEquipment(\"" + escapeHTML(eq.id) + "\")'>Delete</button>" +
-            "  </div>" +
-            "</td>";
+            "<td class='font-mono'>" + escapeHTML(eq.lastMaintenance) + "</td>" +
+            "<td class='font-mono'>" + escapeHTML(eq.nextMaintenance) + "</td>" +
+            "<td class='text-center'>" + actionsHtml + "</td>";
 
         tbody.appendChild(tr);
     }
 
     applyRolePermissions();
+}
+
+// Deep-linking URL query handler
+function handleUrlParams() {
+    var params = new URLSearchParams(window.location.search);
+    var id = params.get("id");
+    var search = params.get("search");
+    var action = params.get("action");
+
+    if (action === "new") {
+        var role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+        if (role === "Administrator") {
+            setTimeout(function () {
+                resetForm();
+                if (equipmentModalInstance) equipmentModalInstance.show();
+            }, 100);
+        }
+    } else if (id) {
+        var input = document.getElementById("searchInput");
+        if (input) {
+            input.value = id;
+            filterAndRenderTable();
+        }
+    } else if (search) {
+        var input = document.getElementById("searchInput");
+        if (input) {
+            input.value = search;
+            filterAndRenderTable();
+        }
+    }
 }
 
 // Reset form for new equipment

@@ -34,6 +34,9 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("rescheduleForm").addEventListener("submit", handleRescheduleSubmit);
 
     // 7. Auto-Assign button is wired via inline onclick on the HTML button
+
+    // 8. Handle URL parameters (?action=new, ?id=MNT-001)
+    handleUrlParams();
 });
 
 // Load records from localStorage
@@ -181,23 +184,31 @@ function filterAndRenderTable() {
         }
 
         // Action buttons
-        let actionsHtml = "<div class='btn-action-group justify-content-center'>";
-        if (!m.workOrderId && m.status !== "Completed" && m.status !== "Cancelled") {
-            actionsHtml += "<button type='button' class='btn-action-order' onclick='generateWorkOrderFromMaint(\"" + escapeHTML(m.id) + "\")'>+ Work Order</button>";
+        var role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+        let actionsHtml = "";
+        if (role === "Operator") {
+            actionsHtml = "<span class='badge bg-secondary font-mono' style='font-size:0.7rem;'>READ-ONLY</span>";
+        } else {
+            actionsHtml = "<div class='btn-action-group justify-content-center'>";
+            if (!m.workOrderId && m.status !== "Completed" && m.status !== "Cancelled") {
+                actionsHtml += "<button type='button' class='btn-action-order' onclick='generateWorkOrderFromMaint(\"" + escapeHTML(m.id) + "\")'>+ Work Order</button>";
+            }
+            actionsHtml += "<button type='button' class='btn-action-edit' onclick='editMaintenance(\"" + escapeHTML(m.id) + "\")'>Edit</button>";
+            if (m.status !== "Completed" && m.status !== "Cancelled") {
+                actionsHtml += "<button type='button' class='btn-action-reschedule' onclick='openRescheduleModal(\"" + escapeHTML(m.id) + "\")'>Reschedule</button>";
+            }
+            if (role === "Administrator") {
+                actionsHtml += "<button type='button' class='btn-action-delete' onclick='deleteMaintenance(\"" + escapeHTML(m.id) + "\")'>Delete</button>";
+            }
+            actionsHtml += "</div>";
         }
-        actionsHtml += "<button type='button' class='btn-action-edit' onclick='editMaintenance(\"" + escapeHTML(m.id) + "\")'>Edit</button>";
-        if (m.status !== "Completed" && m.status !== "Cancelled") {
-            actionsHtml += "<button type='button' class='btn-action-reschedule' onclick='openRescheduleModal(\"" + escapeHTML(m.id) + "\")'>Reschedule</button>";
-        }
-        actionsHtml += "<button type='button' class='btn-action-delete' onclick='deleteMaintenance(\"" + escapeHTML(m.id) + "\")'>Delete</button>";
-        actionsHtml += "</div>";
 
         tr.innerHTML =
-            "<td><strong>" + escapeHTML(m.id) + "</strong>" + woBadge + "</td>" +
+            "<td class='font-mono'><strong>" + escapeHTML(m.id) + "</strong>" + woBadge + "</td>" +
             "<td><strong>" + escapeHTML(m.equipment) + "</strong></td>" +
             "<td><span class='badge-status " + typeBadgeClass + "'>" + escapeHTML(m.type) + "</span></td>" +
             "<td>" + escapeHTML(m.technician) + "</td>" +
-            "<td>" + dateHtml + "</td>" +
+            "<td class='font-mono'>" + dateHtml + "</td>" +
             "<td><span class='badge-status " + statusBadgeClass + "'>" + escapeHTML(m.status) + "</span></td>" +
             "<td class='text-center'>" + actionsHtml + "</td>";
 
@@ -205,6 +216,36 @@ function filterAndRenderTable() {
     }
 
     applyRolePermissions();
+}
+
+// Deep-linking URL query handler
+function handleUrlParams() {
+    var params = new URLSearchParams(window.location.search);
+    var id = params.get("id");
+    var search = params.get("search");
+    var action = params.get("action");
+
+    if (action === "new") {
+        var role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+        if (role === "Administrator") {
+            setTimeout(function () {
+                resetForm();
+                if (maintenanceModalInstance) maintenanceModalInstance.show();
+            }, 100);
+        }
+    } else if (id) {
+        var input = document.getElementById("searchInput");
+        if (input) {
+            input.value = id;
+            filterAndRenderTable();
+        }
+    } else if (search) {
+        var input = document.getElementById("searchInput");
+        if (input) {
+            input.value = search;
+            filterAndRenderTable();
+        }
+    }
 }
 
 // Reset form for new schedule

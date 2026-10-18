@@ -2562,6 +2562,105 @@ a { transition: color var(--transition-fast); }
 .role-view-panel { display: none; }
 .role-view-panel.active { display: block; }
 
+/* Administrator Operational Exceptions Strip */
+.admin-exceptions-strip {
+    background-color: rgba(185, 74, 72, 0.08);
+    border: 1px solid rgba(185, 74, 72, 0.35);
+    border-left: 4px solid var(--danger);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+}
+.exceptions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.exceptions-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--danger);
+    letter-spacing: 0.5px;
+}
+.exceptions-count {
+    font-size: 0.74rem;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-muted);
+}
+.exceptions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 10px;
+}
+.exception-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.exception-item-left {
+    display: flex;
+    flex-direction: column;
+}
+.exception-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.exception-title {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.exception-desc {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+}
+.exception-action-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    padding: 4px 9px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-card);
+    color: var(--text-primary);
+    text-decoration: none;
+    white-space: nowrap;
+}
+.exception-action-btn:hover {
+    background: var(--primary);
+    color: #000;
+}
+
+/* Technician spare parts pill */
+.tech-part-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin-top: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+}
+.tech-part-pill.in-stock {
+    background-color: rgba(77, 139, 87, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(77, 139, 87, 0.35);
+}
+.tech-part-pill.low-stock {
+    background-color: rgba(185, 74, 72, 0.15);
+    color: var(--danger);
+    border: 1px solid rgba(185, 74, 72, 0.35);
+}
+
 /* Technician task cards */
 .tech-task-card {
     background-color: var(--card-bg);

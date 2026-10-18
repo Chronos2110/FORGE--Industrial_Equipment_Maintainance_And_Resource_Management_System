@@ -499,6 +499,35 @@ function syncEquipmentStatusOnWorkOrder(equipmentName, newStatus, completedDate)
 }
 
 // ==========================================================================
+// Central Spare Parts Deduction Helper
+// ==========================================================================
+function consumeSpareParts(partName, quantity, orderId) {
+    return consumeSparePartsOnComplete(partName, quantity, orderId);
+}
+
+function consumeSparePartsOnComplete(partName, qty, orderId) {
+    if (!partName || !qty || qty <= 0) return false;
+    var inventory = JSON.parse(localStorage.getItem("forge_inventory")) ||
+                    JSON.parse(localStorage.getItem("iemrs_inventory")) || [];
+    var idx = -1;
+    for (var i = 0; i < inventory.length; i++) {
+        var pName = inventory[i].name || inventory[i].partName || "";
+        if (pName.toLowerCase() === partName.toLowerCase()) { idx = i; break; }
+    }
+    if (idx === -1) return false;
+
+    var p = inventory[idx];
+    var cur = parseInt(p.quantity, 10) || 0;
+    var deduct = Math.min(cur, parseInt(qty, 10));
+    p.quantity = Math.max(0, cur - deduct);
+
+    localStorage.setItem("forge_inventory", JSON.stringify(inventory));
+    localStorage.setItem("iemrs_inventory", JSON.stringify(inventory));
+    logActivity(partName, "Consumed " + deduct + " units for Work Order " + (orderId || "WO-DISPATCH"), "badge-maintenance");
+    return true;
+}
+
+// ==========================================================================
 // Show alert toast
 // ==========================================================================
 function showAlert(message, type) {

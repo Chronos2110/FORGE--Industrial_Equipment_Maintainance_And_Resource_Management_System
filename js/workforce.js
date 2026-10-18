@@ -23,7 +23,38 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 5. Form submit
     document.getElementById("workforceForm").addEventListener("submit", handleFormSubmit);
+
+    // 6. Handle URL parameters for deep-linking
+    handleUrlParams();
 });
+
+// Deep link handling for Command Palette / Control Dock queries
+function handleUrlParams() {
+    let params = new URLSearchParams(window.location.search);
+    let action = params.get("action");
+    let id = params.get("id");
+    let search = params.get("search");
+
+    if (action === "new") {
+        let role = typeof getActiveRole === "function" ? getActiveRole() : "Administrator";
+        if (role === "Administrator") {
+            resetForm();
+            if (workforceModalInstance) workforceModalInstance.show();
+        }
+    } else if (id) {
+        let searchEl = document.getElementById("searchInput");
+        if (searchEl) {
+            searchEl.value = id;
+            filterAndRenderTable();
+        }
+    } else if (search) {
+        let searchEl = document.getElementById("searchInput");
+        if (searchEl) {
+            searchEl.value = search;
+            filterAndRenderTable();
+        }
+    }
+}
 
 // Load records from localStorage
 function loadWorkforceData() {
@@ -121,27 +152,36 @@ function filterAndRenderTable() {
         if (dynamicAvail === "On Leave") {
             workloadHtml = "<span class='text-muted small'>On Leave</span>";
         } else if (activeOrders === 0) {
-            workloadHtml = "<span class='badge-status badge-operational'>Low (0/3)</span>";
+            workloadHtml = "<span class='badge-status badge-operational font-mono'>Low (0/3)</span>";
         } else if (activeOrders === 1) {
-            workloadHtml = "<span class='badge-status badge-in-progress'>Medium (1/3)</span>";
+            workloadHtml = "<span class='badge-status badge-in-progress font-mono'>Medium (1/3)</span>";
         } else {
-            workloadHtml = "<span class='badge-status badge-waiting'>High (" + activeOrders + "/3)</span>";
+            workloadHtml = "<span class='badge-status badge-waiting font-mono'>High (" + activeOrders + "/3)</span>";
+        }
+
+        let role = typeof getActiveRole === "function" ? getActiveRole() : "Administrator";
+        let actionCol = "";
+        if (role === "Operator") {
+            actionCol = "<span class='badge bg-secondary font-mono'>READ-ONLY</span>";
+        } else if (role === "Technician") {
+            actionCol = "<span class='badge bg-secondary font-mono'>ROSTER VIEW</span>";
+        } else {
+            actionCol = 
+                "  <div class='btn-action-group justify-content-center'>" +
+                "    <button type='button' class='btn-action-edit' onclick='editTechnician(\"" + escapeHTML(t.id) + "\")'>Edit</button>" +
+                "    <button type='button' class='btn-action-delete' onclick='deleteTechnician(\"" + escapeHTML(t.id) + "\")'>Delete</button>" +
+                "  </div>";
         }
 
         tr.innerHTML =
-            "<td><strong>" + escapeHTML(t.id) + "</strong></td>" +
-            "<td>" + escapeHTML(t.name) + "</td>" +
+            "<td><strong class='font-mono'>" + escapeHTML(t.id) + "</strong></td>" +
+            "<td><strong>" + escapeHTML(t.name) + "</strong></td>" +
             "<td>" + escapeHTML(t.skill) + "</td>" +
-            "<td><small class='text-muted'>" + escapeHTML(t.certification) + "</small></td>" +
+            "<td><small class='text-muted font-mono'>" + escapeHTML(t.certification) + "</small></td>" +
             "<td><span class='badge-status " + availBadgeClass + "'>" + escapeHTML(dynamicAvail) + "</span></td>" +
-            "<td><strong>" + activeOrders + "</strong></td>" +
+            "<td class='font-mono'><strong>" + activeOrders + "</strong></td>" +
             "<td>" + workloadHtml + "</td>" +
-            "<td class='text-center'>" +
-            "  <div class='btn-action-group justify-content-center'>" +
-            "    <button type='button' class='btn-action-edit' onclick='editTechnician(\"" + escapeHTML(t.id) + "\")'>Edit</button>" +
-            "    <button type='button' class='btn-action-delete' onclick='deleteTechnician(\"" + escapeHTML(t.id) + "\")'>Delete</button>" +
-            "  </div>" +
-            "</td>";
+            "<td class='text-center'>" + actionCol + "</td>";
 
         tbody.appendChild(tr);
     }

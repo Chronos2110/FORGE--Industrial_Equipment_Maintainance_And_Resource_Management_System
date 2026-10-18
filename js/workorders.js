@@ -39,6 +39,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // 8. Part selection stock notice
     document.getElementById("orderRequiredPart").addEventListener("change", updatePartAvailabilityNotice);
     document.getElementById("orderRequiredQty").addEventListener("input", updatePartAvailabilityNotice);
+
+    // 9. Read URL parameters for deep-linking (?action=new, ?id=WO-301)
+    handleUrlParams();
 });
 
 // Load records from localStorage
@@ -249,24 +252,30 @@ function filterAndRenderTable() {
         }
 
         // Action buttons
-        let actionsHtml = "<div class='btn-action-group justify-content-center'>";
-        if (isWaiting) {
-            actionsHtml += "<button type='button' class='btn-action-resume' onclick='resumeWorkOrder(\"" + escapeHTML(o.id) + "\")'>Resume</button>";
+        var role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+        let actionsHtml = "";
+        if (role === "Operator") {
+            actionsHtml = "<span class='badge bg-secondary font-mono' style='font-size:0.7rem;'>READ-ONLY</span>";
+        } else {
+            actionsHtml = "<div class='btn-action-group justify-content-center'>";
+            if (isWaiting) {
+                actionsHtml += "<button type='button' class='btn-action-resume' onclick='resumeWorkOrder(\"" + escapeHTML(o.id) + "\")'>Resume</button>";
+            }
+            actionsHtml += "<button type='button' class='btn-action-edit' onclick='editOrder(\"" + escapeHTML(o.id) + "\")'>Edit</button>";
+            if (o.status !== "Completed" && o.status !== "Cancelled") {
+                actionsHtml += "<button type='button' class='btn-action-reschedule' onclick='openRescheduleModal(\"" + escapeHTML(o.id) + "\")'>Reschedule</button>";
+            }
+            actionsHtml += "<button type='button' class='btn-action-delete' onclick='deleteOrder(\"" + escapeHTML(o.id) + "\")'>Delete</button>";
+            actionsHtml += "</div>";
         }
-        actionsHtml += "<button type='button' class='btn-action-edit' onclick='editOrder(\"" + escapeHTML(o.id) + "\")'>Edit</button>";
-        if (o.status !== "Completed" && o.status !== "Cancelled") {
-            actionsHtml += "<button type='button' class='btn-action-reschedule' onclick='openRescheduleModal(\"" + escapeHTML(o.id) + "\")'>Reschedule</button>";
-        }
-        actionsHtml += "<button type='button' class='btn-action-delete' onclick='deleteOrder(\"" + escapeHTML(o.id) + "\")'>Delete</button>";
-        actionsHtml += "</div>";
 
         tr.innerHTML =
-            "<td><strong>" + escapeHTML(o.id) + "</strong></td>" +
+            "<td class='font-mono'><strong>" + escapeHTML(o.id) + "</strong></td>" +
             "<td><strong>" + escapeHTML(o.equipment) + "</strong></td>" +
             "<td>" + detailsHtml + "</td>" +
             "<td>" + escapeHTML(o.technician) + "</td>" +
             "<td><span class='badge-status " + priorityBadgeClass + "'>" + escapeHTML(o.priority) + "</span></td>" +
-            "<td>" + dateHtml + "</td>" +
+            "<td class='font-mono'>" + dateHtml + "</td>" +
             "<td><span class='badge-status " + statusBadgeClass + "'>" + escapeHTML(o.status) + "</span>" + readyToResumeBadge + "</td>" +
             "<td class='text-center'>" + actionsHtml + "</td>";
 
@@ -274,6 +283,36 @@ function filterAndRenderTable() {
     }
 
     applyRolePermissions();
+}
+
+// Deep-linking URL query handler
+function handleUrlParams() {
+    var params = new URLSearchParams(window.location.search);
+    var action = params.get("action");
+    var id = params.get("id");
+    var search = params.get("search");
+
+    if (action === "new") {
+        var role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+        if (role !== "Operator") {
+            setTimeout(function () {
+                resetForm();
+                if (orderModalInstance) orderModalInstance.show();
+            }, 100);
+        }
+    } else if (id) {
+        var searchInput = document.getElementById("searchInput");
+        if (searchInput) {
+            searchInput.value = id;
+            filterAndRenderTable();
+        }
+    } else if (search) {
+        var searchInput = document.getElementById("searchInput");
+        if (searchInput) {
+            searchInput.value = search;
+            filterAndRenderTable();
+        }
+    }
 }
 
 // Reset form for new order

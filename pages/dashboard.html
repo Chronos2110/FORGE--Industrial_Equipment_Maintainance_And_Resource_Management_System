@@ -89,6 +89,17 @@
                 <!-- ========== PANEL: ADMINISTRATOR ========== -->
                 <div id="panelAdmin" class="role-view-panel">
 
+                <!-- Operational Exceptions & Bottlenecks Strip -->
+                <div id="adminExceptionsBanner" class="admin-exceptions-strip mb-4 d-none">
+                    <div class="exceptions-header">
+                        <span class="exceptions-badge">⚠️ OPERATIONAL EXCEPTIONS &amp; BOTTLENECKS</span>
+                        <span class="exceptions-count" id="adminExceptionsCount">0 Active Exceptions</span>
+                    </div>
+                    <div class="exceptions-grid" id="adminExceptionsList">
+                        <!-- Populated dynamically by dashboard.js -->
+                    </div>
+                </div>
+
                 <!-- Primary Operational Metrics (Restrained Industrial Numbers) -->
                 <div class="row g-3 mb-4">
                     <div class="col-xl-3 col-sm-6">
@@ -283,7 +294,7 @@
                     </div>
 
                     <!-- Assigned Task List -->
-                    <div class="dashboard-section">
+                    <div class="dashboard-section mb-4">
                         <div class="section-header">
                             <h4>My Assigned Work Orders</h4>
                             <a href="workorders.html" class="btn btn-sm btn-outline-primary">View All &rarr;</a>
@@ -294,6 +305,35 @@
                                 <h5>No Assigned Work Orders</h5>
                                 <p>You have no active assignments at this time.</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Preventive Maintenance for Tech -->
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h4>Upcoming Preventive Maintenance</h4>
+                            <a href="maintenance.html" class="btn btn-sm btn-outline-primary">Full Schedule &rarr;</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Equipment</th>
+                                        <th>Procedure</th>
+                                        <th>Scheduled Date</th>
+                                        <th>Assigned Tech</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="techUpcomingMaintBody">
+                                    <!-- Populated dynamically by dashboard.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="techMaintEmptyState" class="empty-state d-none">
+                            <div class="empty-state-icon">🛠️</div>
+                            <h5>No Scheduled Maintenance</h5>
+                            <p>All preventive maintenance tasks are complete or up to date.</p>
                         </div>
                     </div>
 
@@ -321,9 +361,9 @@
                         </div>
                         <div class="col-sm-4">
                             <div class="dashboard-card card-amber">
-                                <h5>Open Work Orders</h5>
+                                <h5>Open Incidents &amp; Orders</h5>
                                 <h2 id="opOpenFaults">0</h2>
-                                <span class="card-hint text-warning">Active / in-progress orders</span>
+                                <span class="card-hint text-warning">Active floor reports</span>
                             </div>
                         </div>
                     </div>
@@ -357,17 +397,19 @@
                     <!-- My Fault Reports -->
                     <div class="dashboard-section">
                         <div class="section-header">
-                            <h4>Recent Fault Reports</h4>
+                            <h4>Floor Incident &amp; Fault Tracking</h4>
                             <a href="workorders.html" class="btn btn-sm btn-outline-primary">Dispatch Console &rarr;</a>
                         </div>
                         <div class="table-responsive">
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>WO / Fault ID</th>
+                                        <th>Incident ID</th>
                                         <th>Equipment</th>
+                                        <th>Diagnostics / Symptom</th>
                                         <th>Priority</th>
                                         <th>Status</th>
+                                        <th>Assigned Tech</th>
                                     </tr>
                                 </thead>
                                 <tbody id="operatorFaultBody">
