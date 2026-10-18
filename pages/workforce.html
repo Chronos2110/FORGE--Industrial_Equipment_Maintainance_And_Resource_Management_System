@@ -205,6 +205,12 @@
                             <label for="techWorkload" class="form-label">Workload Status Note</label>
                             <input type="text" id="techWorkload" class="form-control" placeholder="e.g. Shift Lead / Production Line 1">
                         </div>
+                        <div class="form-check mb-2 p-2 rounded" style="background: var(--bg-surface-hover); border: 1px solid var(--border-color);" id="techProvisionGroup">
+                            <input class="form-check-input ms-1 me-2" type="checkbox" id="techProvisionLogin" checked>
+                            <label class="form-check-label small" for="techProvisionLogin">
+                                Provision terminal login account in <span class="font-mono text-gold">forge_users</span> (Passcode: <span class="font-mono">tech123</span>)
+                            </label>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FORGE - Personnel Self-Registration &amp; Workforce Provisioning</title>
+    <!-- Apply theme before render to prevent flash (default: light) -->
+    <script>
+        (function () {
+            var t = localStorage.getItem("forge_theme") || "light";
+            document.documentElement.setAttribute("data-theme", t);
+        })();
+    </script>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom Industrial Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="login-page">
+
+        <!-- Theme Toggle — top right corner -->
+        <div class="login-theme-toggle-wrapper">
+            <div class="theme-toggle" role="group" aria-label="Theme selector">
+                <button class="theme-toggle-btn active" id="regThemeBtnLight" title="Switch to Light Mode" aria-pressed="true">&#9728; Light</button>
+                <span class="theme-toggle-divider" aria-hidden="true"></span>
+                <button class="theme-toggle-btn" id="regThemeBtnDark" title="Switch to Dark Mode" aria-pressed="false">&#9790; Dark</button>
+            </div>
+        </div>
+
+        <div class="login-container" style="max-width: 980px;">
+
+            <div class="login-split-card">
+
+                <!-- Left Panel: Industrial Identity & Brand -->
+                <div class="login-brand-panel">
+                    <div>
+                        <div class="brand-wordmark">FORGE</div>
+                        <div class="text-gold font-mono small mb-2" style="font-size:0.75rem; letter-spacing:0.5px;">ONBOARDING // SELF-REGISTRATION</div>
+                        <div class="login-headline">
+                            WORKFORCE<br>
+                            <span>PROVISIONING</span> PORTAL.
+                        </div>
+                        <p class="login-support-text">
+                            Directly enroll plant personnel into operational datasets. Technicians are automatically provisioned into the active workforce dispatch roster with instant work order eligibility.
+                        </p>
+
+                        <div class="mt-4 pt-3 border-top" style="border-color: rgba(255,255,255,0.12) !important;">
+                            <div class="d-flex align-items-center gap-2 mb-2 font-mono small text-muted">
+                                <span class="text-gold">✓</span> Automated Roster &amp; Dispatch Sync
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mb-2 font-mono small text-muted">
+                                <span class="text-gold">✓</span> ISO-55000 Shift Log Attribution
+                            </div>
+                            <div class="d-flex align-items-center gap-2 font-mono small text-muted">
+                                <span class="text-gold">✓</span> Role-Adaptive Privilege Gating
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="login-brand-footer d-flex justify-content-between align-items-center mt-4">
+                        <span class="font-mono">SPEC 3.4 // ROSTER ENGINE</span>
+                        <a href="login.html" class="text-gold text-decoration-none font-mono small">&larr; Access Console</a>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Registration Form -->
+                <div class="login-form-panel p-4" style="overflow-y: auto; max-height: 90vh;">
+
+                    <div class="login-form-header mb-3">
+                        <h3 class="mb-1">PERSONNEL ENROLLMENT</h3>
+                        <p class="text-muted small">Select your plant floor role and configure operational credentials.</p>
+                    </div>
+
+                    <!-- Role Selector Cards -->
+                    <div class="role-selector-cards mb-3" role="radiogroup" aria-label="Operational Role Selection">
+                        <div class="role-select-card" id="roleCardAdmin" data-role="Administrator" tabindex="0" role="radio" aria-checked="false">
+                            <div class="role-card-icon">🛡️</div>
+                            <div class="role-card-title">Administrator</div>
+                            <div class="role-card-hint">Security Clearance Req.</div>
+                        </div>
+                        <div class="role-select-card active" id="roleCardTech" data-role="Technician" tabindex="0" role="radio" aria-checked="true">
+                            <div class="role-card-icon">🛠️</div>
+                            <div class="role-card-title">Technician</div>
+                            <div class="role-card-hint">Roster Auto-Provision</div>
+                        </div>
+                        <div class="role-select-card" id="roleCardOperator" data-role="Operator" tabindex="0" role="radio" aria-checked="false">
+                            <div class="role-card-icon">⚙️</div>
+                            <div class="role-card-title">Operator</div>
+                            <div class="role-card-hint">Station Telemetry</div>
+                        </div>
+                    </div>
+
+                    <form id="registerForm">
+                        <input type="hidden" id="selectedRole" value="Technician">
+
+                        <!-- Common Identity Fields -->
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6">
+                                <label for="regFullName" class="form-label small">Full Name</label>
+                                <input type="text" id="regFullName" class="form-control form-control-sm" placeholder="e.g. Aarav Mehta" required autofocus>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="regEmail" class="form-label small">Official Work Email</label>
+                                <input type="email" id="regEmail" class="form-control form-control-sm" placeholder="e.g. a.mehta@forge.io" required>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6">
+                                <label for="regBadgeId" class="form-label small d-flex justify-content-between">
+                                    <span>Employee Badge ID</span>
+                                    <button type="button" class="btn p-0 text-gold font-mono" id="btnAutoBadge" style="font-size:0.7rem; text-decoration:underline;">↺ Suggest</button>
+                                </label>
+                                <input type="text" id="regBadgeId" class="form-control form-control-sm font-mono" placeholder="TECH-07" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="regBay" class="form-label small">Assigned Plant Sector / Bay</label>
+                                <select id="regBay" class="form-select form-select-sm" required>
+                                    <option value="Bay 01">Bay 01 — Machining Complex</option>
+                                    <option value="Bay 02">Bay 02 — Heavy Press &amp; Forming</option>
+                                    <option value="Bay 03">Bay 03 — Fluid &amp; Pneumatics</option>
+                                    <option value="Bay 04" selected>Bay 04 — Assembly Lines 1 &amp; 2</option>
+                                    <option value="Bay 05">Bay 05 — Quality &amp; Metrology</option>
+                                    <option value="Bay 06">Bay 06 — Utilities &amp; Powerhouse</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Role-Adaptive Container -->
+                        <div id="roleAdaptiveSection" class="p-3 mb-3 rounded" style="background: var(--bg-surface-hover); border: 1px solid var(--border-color);">
+                            <!-- Injected dynamically via js/register.js -->
+                        </div>
+
+                        <!-- Password & Security Fields -->
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6">
+                                <label for="regPassword" class="form-label small">Passcode</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="password" id="regPassword" class="form-control" placeholder="Min. 6 characters" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleRegPassword" title="Toggle password visibility" style="border-color: var(--border-color); background: var(--card-bg); color: var(--text-muted);">👁</button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="regPasswordConfirm" class="form-label small">Confirm Passcode</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="password" id="regPasswordConfirm" class="form-control" placeholder="Re-enter passcode" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleRegPasswordConfirm" title="Toggle password visibility" style="border-color: var(--border-color); background: var(--card-bg); color: var(--text-muted);">👁</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password Strength Indicator -->
+                        <div class="password-strength-container mb-3">
+                            <div class="password-strength-bar">
+                                <div class="strength-segment" id="strengthSeg1"></div>
+                                <div class="strength-segment" id="strengthSeg2"></div>
+                                <div class="strength-segment" id="strengthSeg3"></div>
+                                <div class="strength-segment" id="strengthSeg4"></div>
+                            </div>
+                            <div class="password-strength-label">
+                                <span id="strengthText">STRENGTH: AWAITING INPUT</span>
+                                <span id="matchText" class="font-mono"></span>
+                            </div>
+                        </div>
+
+                        <!-- Status Message -->
+                        <div id="registerMessage" class="mb-3 font-mono small text-center" style="min-height: 1.25rem;"></div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 font-mono" id="btnRegisterSubmit">
+                            COMPLETE ENROLLMENT &amp; ENTER FORGE &rarr;
+                        </button>
+
+                        <div class="text-center mt-3 pt-2 border-top" style="border-color: var(--border-color) !important;">
+                            <span class="text-muted small">Already have registered credentials?</span>
+                            <a href="login.html" class="text-gold font-mono small d-block mt-1 text-decoration-none">
+                                &larr; SIGN IN TO OPERATIONS CONSOLE
+                            </a>
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Theme Toggle Logic -->
+    <script>
+        (function () {
+            var currentTheme = localStorage.getItem("forge_theme") || "light";
+            var btnLight = document.getElementById("regThemeBtnLight");
+            var btnDark = document.getElementById("regThemeBtnDark");
+
+            function syncRegToggle(theme) {
+                if (btnLight && btnDark) {
+                    btnLight.classList.toggle("active", theme === "light");
+                    btnLight.setAttribute("aria-pressed", String(theme === "light"));
+                    btnDark.classList.toggle("active", theme === "dark");
+                    btnDark.setAttribute("aria-pressed", String(theme === "dark"));
+                }
+            }
+
+            syncRegToggle(currentTheme);
+
+            if (btnLight) {
+                btnLight.addEventListener("click", function () {
+                    document.documentElement.setAttribute("data-theme", "light");
+                    localStorage.setItem("forge_theme", "light");
+                    syncRegToggle("light");
+                });
+            }
+
+            if (btnDark) {
+                btnDark.addEventListener("click", function () {
+                    document.documentElement.setAttribute("data-theme", "dark");
+                    localStorage.setItem("forge_theme", "dark");
+                    syncRegToggle("dark");
+                });
+            }
+        })();
+    </script>
+
+    <!-- Shared Common Script & Data Service -->
+    <script src="js/common.js"></script>
+
+    <!-- Dedicated Registration Portal Script -->
+    <script src="js/register.js"></script>
+
+</body>
+
+</html>

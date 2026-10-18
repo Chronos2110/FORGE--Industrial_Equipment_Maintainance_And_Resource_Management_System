@@ -3697,3 +3697,230 @@ button:disabled {
         color: #000000 !important;
     }
 }
+
+/* ==========================================================================
+   MILESTONE 6: ENTERPRISE AUTHENTICATION, REGISTRATION & SHIFT CONTROLS
+   ========================================================================== */
+
+/* Topbar User Profile Button */
+.topbar-user-btn {
+    background-color: var(--role-badge-bg);
+    color: var(--text-primary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.topbar-user-btn:hover {
+    background-color: var(--bg-surface-hover);
+    border-color: var(--primary);
+    box-shadow: 0 0 8px rgba(212, 160, 23, 0.2);
+}
+.topbar-user-btn:focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(212, 160, 23, 0.4);
+}
+.topbar-user-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 0.2px;
+}
+.topbar-badge-id {
+    color: var(--primary);
+    font-size: 0.72rem;
+    background: rgba(212, 160, 23, 0.12);
+    padding: 1px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(212, 160, 23, 0.25);
+}
+.topbar-user-role-badge {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'IBM Plex Mono', monospace;
+}
+.status-dot-available {
+    background-color: #10b981 !important;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+.status-dot-break {
+    background-color: #f59e0b !important;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+.status-dot-off {
+    background-color: #6b7280 !important;
+    box-shadow: none;
+}
+
+/* Personnel Profile Modal */
+.profile-hero-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    background: var(--bg-surface-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+.profile-avatar-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), #8b6508);
+    color: #0b0d10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.profile-hero-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.shift-control-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+}
+.shift-status-radios {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.shift-status-tile {
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface-hover);
+    border-radius: 5px;
+    padding: 8px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.shift-status-tile:hover {
+    border-color: var(--primary);
+}
+.shift-status-tile.selected.status-tile-available {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+.shift-status-tile.selected.status-tile-break {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+}
+.shift-status-tile.selected.status-tile-off {
+    border-color: #6b7280;
+    background: rgba(107, 114, 128, 0.1);
+}
+.shift-status-tile .tile-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.shift-status-tile .tile-desc {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+.profile-info-box {
+    background: var(--bg-surface-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Registration Portal */
+.role-selector-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+.role-select-card {
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface-hover);
+    border-radius: 6px;
+    padding: 10px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), transform var(--transition-fast), background var(--transition-fast);
+    user-select: none;
+}
+.role-select-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+.role-select-card.active {
+    border-color: var(--primary);
+    background: rgba(212, 160, 23, 0.08);
+    box-shadow: 0 0 10px rgba(212, 160, 23, 0.15);
+}
+.role-select-card .role-card-icon {
+    font-size: 1.25rem;
+    margin-bottom: 4px;
+}
+.role-select-card .role-card-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.role-select-card .role-card-hint {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-top: 2px;
+}
+.password-strength-container {
+    margin-top: 6px;
+}
+.password-strength-bar {
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    overflow: hidden;
+    display: flex;
+    gap: 3px;
+}
+.strength-segment {
+    flex: 1;
+    height: 100%;
+    background: transparent;
+    transition: background-color 0.3s ease;
+}
+.strength-segment.active-weak {
+    background-color: #ef4444;
+}
+.strength-segment.active-fair {
+    background-color: #f59e0b;
+}
+.strength-segment.active-good {
+    background-color: #3b82f6;
+}
+.strength-segment.active-strong {
+    background-color: #10b981;
+}
+.password-strength-label {
+    font-size: 0.68rem;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-muted);
+    margin-top: 3px;
+    display: flex;
+    justify-content: space-between;
+}
+

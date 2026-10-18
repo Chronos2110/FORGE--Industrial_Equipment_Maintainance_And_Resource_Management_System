@@ -204,6 +204,8 @@ function resetForm() {
     document.getElementById("editIndex").value = "-1";
     document.getElementById("techId").removeAttribute("readonly");
     document.getElementById("workforceModalLabel").textContent = "Register Technician";
+    var provGroup = document.getElementById("techProvisionGroup");
+    if (provGroup) provGroup.classList.remove("d-none");
 }
 
 // Form Submit Handler
@@ -218,7 +220,7 @@ function handleFormSubmit(event) {
     }
 
     let editIndexVal = parseInt(document.getElementById("editIndex").value);
-    let id = document.getElementById("techId").value.trim();
+    let id = document.getElementById("techId").value.trim().toUpperCase();
     let name = document.getElementById("techName").value.trim();
     let skill = document.getElementById("techSkill").value.trim();
     let certification = document.getElementById("techCert").value.trim();
@@ -245,7 +247,9 @@ function handleFormSubmit(event) {
             id: id,
             name: name,
             skill: skill,
+            specialization: skill,
             certification: certification,
+            certifications: certification,
             availability: availability,
             workload: workloadNote
         };
@@ -253,16 +257,67 @@ function handleFormSubmit(event) {
         workforceList.unshift(newTech);
         showAlert("Technician " + name + " registered.", "success");
         logActivity(name, "New technician registered (" + skill + ")", "badge-available");
+
+        // Optionally provision matching login account in forge_users
+        var provBox = document.getElementById("techProvisionLogin");
+        if (provBox && provBox.checked && typeof ForgeDataService !== "undefined" && ForgeDataService.getUsers) {
+            var users = ForgeDataService.getUsers();
+            var existingUser = users.find(function (u) { return (u.badgeId || "").toUpperCase() === id.toUpperCase(); });
+            if (!existingUser) {
+                var userRecord = {
+                    id: "USR-" + Date.now(),
+                    name: name,
+                    username: id.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+                    email: id.toLowerCase().replace(/[^a-z0-9]/g, "") + "@forge.io",
+                    badgeId: id.toUpperCase(),
+                    role: "Technician",
+                    bay: "Bay 04",
+                    shift: "Day Shift",
+                    specialization: skill,
+                    status: availability === "Available" ? "Available" : (availability === "Busy" ? "On Break" : "Off Shift"),
+                    passwordHash: ForgeDataService.hashPassword ? ForgeDataService.hashPassword("tech123") : "plain$tech123",
+                    passwordPlain: "tech123",
+                    createdAt: new Date().toISOString()
+                };
+                users.push(userRecord);
+                safeSetJSON("forge_users", users);
+                if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+                    ForgeSync.broadcast("users", "REGISTER", { id: userRecord.id, badgeId: userRecord.badgeId, role: "Technician" });
+                }
+            }
+        }
+
+        if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+            ForgeSync.broadcast("technicians", "CREATE", { id: id, name: name });
+        }
     } else {
         // Edit existing
         if (editIndexVal >= 0 && editIndexVal < workforceList.length) {
             workforceList[editIndexVal].name = name;
             workforceList[editIndexVal].skill = skill;
+            workforceList[editIndexVal].specialization = skill;
             workforceList[editIndexVal].certification = certification;
+            workforceList[editIndexVal].certifications = certification;
             workforceList[editIndexVal].availability = availability;
             workforceList[editIndexVal].workload = workloadNote;
             showAlert("Technician " + name + " profile updated.", "success");
             logActivity(name, "Technician profile updated (Availability: " + availability + ")", "badge-in-progress");
+
+            // Sync with forge_users if matching badgeId exists
+            if (typeof ForgeDataService !== "undefined" && ForgeDataService.getUsers) {
+                var users = ForgeDataService.getUsers();
+                var uIdx = users.findIndex(function (u) { return (u.badgeId || "").toUpperCase() === id.toUpperCase(); });
+                if (uIdx >= 0) {
+                    users[uIdx].name = name;
+                    users[uIdx].specialization = skill;
+                    users[uIdx].status = availability === "Available" ? "Available" : (availability === "Busy" ? "On Break" : "Off Shift");
+                    safeSetJSON("forge_users", users);
+                }
+            }
+
+            if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+                ForgeSync.broadcast("technicians", "UPDATE", { id: id, availability: availability });
+            }
         }
     }
 
@@ -295,6 +350,9 @@ function editTechnician(id) {
     document.getElementById("techCert").value = t.certification;
     document.getElementById("techAvailability").value = t.availability;
     document.getElementById("techWorkload").value = t.workload || "";
+
+    var provGroup = document.getElementById("techProvisionGroup");
+    if (provGroup) provGroup.classList.add("d-none");
 
     document.getElementById("workforceModalLabel").textContent = "Edit Technician (" + t.id + ")";
     workforceModalInstance.show();

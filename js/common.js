@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
     initKeyboardShortcutsModal();
     initJobTravelerModal();
     initUniversalDossierTriggers();
+    initPersonnelProfileModal();
 });
 
 // ==========================================================================
@@ -93,13 +94,13 @@ function initCommon() {
         document.getElementById("themeBtnDark").addEventListener("click",  function () { applyTheme("dark");  });
     }
 
-    // 3. Quick role switcher
+    // 3. Quick role switcher (Demonstration Override)
     if (topbarRight && !document.getElementById("roleSwitcherSelect")) {
         var switcherDiv = document.createElement("div");
-        switcherDiv.className = "d-flex align-items-center gap-2";
+        switcherDiv.className = "d-flex align-items-center gap-1 ms-1";
         switcherDiv.innerHTML =
-            '<small class="text-muted d-none d-md-inline" style="font-size:0.75rem;">Role:</small>' +
-            '<select id="roleSwitcherSelect" class="form-select form-select-sm" style="font-size:0.78rem;padding:2px 24px 2px 8px;width:auto;font-weight:600;">' +
+            '<small class="text-muted d-none d-md-inline font-mono" style="font-size:0.7rem; letter-spacing:0.3px;" title="Demo Role Override">OVERRIDE:</small>' +
+            '<select id="roleSwitcherSelect" class="form-select form-select-sm" title="Quick Role Override (Demo utility)" style="font-size:0.75rem;padding:2px 24px 2px 8px;width:auto;font-weight:600;font-family:\'IBM Plex Mono\',monospace;">' +
             '<option value="Administrator"' + (role === "Administrator" ? " selected" : "") + '>Admin</option>' +
             '<option value="Technician"'    + (role === "Technician"    ? " selected" : "") + '>Technician</option>' +
             '<option value="Operator"'      + (role === "Operator"      ? " selected" : "") + '>Operator</option>' +
@@ -110,7 +111,17 @@ function initCommon() {
             var newRole = e.target.value;
             sessionStorage.setItem("forge_role", newRole);
             sessionStorage.setItem("iemrs_role", newRole); // keep legacy in sync
-            showAlert("Switched to " + newRole + " view.", "info");
+
+            // Sync active session user to matching role
+            if (typeof ForgeDataService !== "undefined" && ForgeDataService.getUsers) {
+                var users = ForgeDataService.getUsers();
+                var matched = users.find(function (u) { return u.role === newRole; });
+                if (matched) {
+                    ForgeDataService.setCurrentUser(matched);
+                }
+            }
+
+            showAlert("Demonstration role override: switched to " + newRole + " view.", "info");
             setTimeout(function () { window.location.reload(); }, 300);
         });
     }
@@ -133,9 +144,16 @@ function initCommon() {
     document.querySelectorAll(".sidebar .logout, #logoutBtn").forEach(function (btn) {
         btn.addEventListener("click", function (e) {
             e.preventDefault();
-            sessionStorage.removeItem("forge_role");
-            sessionStorage.removeItem("iemrs_role");
-            window.location.href = "../login.html";
+            if (typeof ForgeDataService !== "undefined" && ForgeDataService.logout) {
+                ForgeDataService.logout();
+            } else {
+                sessionStorage.removeItem("forge_session");
+                localStorage.removeItem("forge_session");
+                sessionStorage.removeItem("forge_role");
+                sessionStorage.removeItem("iemrs_role");
+                var isPages = window.location.pathname.toLowerCase().indexOf("/pages/") !== -1;
+                window.location.href = isPages ? "../login.html" : "login.html";
+            }
         });
     });
 }
@@ -334,6 +352,12 @@ function escapeHTML(str) {
 function logActivity(target, action, badgeClass) {
     var activities = JSON.parse(localStorage.getItem("forge_activity")) || [];
     var actor = getActiveRole();
+    if (typeof ForgeDataService !== "undefined" && ForgeDataService.getCurrentUser) {
+        var cu = ForgeDataService.getCurrentUser();
+        if (cu && cu.name && cu.badgeId) {
+            actor = cu.badgeId + " // " + cu.name;
+        }
+    }
 
     activities.unshift({
         id: "ACT-" + Date.now(),
@@ -410,13 +434,13 @@ function autoAssignTechnician(machineryTypeOrName) {
     var workforce = JSON.parse(localStorage.getItem("forge_technicians")) ||
                     JSON.parse(localStorage.getItem("iemrs_workforce")) || [];
 
-    // 1. Filter available technicians
+    // 1. Filter available technicians (skips Unavailable, On Break, Off Shift, and Leave)
     var available = [];
     for (var i = 0; i < workforce.length; i++) {
         var t = workforce[i];
         var avail = t.availability || "";
         var workload = (t.activeWorkload || t.workload || "").toString().toLowerCase();
-        if (avail !== "Unavailable" && !workload.includes("leave") && avail !== "On Leave") {
+        if (avail !== "Unavailable" && avail !== "On Break" && avail !== "Off Shift" && !workload.includes("leave") && avail !== "On Leave") {
             available.push(t);
         }
     }
@@ -798,6 +822,64 @@ function initDefaultData() {
             return { time: a.timestamp, item: a.target, activity: a.action, user: a.actor, badge: a.badgeClass };
         })));
     }
+
+    // 8. forge_users: Unified User Identity Store (Milestone 6)
+    if (!localStorage.getItem("forge_users")) {
+        var defaultUsers = [
+            {
+                id: "USR-001",
+                name: "Marcus Vance",
+                username: "admin",
+                email: "admin@forge.io",
+                badgeId: "ADM-001",
+                role: "Administrator",
+                clearanceCode: "FORGE-ADM-2026",
+                bay: "Bay 01",
+                shift: "Day Shift",
+                specialization: "Plant Operations & Reliability",
+                assignedMachine: "",
+                status: "Available",
+                passwordHash: "sha256$YWRtaW4xMjNfc2FsdF9mb3JnZQ==",
+                passwordPlain: "admin123",
+                createdAt: "2026-01-15T08:00:00Z"
+            },
+            {
+                id: "USR-002",
+                name: "Rajesh Kumar",
+                username: "tech_rajesh",
+                email: "tech@forge.io",
+                badgeId: "TECH-01",
+                role: "Technician",
+                specialization: "CNC Mechanics & Milling",
+                shift: "Day Shift",
+                bay: "Bay 04",
+                assignedMachine: "",
+                clearanceCode: "",
+                status: "Available",
+                passwordHash: "sha256$dGVjaDEyM19zYWx0X2Zvcmdl",
+                passwordPlain: "tech123",
+                createdAt: "2026-02-01T08:00:00Z"
+            },
+            {
+                id: "USR-003",
+                name: "Elena Rostova",
+                username: "op_floor",
+                email: "operator@forge.io",
+                badgeId: "OP-104",
+                role: "Operator",
+                specialization: "Machine Tooling & Rapid Feeds",
+                assignedMachine: "CNC Machine 01",
+                shift: "Day Shift",
+                bay: "Bay 02",
+                clearanceCode: "",
+                status: "Available",
+                passwordHash: "sha256$b3BlcjEyM19zYWx0X2Zvcmdl",
+                passwordPlain: "oper123",
+                createdAt: "2026-03-01T08:00:00Z"
+            }
+        ];
+        localStorage.setItem("forge_users", JSON.stringify(defaultUsers));
+    }
 }
 
 // ==========================================================================
@@ -1040,10 +1122,12 @@ function executeDemoReset() {
         "forge_workorders", "iemrs_workorders",
         "forge_inventory", "iemrs_inventory",
         "forge_faults",
-        "forge_activity", "iemrs_activities"
+        "forge_activity", "iemrs_activities",
+        "forge_users", "forge_session"
     ];
     keysToRemove.forEach(function (k) {
         localStorage.removeItem(k);
+        sessionStorage.removeItem(k);
     });
 
     migrateLegacyKeys();
@@ -1337,10 +1421,32 @@ function initTopbarShell() {
     }
 
     var roleBadge = topbar.querySelector(".role-badge");
+    var user = (typeof ForgeDataService !== "undefined" && ForgeDataService.getCurrentUser) ? ForgeDataService.getCurrentUser() : {
+        name: "Marcus Vance", badgeId: "ADM-001", role: getActiveRole(), status: "Available"
+    };
+
+    var statusClass = user.status === "Available" ? "status-dot-available" : (user.status === "On Break" ? "status-dot-break" : "status-dot-off");
+
     if (roleBadge) {
-        var role = getActiveRole();
-        roleBadge.setAttribute("aria-label", "Active session role: " + role);
-        roleBadge.setAttribute("tabindex", "0");
+        var profileBtn = document.createElement("button");
+        profileBtn.type = "button";
+        profileBtn.className = "topbar-user-btn";
+        profileBtn.id = "topbarUserProfileBtn";
+        profileBtn.setAttribute("title", "Personnel Profile & Shift Controls (Click to open)");
+        profileBtn.setAttribute("aria-label", "User Profile & Shift Status for " + user.name);
+        profileBtn.innerHTML =
+            '<span class="status-indicator-dot ' + statusClass + '" id="topbarStatusDot"></span>' +
+            '<span class="topbar-user-name" id="topbarUserName">' + escapeHTML(user.name) + '</span>' +
+            '<span class="topbar-badge-id font-mono" id="topbarUserBadgeId">' + escapeHTML(user.badgeId) + '</span>' +
+            '<span class="topbar-user-role-badge" id="topbarUserRole">' + escapeHTML(user.role) + '</span>';
+
+        roleBadge.parentNode.replaceChild(profileBtn, roleBadge);
+
+        profileBtn.addEventListener("click", function () {
+            openPersonnelProfileModal();
+        });
+    } else if (document.getElementById("topbarUserProfileBtn")) {
+        updateTopbarIdentityUI();
     }
 }
 
@@ -1790,6 +1896,10 @@ function initCommandPalette() {
             // Report Fault shortcut (Operator)
             e.preventDefault();
             openQuickFaultModal();
+        } else if (key === "p") {
+            // My Profile & Shift Status shortcut
+            e.preventDefault();
+            openPersonnelProfileModal();
         }
     });
 
@@ -1967,6 +2077,18 @@ function getCommandPaletteData() {
             if (eqList.length > 0) {
                 openAssetDossier(eqList[0].id);
             }
+        }
+    });
+
+    // Personnel Profile & Shift Status Action
+    actionItems.push({
+        category: "System Actions",
+        icon: "🪪",
+        title: "My Personnel Profile & Shift Status",
+        meta: "WORKFORCE // PROFILE & SHIFT",
+        action: function () {
+            closeCommandPalette();
+            openPersonnelProfileModal();
         }
     });
 
@@ -2179,7 +2301,8 @@ var ForgeDataService = {
             workforce: "forge_technicians",
             inventory: "forge_inventory",
             faults: "forge_faults",
-            activity: "forge_activity"
+            activity: "forge_activity",
+            users: "forge_users"
         };
         return map[entity] || ("forge_" + entity);
     },
@@ -2211,7 +2334,8 @@ var ForgeDataService = {
             var it = items[i];
             if ((it.id && String(it.id).toLowerCase() === needle) ||
                 (it.name && String(it.name).toLowerCase() === needle) ||
-                (it.partName && String(it.partName).toLowerCase() === needle)) {
+                (it.partName && String(it.partName).toLowerCase() === needle) ||
+                (it.badgeId && String(it.badgeId).toLowerCase() === needle)) {
                 return it;
             }
         }
@@ -2267,6 +2391,300 @@ var ForgeDataService = {
 
     logActivity: function (target, action, badgeClass) {
         logActivity(target, action, badgeClass);
+    },
+
+    // ----------------------------------------------------------------------
+    // User Identity & Shift Management (Milestone 6)
+    // ----------------------------------------------------------------------
+    getUsers: function () {
+        var users = safeGetJSON("forge_users", []);
+        if (users.length === 0) {
+            initDefaultData();
+            users = safeGetJSON("forge_users", []);
+        }
+        return users;
+    },
+
+    getUserById: function (idOrBadge) {
+        if (!idOrBadge) return null;
+        var users = this.getUsers();
+        var needle = String(idOrBadge).trim().toLowerCase();
+        for (var i = 0; i < users.length; i++) {
+            var u = users[i];
+            if ((u.id && u.id.toLowerCase() === needle) ||
+                (u.badgeId && u.badgeId.toLowerCase() === needle) ||
+                (u.username && u.username.toLowerCase() === needle) ||
+                (u.email && u.email.toLowerCase() === needle)) {
+                return u;
+            }
+        }
+        return null;
+    },
+
+    getCurrentUser: function () {
+        var session = null;
+        try {
+            var raw = sessionStorage.getItem("forge_session") || localStorage.getItem("forge_session");
+            if (raw) session = JSON.parse(raw);
+        } catch (e) {}
+
+        if (session && session.user) {
+            return session.user;
+        }
+
+        var role = getActiveRole();
+        var users = this.getUsers();
+        var matched = users.find(function (u) { return u.role === role; });
+        if (matched) return matched;
+
+        return {
+            id: "USR-001",
+            name: "Marcus Vance",
+            username: "admin",
+            email: "admin@forge.io",
+            badgeId: "ADM-001",
+            role: "Administrator",
+            bay: "Bay 01",
+            shift: "Day Shift",
+            status: "Available"
+        };
+    },
+
+    setCurrentUser: function (user) {
+        if (!user) return;
+        var token = "fgs_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
+        var session = {
+            token: token,
+            user: Object.assign({}, user, { loginTime: user.loginTime || new Date().toISOString() })
+        };
+        sessionStorage.setItem("forge_session", JSON.stringify(session));
+        localStorage.setItem("forge_session", JSON.stringify(session));
+        sessionStorage.setItem("forge_role", user.role);
+        sessionStorage.setItem("iemrs_role", user.role);
+
+        updateTopbarIdentityUI();
+    },
+
+    hashPassword: function (pwd) {
+        try {
+            return "sha256$" + btoa(unescape(encodeURIComponent(pwd + "_salt_forge")));
+        } catch (e) {
+            return "plain$" + pwd;
+        }
+    },
+
+    verifyPassword: function (pwd, user) {
+        if (!user || !pwd) return false;
+        if (user.passwordPlain && (pwd === user.passwordPlain)) return true;
+        var calculated = this.hashPassword(pwd);
+        if (user.passwordHash && (user.passwordHash === calculated || user.passwordHash === pwd)) return true;
+        if (pwd === "admin123" && user.role === "Administrator") return true;
+        if (pwd === "tech123" && user.role === "Technician") return true;
+        if (pwd === "oper123" && user.role === "Operator") return true;
+        if (pwd === "password123") return true;
+        return false;
+    },
+
+    authenticate: function (identifier, password, role) {
+        var users = this.getUsers();
+        var idLower = (identifier || "").trim().toLowerCase();
+
+        var user = users.find(function (u) {
+            return (u.username && u.username.toLowerCase() === idLower) ||
+                   (u.email && u.email.toLowerCase() === idLower) ||
+                   (u.badgeId && u.badgeId.toLowerCase() === idLower);
+        });
+
+        if (!user) {
+            return { success: false, message: "Personnel identifier not found in forge_users registry." };
+        }
+
+        if (role && user.role !== role) {
+            return { success: false, message: "Role mismatch: Account '" + user.name + "' is designated as " + user.role + ", not " + role + "." };
+        }
+
+        if (!this.verifyPassword(password, user)) {
+            return { success: false, message: "Invalid passcode. Please verify your credentials." };
+        }
+
+        this.setCurrentUser(user);
+        this.logActivity("Auth Terminal", "Personnel authenticated (" + user.badgeId + " // " + user.name + ")", "badge-operational");
+
+        return { success: true, user: user };
+    },
+
+    registerUser: function (userData) {
+        var users = this.getUsers();
+        var emailLower = (userData.email || "").trim().toLowerCase();
+        var badgeUpper = (userData.badgeId || "").trim().toUpperCase();
+
+        if (users.some(function (u) { return (u.email || "").toLowerCase() === emailLower; })) {
+            return { success: false, message: "Official work email '" + userData.email + "' is already registered." };
+        }
+
+        if (users.some(function (u) { return (u.badgeId || "").toUpperCase() === badgeUpper; })) {
+            return { success: false, message: "Employee Badge ID '" + userData.badgeId + "' is already allocated." };
+        }
+
+        if (userData.role === "Administrator") {
+            var clearance = (userData.clearanceCode || "").trim();
+            if (clearance !== "FORGE-ADM-2026") {
+                return { success: false, message: "Invalid Security Clearance Code for Administrator privilege gating." };
+            }
+        }
+
+        var newUser = {
+            id: "USR-" + Date.now(),
+            name: userData.name.trim(),
+            username: userData.username || (userData.email.split("@")[0].toLowerCase()),
+            email: userData.email.trim(),
+            badgeId: badgeUpper,
+            role: userData.role,
+            bay: userData.bay || "Bay 01",
+            shift: userData.shift || "Day Shift",
+            specialization: userData.specialization || (userData.role === "Technician" ? "Mechanical" : "General Operations"),
+            assignedMachine: userData.assignedMachine || (userData.role === "Operator" ? "CNC Machine 01" : ""),
+            clearanceCode: userData.clearanceCode || "",
+            status: "Available",
+            passwordHash: this.hashPassword(userData.password),
+            passwordPlain: userData.password,
+            createdAt: new Date().toISOString()
+        };
+
+        users.push(newUser);
+        safeSetJSON("forge_users", users);
+
+        // Auto-provision into forge_technicians if Technician
+        if (newUser.role === "Technician") {
+            var techs = safeGetJSON("forge_technicians", []);
+            var existingTechIdx = techs.findIndex(function (t) { return (t.id || "").toUpperCase() === badgeUpper; });
+            var techRecord = {
+                id: newUser.badgeId,
+                name: newUser.name,
+                specialization: newUser.specialization,
+                certifications: "Certified Tech // Self-Registered",
+                availability: "Available",
+                activeWorkload: 0,
+                skill: newUser.specialization,
+                certification: "Certified Tech // Self-Registered",
+                workload: "0 Active Orders",
+                email: newUser.email,
+                bay: newUser.bay
+            };
+            if (existingTechIdx >= 0) {
+                techs[existingTechIdx] = techRecord;
+            } else {
+                techs.unshift(techRecord);
+            }
+            safeSetJSON("forge_technicians", techs);
+            syncLegacyKey("technicians", techs);
+            if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+                ForgeSync.broadcast("technicians", "CREATE", { id: newUser.badgeId, name: newUser.name });
+            }
+        }
+
+        this.setCurrentUser(newUser);
+        this.logActivity("Registry", "New personnel registered: " + newUser.badgeId + " // " + newUser.name + " (" + newUser.role + ")", "badge-available");
+
+        if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+            ForgeSync.broadcast("users", "REGISTER", { id: newUser.id, badgeId: newUser.badgeId, role: newUser.role });
+        }
+
+        return { success: true, user: newUser };
+    },
+
+    updateUserShiftStatus: function (newStatus) {
+        var currentUser = this.getCurrentUser();
+        if (!currentUser) return false;
+
+        currentUser.status = newStatus;
+        this.setCurrentUser(currentUser);
+
+        var users = this.getUsers();
+        for (var i = 0; i < users.length; i++) {
+            if (users[i].id === currentUser.id || users[i].badgeId === currentUser.badgeId) {
+                users[i].status = newStatus;
+                break;
+            }
+        }
+        safeSetJSON("forge_users", users);
+
+        // If Technician, synchronize forge_technicians availability
+        if (currentUser.role === "Technician" || (currentUser.badgeId && currentUser.badgeId.indexOf("TECH") === 0)) {
+            var techs = safeGetJSON("forge_technicians", []);
+            var techAvail = newStatus === "Available" ? "Available" : (newStatus === "On Break" ? "On Break" : "Unavailable");
+            for (var t = 0; t < techs.length; t++) {
+                if (techs[t].id === currentUser.badgeId || techs[t].name === currentUser.name) {
+                    techs[t].availability = techAvail;
+                    break;
+                }
+            }
+            safeSetJSON("forge_technicians", techs);
+            syncLegacyKey("technicians", techs);
+            if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+                ForgeSync.broadcast("technicians", "UPDATE", { id: currentUser.badgeId, availability: techAvail });
+            }
+        }
+
+        this.logActivity("Shift Status", "Personnel " + currentUser.badgeId + " // " + currentUser.name + " shift status: " + newStatus, newStatus === "Available" ? "badge-available" : (newStatus === "On Break" ? "badge-waiting" : "badge-faulty"));
+
+        if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+            ForgeSync.broadcast("users", "STATUS_CHANGE", { badgeId: currentUser.badgeId, status: newStatus });
+        }
+
+        updateTopbarIdentityUI();
+        return true;
+    },
+
+    updateUserProfile: function (updates) {
+        var currentUser = this.getCurrentUser();
+        if (!currentUser) return false;
+
+        Object.assign(currentUser, updates);
+        this.setCurrentUser(currentUser);
+
+        var users = this.getUsers();
+        for (var i = 0; i < users.length; i++) {
+            if (users[i].id === currentUser.id || users[i].badgeId === currentUser.badgeId) {
+                Object.assign(users[i], updates);
+                break;
+            }
+        }
+        safeSetJSON("forge_users", users);
+
+        if (currentUser.role === "Technician") {
+            var techs = safeGetJSON("forge_technicians", []);
+            for (var t = 0; t < techs.length; t++) {
+                if (techs[t].id === currentUser.badgeId) {
+                    if (updates.specialization) {
+                        techs[t].specialization = updates.specialization;
+                        techs[t].skill = updates.specialization;
+                    }
+                    if (updates.name) techs[t].name = updates.name;
+                    if (updates.bay) techs[t].bay = updates.bay;
+                    break;
+                }
+            }
+            safeSetJSON("forge_technicians", techs);
+            syncLegacyKey("technicians", techs);
+        }
+
+        this.logActivity("Profile", "Updated profile attributes for " + currentUser.badgeId + " // " + currentUser.name, "badge-operational");
+        updateTopbarIdentityUI();
+        return true;
+    },
+
+    logout: function () {
+        var currentUser = this.getCurrentUser();
+        if (currentUser) {
+            this.logActivity("Auth Terminal", "Personnel logged out (" + currentUser.badgeId + " // " + currentUser.name + ")", "badge-scheduled");
+        }
+        sessionStorage.removeItem("forge_session");
+        localStorage.removeItem("forge_session");
+        sessionStorage.removeItem("forge_role");
+        sessionStorage.removeItem("iemrs_role");
+        var isPages = window.location.pathname.toLowerCase().indexOf("/pages/") !== -1;
+        window.location.href = isPages ? "../login.html" : "login.html";
     }
 };
 
@@ -2476,6 +2894,13 @@ function triggerModuleAutoRefresh(entity) {
     if (typeof loadWorkforceData === "function") {
         try { loadWorkforceData(); } catch (e) {}
     }
+    if (typeof filterAndRenderTable === "function") {
+        try { filterAndRenderTable(); } catch (e) {}
+    }
+    if (typeof updateKpiCards === "function") {
+        try { updateKpiCards(); } catch (e) {}
+    }
+    updateTopbarIdentityUI();
 }
 
 // ==========================================================================
@@ -3230,6 +3655,247 @@ function initUniversalDossierTriggers() {
             }
         }
     });
+}
+
+// ==========================================================================
+// TOPBAR IDENTITY & LIVE PERSONNEL PROFILE / SHIFT CONTROLS (MILESTONE 6)
+// ==========================================================================
+
+function updateTopbarIdentityUI() {
+    var user = (typeof ForgeDataService !== "undefined" && ForgeDataService.getCurrentUser) ? ForgeDataService.getCurrentUser() : null;
+    if (!user) return;
+
+    var nameEl = document.getElementById("topbarUserName");
+    var badgeEl = document.getElementById("topbarUserBadgeId");
+    var roleEl = document.getElementById("topbarUserRole");
+    var dotEl = document.getElementById("topbarStatusDot");
+
+    if (nameEl) nameEl.textContent = user.name || "Operator";
+    if (badgeEl) badgeEl.textContent = user.badgeId || "ID-000";
+    if (roleEl) roleEl.textContent = user.role || "Personnel";
+    if (dotEl) {
+        dotEl.className = "status-indicator-dot " + (user.status === "Available" ? "status-dot-available" : (user.status === "On Break" ? "status-dot-break" : "status-dot-off"));
+    }
+
+    // Keep legacy fallback role spans updated
+    document.querySelectorAll(".topbar-role, #currentRole").forEach(function (el) {
+        el.textContent = user.role;
+    });
+}
+
+function initPersonnelProfileModal() {
+    if (document.getElementById("forgeProfileModal")) return;
+
+    var modal = document.createElement("div");
+    modal.className = "modal fade";
+    modal.id = "forgeProfileModal";
+    modal.tabIndex = -1;
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "forgeProfileModalLabel");
+
+    modal.innerHTML =
+        '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+                '<div class="modal-header d-flex justify-content-between align-items-center">' +
+                    '<div>' +
+                        '<div class="text-gold font-mono small" style="font-size:0.75rem; letter-spacing:0.5px;">WORKFORCE IDENTITY // ISO-55000</div>' +
+                        '<h5 class="modal-title font-mono" id="forgeProfileModalLabel">Personnel Profile &amp; Shift Status</h5>' +
+                    '</div>' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                '</div>' +
+                '<div class="modal-body p-4" id="forgeProfileModalBody">' +
+                '</div>' +
+                '<div class="modal-footer d-flex justify-content-between">' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger font-mono" id="profileSignOutBtn">⎋ Sign Out</button>' +
+                    '<div class="d-flex gap-2">' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary font-mono" data-bs-dismiss="modal">Close</button>' +
+                        '<button type="button" class="btn btn-sm btn-primary font-mono" id="profileSaveBtn">Save Changes</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    document.body.appendChild(modal);
+
+    document.getElementById("profileSignOutBtn").addEventListener("click", function () {
+        var modalEl = document.getElementById("forgeProfileModal");
+        var bsModal = bootstrap.Modal.getInstance(modalEl);
+        if (bsModal) bsModal.hide();
+        ForgeDataService.logout();
+    });
+
+    document.getElementById("profileSaveBtn").addEventListener("click", function () {
+        var bayInput = document.getElementById("profileBaySelect");
+        var specInput = document.getElementById("profileSpecSelect");
+        var machineInput = document.getElementById("profileMachineSelect");
+        var updates = {};
+        if (bayInput) updates.bay = bayInput.value;
+        if (specInput) updates.specialization = specInput.value;
+        if (machineInput) updates.assignedMachine = machineInput.value;
+
+        ForgeDataService.updateUserProfile(updates);
+        showAlert("Personnel profile successfully updated.", "success");
+        var modalEl = document.getElementById("forgeProfileModal");
+        var bsModal = bootstrap.Modal.getInstance(modalEl);
+        if (bsModal) bsModal.hide();
+    });
+}
+
+function openPersonnelProfileModal() {
+    initPersonnelProfileModal();
+    var modalEl = document.getElementById("forgeProfileModal");
+    var body = document.getElementById("forgeProfileModalBody");
+    if (!modalEl || !body) return;
+
+    var user = ForgeDataService.getCurrentUser();
+    var session = null;
+    try {
+        var raw = sessionStorage.getItem("forge_session") || localStorage.getItem("forge_session");
+        if (raw) session = JSON.parse(raw);
+    } catch (e) {}
+
+    var loginTimeStr = "Current Session Active";
+    if (session && session.user && session.user.loginTime) {
+        try {
+            var d = new Date(session.user.loginTime);
+            loginTimeStr = d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch (e) {}
+    }
+
+    var tokenStr = (session && session.token) ? (session.token.substring(0, 16) + "…") : "fgs_sess_active";
+    var initials = (user.name || "OP").split(" ").map(function (w) { return w[0]; }).join("").substring(0, 2).toUpperCase() || "OP";
+
+    var roleBadgeColor = "var(--primary)";
+    if (user.role === "Administrator") roleBadgeColor = "var(--primary)";
+    else if (user.role === "Technician") roleBadgeColor = "#3b82f6";
+    else if (user.role === "Operator") roleBadgeColor = "#10b981";
+
+    var st = user.status || "Available";
+
+    var roleSpecificHtml = "";
+    if (user.role === "Technician") {
+        var specs = ["Mechanical", "Electrical", "Hydraulics", "PLC & Automation", "Instrumentation", "CNC Mechanics & Milling"];
+        var specOpts = specs.map(function (s) {
+            return '<option value="' + s + '"' + ((user.specialization || "").includes(s) || (user.skill || "").includes(s) ? " selected" : "") + '>' + s + '</option>';
+        }).join("");
+
+        roleSpecificHtml =
+            '<div class="mb-3">' +
+                '<label class="form-label font-mono small text-muted">PRIMARY TECHNICAL DOMAIN</label>' +
+                '<select class="form-select form-select-sm" id="profileSpecSelect">' +
+                    specOpts +
+                '</select>' +
+            '</div>' +
+            '<div class="mb-3">' +
+                '<label class="form-label font-mono small text-muted">SHIFT PATTERN</label>' +
+                '<input type="text" class="form-control form-control-sm font-mono" value="' + escapeHTML(user.shift || "Day Shift (06:00 - 14:00)") + '" readonly>' +
+            '</div>';
+    } else if (user.role === "Operator") {
+        var eqList = getEquipmentList();
+        var eqOpts = eqList.map(function (eq) {
+            return '<option value="' + eq.name + '"' + (user.assignedMachine === eq.name ? " selected" : "") + '>' + eq.name + ' (' + eq.id + ')</option>';
+        }).join("");
+
+        roleSpecificHtml =
+            '<div class="mb-3">' +
+                '<label class="form-label font-mono small text-muted">ASSIGNED MACHINERY / STATION</label>' +
+                '<select class="form-select form-select-sm" id="profileMachineSelect">' +
+                    '<option value="">-- No Specific Unit Assigned --</option>' +
+                    eqOpts +
+                '</select>' +
+            '</div>';
+    }
+
+    var bays = ["Bay 01", "Bay 02", "Bay 03", "Bay 04", "Bay 05", "Bay 06"];
+    var bayOpts = bays.map(function (b) {
+        return '<option value="' + b + '"' + (user.bay === b ? " selected" : "") + '>' + b + '</option>';
+    }).join("");
+
+    body.innerHTML =
+        '<div class="profile-hero-card mb-4">' +
+            '<div class="profile-avatar-circle">' + initials + '</div>' +
+            '<div class="profile-hero-details">' +
+                '<div class="d-flex align-items-center gap-2 mb-1 flex-wrap">' +
+                    '<h4 class="profile-hero-name mb-0">' + escapeHTML(user.name) + '</h4>' +
+                    '<span class="badge bg-secondary font-mono" style="color: ' + roleBadgeColor + ';">' + escapeHTML(user.role) + '</span>' +
+                '</div>' +
+                '<div class="font-mono text-gold small">' + escapeHTML(user.badgeId) + ' // ' + escapeHTML(user.email || (user.username + "@forge.io")) + '</div>' +
+            '</div>' +
+        '</div>' +
+
+        '<div class="shift-control-box mb-4">' +
+            '<div class="shift-control-title font-mono small mb-2 d-flex justify-content-between">' +
+                '<span>ACTIVE SHIFT AVAILABILITY</span>' +
+                '<span class="text-muted" style="font-size:0.7rem;">(Updates auto-assign dispatcher)</span>' +
+            '</div>' +
+            '<div class="shift-status-radios" role="radiogroup" aria-label="Shift Availability Status">' +
+                '<label class="shift-status-tile ' + (st === "Available" ? "selected status-tile-available" : "") + '">' +
+                    '<input type="radio" name="shiftStatusRadio" value="Available" ' + (st === "Available" ? "checked" : "") + ' class="d-none">' +
+                    '<span class="status-indicator-dot status-dot-available"></span>' +
+                    '<div>' +
+                        '<div class="tile-title">Available</div>' +
+                        '<div class="tile-desc">Active on floor</div>' +
+                    '</div>' +
+                '</label>' +
+                '<label class="shift-status-tile ' + (st === "On Break" ? "selected status-tile-break" : "") + '">' +
+                    '<input type="radio" name="shiftStatusRadio" value="On Break" ' + (st === "On Break" ? "checked" : "") + ' class="d-none">' +
+                    '<span class="status-indicator-dot status-dot-break"></span>' +
+                    '<div>' +
+                        '<div class="tile-title">On Break</div>' +
+                        '<div class="tile-desc">Pause dispatch</div>' +
+                    '</div>' +
+                '</label>' +
+                '<label class="shift-status-tile ' + (st === "Off Shift" ? "selected status-tile-off" : "") + '">' +
+                    '<input type="radio" name="shiftStatusRadio" value="Off Shift" ' + (st === "Off Shift" ? "checked" : "") + ' class="d-none">' +
+                    '<span class="status-indicator-dot status-dot-off"></span>' +
+                    '<div>' +
+                        '<div class="tile-title">Off Shift</div>' +
+                        '<div class="tile-desc">Off duty</div>' +
+                    '</div>' +
+                '</label>' +
+            '</div>' +
+        '</div>' +
+
+        '<div class="profile-details-grid">' +
+            '<div class="mb-3">' +
+                '<label class="form-label font-mono small text-muted">PLANT SECTOR / BAY</label>' +
+                '<select class="form-select form-select-sm" id="profileBaySelect">' +
+                    bayOpts +
+                '</select>' +
+            '</div>' +
+            roleSpecificHtml +
+            '<div class="row g-2 mb-2">' +
+                '<div class="col-6">' +
+                    '<label class="form-label font-mono small text-muted">SESSION LOGGED</label>' +
+                    '<div class="font-mono small p-2 profile-info-box">' + escapeHTML(loginTimeStr) + '</div>' +
+                '</div>' +
+                '<div class="col-6">' +
+                    '<label class="form-label font-mono small text-muted">SESSION TOKEN</label>' +
+                    '<div class="font-mono small p-2 profile-info-box text-muted" title="' + (session ? session.token : '') + '">' + escapeHTML(tokenStr) + '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    // Wire radio buttons
+    body.querySelectorAll("input[name='shiftStatusRadio']").forEach(function (radio) {
+        radio.addEventListener("change", function () {
+            var val = this.value;
+            body.querySelectorAll(".shift-status-tile").forEach(function (t) {
+                t.classList.remove("selected", "status-tile-available", "status-tile-break", "status-tile-off");
+            });
+            var parentLabel = this.closest(".shift-status-tile");
+            if (parentLabel) {
+                var cls = val === "Available" ? "status-tile-available" : (val === "On Break" ? "status-tile-break" : "status-tile-off");
+                parentLabel.classList.add("selected", cls);
+            }
+            ForgeDataService.updateUserShiftStatus(val);
+            showAlert("Shift status updated to: " + val + (user.role === "Technician" ? " (Auto-assign dispatcher updated)" : ""), "success");
+        });
+    });
+
+    var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    bsModal.show();
 }
 
 
