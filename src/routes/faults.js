@@ -1,18 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db');
+const { faults, equipment, users, workOrders } = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
-// Format Fault Report for front-end consumption
-function formatFault(f) {
+// Format and enrich Fault Report for front-end consumption
+async function enrichFault(f) {
+  if (!f) return null;
+
+  const eq = f.equipment_id
+    ? await equipment.findOne({ $or: [{ _id: f.equipment_id }, { id: f.equipment_id }] })
+    : null;
+
+  const reporter = f.reported_by
+    ? await users.findOne({ $or: [{ _id: f.reported_by }, { id: f.reported_by }] })
+    : null;
+
   return {
-    id: f.id,
+    id: f.id || f._id,
     equipmentId: f.equipment_id,
-    equipmentName: f.equipment ? f.equipment.name : f.equipment_id,
-    equipment: f.equipment ? f.equipment.name : f.equipment_id,
-    reportedBy: f.reporter ? f.reporter.name : f.reported_by,
+    equipmentName: eq ? eq.name : f.equipment_id,
+    equipment: eq ? eq.name : f.equipment_id,
+    reportedBy: reporter ? reporter.name : f.reported_by,
     severity: f.severity,
-    priority: f.severity === 'CRITICAL' ? 'High' : (f.severity === 'HIGH' ? 'High' : (f.severity === 'MEDIUM' ? 'Medium' : 'Low')),
+    priority: f.severity === 'CRITICAL' || f.severity === 'HIGH' ? 'High' : (f.severity === 'MEDIUM' ? 'Medium' : 'Low'),
     description: f.description,
     status: f.status === 'CONVERTED_TO_WO' ? 'Converted to WO' : (f.status === 'REPORTED' ? 'Open' : f.status),
     linked_wo_id: f.linked_wo_id,
@@ -26,16 +36,10 @@ function formatFault(f) {
 // Accessible by: ADMIN, TECHNICIAN, OPERATOR
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const faults = await prisma.faultReport.findMany({
-      orderBy: { created_at: 'desc' },
-      include: {
-        equipment: true,
-        reporter: { select: { id: true, name: true, role: true } },
-        work_order: true
-      }
-    });
+    const raw = await faults.find({}).sort({ created_at: -1 }).toArray();
+    const formatted = await Promise.all(raw.map(enrichFault));
 
-    return res.json(faults.map(formatFault));
+    return res.json(formatted);
   } catch (err) {
     console.error('Error fetching faults:', err);
     return res.status(500).json({ error: 'Failed to retrieve faults', details: err.message });
@@ -55,12 +59,10 @@ router.post('/', authenticateToken, async (req, res) => {
     // Resolve equipment_id
     let resolvedEquipmentId = equipment_id;
     if (!resolvedEquipmentId && equipmentName) {
-      const eq = await prisma.equipment.findFirst({
-        where: {
-          OR: [{ id: equipmentName }, { name: equipmentName }]
-        }
+      const eqDoc = await equipment.findOne({
+        $or: [{ _id: equipmentName }, { id: equipmentName }, { name: equipmentName }]
       });
-      if (eq) resolvedEquipmentId = eq.id;
+      if (eqDoc) resolvedEquipmentId = eqDoc._id;
     }
 
     if (!resolvedEquipmentId) {
@@ -69,54 +71,54 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const faultId = id || `FLT-${Math.floor(100 + Math.random() * 900)}`;
 
-    const result = await prisma.$transaction(async (tx) => {
-      const fault = await tx.faultReport.create({
-        data: {
-          id: faultId,
-          equipment_id: resolvedEquipmentId,
-          reported_by: req.user.id,
-          severity: faultSeverity,
-          description: faultDesc,
-          status: 'REPORTED'
-        },
-        include: {
-          equipment: true,
-          reporter: true
+    const faultDoc = {
+      _id: faultId,
+      id: faultId,
+      equipment_id: resolvedEquipmentId,
+      reported_by: req.user.id,
+      severity: faultSeverity,
+      description: faultDesc,
+      status: 'REPORTED',
+      linked_wo_id: null,
+      created_at: new Date()
+    };
+
+    await faults.insertOne(faultDoc);
+
+    // Automatically update equipment status based on fault severity
+    if (faultSeverity === 'CRITICAL') {
+      await equipment.updateOne(
+        { $or: [{ _id: resolvedEquipmentId }, { id: resolvedEquipmentId }] },
+        {
+          $set: { status: 'DOWN' },
+          $inc: { health_score: -25 }
         }
-      });
+      );
+    } else if (faultSeverity === 'HIGH') {
+      await equipment.updateOne(
+        { $or: [{ _id: resolvedEquipmentId }, { id: resolvedEquipmentId }] },
+        {
+          $set: { status: 'WARNING' },
+          $inc: { health_score: -15 }
+        }
+      );
+    }
 
-      // Automatically update equipment status based on fault severity
-      if (faultSeverity === 'CRITICAL') {
-        await tx.equipment.update({
-          where: { id: resolvedEquipmentId },
-          data: { status: 'DOWN', health_score: { decrement: 25 } }
-        });
-      } else if (faultSeverity === 'HIGH') {
-        await tx.equipment.update({
-          where: { id: resolvedEquipmentId },
-          data: { status: 'WARNING', health_score: { decrement: 15 } }
-        });
-      }
-
-      return fault;
-    });
-
-    return res.status(201).json(formatFault(result));
+    const formatted = await enrichFault(faultDoc);
+    return res.status(201).json(formatted);
   } catch (err) {
     console.error('Error reporting fault:', err);
     return res.status(500).json({ error: 'Failed to record fault report', details: err.message });
   }
 });
 
-// POST /api/faults/:id/escalate (Creates a linked Work Order from the fault inside a single transaction)
+// POST /api/faults/:id/escalate (Creates a linked Work Order from the fault)
 // Accessible by: ADMIN and TECHNICIAN
 router.post('/:id/escalate', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const fault = await prisma.faultReport.findUnique({
-      where: { id },
-      include: { equipment: true }
+    const id = req.params.id;
+    const fault = await faults.findOne({
+      $or: [{ _id: id }, { id }]
     });
 
     if (!fault) {
@@ -129,50 +131,55 @@ router.post('/:id/escalate', authenticateToken, requireRole(['ADMIN', 'TECHNICIA
       });
     }
 
+    const eqDoc = await equipment.findOne({
+      $or: [{ _id: fault.equipment_id }, { id: fault.equipment_id }]
+    });
+
     const newWoId = `WO-${Math.floor(100 + Math.random() * 900)}`;
     const woPriority = fault.severity === 'CRITICAL' ? 'CRITICAL' : (fault.severity === 'HIGH' ? 'HIGH' : 'MEDIUM');
 
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Create linked Work Order
-      const createdWo = await tx.workOrder.create({
-        data: {
-          id: newWoId,
-          title: `Fault Escalation: ${fault.equipment.name}`,
-          description: fault.description,
-          priority: woPriority,
-          status: 'OPEN',
-          equipment_id: fault.equipment_id,
-          created_by: req.user.id
-        }
-      });
+    const createdWo = {
+      _id: newWoId,
+      id: newWoId,
+      title: `Fault Escalation: ${eqDoc ? eqDoc.name : fault.equipment_id}`,
+      description: fault.description,
+      priority: woPriority,
+      status: 'OPEN',
+      equipment_id: fault.equipment_id,
+      assigned_to: null,
+      created_by: req.user.id,
+      parts_required: [],
+      created_at: new Date(),
+      completed_at: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-      // 2. Update fault report
-      const updatedFault = await tx.faultReport.update({
-        where: { id },
-        data: {
+    await workOrders.insertOne(createdWo);
+
+    await faults.updateOne(
+      { $or: [{ _id: id }, { id }] },
+      {
+        $set: {
           status: 'CONVERTED_TO_WO',
-          linked_wo_id: createdWo.id
-        },
-        include: { equipment: true, reporter: true, work_order: true }
-      });
+          linked_wo_id: createdWo._id
+        }
+      }
+    );
 
-      // 3. Update equipment status to MAINTENANCE
-      await tx.equipment.update({
-        where: { id: fault.equipment_id },
-        data: { status: 'MAINTENANCE' }
-      });
+    await equipment.updateOne(
+      { $or: [{ _id: fault.equipment_id }, { id: fault.equipment_id }] },
+      { $set: { status: 'MAINTENANCE' } }
+    );
 
-      return {
-        workOrder: createdWo,
-        fault: updatedFault
-      };
-    });
+    const updatedFault = await faults.findOne({ $or: [{ _id: id }, { id }] });
+    const formattedFault = await enrichFault(updatedFault);
 
     return res.json({
       success: true,
-      message: `Fault ${id} successfully escalated to Work Order ${result.workOrder.id}.`,
-      workOrder: result.workOrder,
-      fault: formatFault(result.fault)
+      message: `Fault ${id} successfully escalated to Work Order ${createdWo._id}.`,
+      workOrder: createdWo,
+      fault: formattedFault
     });
   } catch (err) {
     console.error('Error escalating fault:', err);

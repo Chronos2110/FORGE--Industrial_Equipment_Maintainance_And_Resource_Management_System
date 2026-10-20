@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db');
+const { equipment, workOrders, maintenance, faults } = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 // GET /api/equipment (Supports ?status= and ?bay= query filters)
@@ -8,40 +8,39 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { status, bay } = req.query;
-    const where = {};
+    const filter = {};
 
     if (status && status !== 'All') {
-      where.status = {
-        equals: status
-      };
+      filter.status = status;
     }
 
     if (bay && bay !== 'All') {
-      where.bay_location = {
-        contains: bay
-      };
+      filter.bay_location = { $regex: bay, $options: 'i' };
     }
 
-    const equipmentList = await prisma.equipment.findMany({
-      where,
-      orderBy: { id: 'asc' },
-      include: {
-        work_orders: {
-          select: { id: true, status: true, priority: true }
-        },
-        maintenance_schedules: {
-          select: { id: true, task_name: true, compliance_status: true, next_due_date: true }
-        }
-      }
-    });
+    const items = await equipment.find(filter).sort({ _id: 1 }).toArray();
 
-    // Format for full compatibility with both database schema and existing UI templates
-    const formatted = equipmentList.map(eq => ({
-      ...eq,
-      type: eq.category,
-      location: eq.bay_location,
-      lastMaintenanceDate: eq.last_serviced_at ? eq.last_serviced_at.toISOString().split('T')[0] : '',
-      lastMaintenance: eq.last_serviced_at ? eq.last_serviced_at.toISOString().split('T')[0] : ''
+    const formatted = await Promise.all(items.map(async (eq) => {
+      const eqOrders = await workOrders
+        .find({ equipment_id: eq._id })
+        .project({ _id: 1, id: 1, status: 1, priority: 1 })
+        .toArray();
+
+      const eqMaintenance = await maintenance
+        .find({ equipment_id: eq._id })
+        .project({ _id: 1, id: 1, task_name: 1, compliance_status: 1, next_due_date: 1 })
+        .toArray();
+
+      return {
+        ...eq,
+        id: eq.id || eq._id,
+        type: eq.category,
+        location: eq.bay_location,
+        lastMaintenanceDate: eq.last_serviced_at ? new Date(eq.last_serviced_at).toISOString().split('T')[0] : '',
+        lastMaintenance: eq.last_serviced_at ? new Date(eq.last_serviced_at).toISOString().split('T')[0] : '',
+        work_orders: eqOrders,
+        maintenance_schedules: eqMaintenance
+      };
     }));
 
     return res.json(formatted);
@@ -54,24 +53,28 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/equipment/:id
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const eq = await prisma.equipment.findUnique({
-      where: { id: req.params.id },
-      include: {
-        work_orders: true,
-        maintenance_schedules: true,
-        fault_reports: true
-      }
+    const id = req.params.id;
+    const eq = await equipment.findOne({
+      $or: [{ _id: id }, { id }]
     });
 
     if (!eq) {
-      return res.status(404).json({ error: `Equipment with ID ${req.params.id} not found.` });
+      return res.status(404).json({ error: `Equipment with ID ${id} not found.` });
     }
+
+    const eqOrders = await workOrders.find({ equipment_id: eq._id }).toArray();
+    const eqMaint = await maintenance.find({ equipment_id: eq._id }).toArray();
+    const eqFaults = await faults.find({ equipment_id: eq._id }).toArray();
 
     return res.json({
       ...eq,
+      id: eq.id || eq._id,
       type: eq.category,
       location: eq.bay_location,
-      lastMaintenanceDate: eq.last_serviced_at ? eq.last_serviced_at.toISOString().split('T')[0] : ''
+      lastMaintenanceDate: eq.last_serviced_at ? new Date(eq.last_serviced_at).toISOString().split('T')[0] : '',
+      work_orders: eqOrders,
+      maintenance_schedules: eqMaint,
+      fault_reports: eqFaults
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve equipment record', details: err.message });
@@ -87,28 +90,33 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), async (req, res) => 
       return res.status(400).json({ error: 'Equipment ID and Name are required.' });
     }
 
-    const existing = await prisma.equipment.findUnique({ where: { id } });
+    const existing = await equipment.findOne({
+      $or: [{ _id: id }, { id }]
+    });
     if (existing) {
       return res.status(400).json({ error: `Equipment with ID ${id} already exists.` });
     }
 
-    const newEq = await prisma.equipment.create({
-      data: {
-        id,
-        name,
-        category: category || type || 'General Machinery',
-        bay_location: bay_location || location || 'Production Floor',
-        status: status || 'OPERATIONAL',
-        health_score: health_score ? parseInt(health_score) : 100,
-        last_serviced_at: last_serviced_at ? new Date(last_serviced_at) : new Date()
-      }
-    });
+    const newEq = {
+      _id: id,
+      id: id,
+      name,
+      category: category || type || 'General Machinery',
+      bay_location: bay_location || location || 'Production Floor',
+      status: status || 'OPERATIONAL',
+      health_score: health_score !== undefined ? parseInt(health_score) : 100,
+      last_serviced_at: last_serviced_at ? new Date(last_serviced_at) : new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    await equipment.insertOne(newEq);
 
     return res.status(201).json({
       ...newEq,
       type: newEq.category,
       location: newEq.bay_location,
-      lastMaintenanceDate: newEq.last_serviced_at ? newEq.last_serviced_at.toISOString().split('T')[0] : ''
+      lastMaintenanceDate: newEq.last_serviced_at ? new Date(newEq.last_serviced_at).toISOString().split('T')[0] : ''
     });
   } catch (err) {
     console.error('Error creating equipment:', err);
@@ -131,17 +139,26 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), as
     if (last_serviced_at || lastMaintenanceDate) {
       data.last_serviced_at = new Date(last_serviced_at || lastMaintenanceDate);
     }
+    data.updatedAt = new Date();
 
-    const updated = await prisma.equipment.update({
-      where: { id },
-      data
-    });
+    const result = await equipment.findOneAndUpdate(
+      { $or: [{ _id: id }, { id }] },
+      { $set: data },
+      { returnDocument: 'after' }
+    );
+
+    const doc = result && result.value ? result.value : await equipment.findOne({ $or: [{ _id: id }, { id }] });
+
+    if (!doc) {
+      return res.status(404).json({ error: `Equipment with ID ${id} not found.` });
+    }
 
     return res.json({
-      ...updated,
-      type: updated.category,
-      location: updated.bay_location,
-      lastMaintenanceDate: updated.last_serviced_at ? updated.last_serviced_at.toISOString().split('T')[0] : ''
+      ...doc,
+      id: doc.id || doc._id,
+      type: doc.category,
+      location: doc.bay_location,
+      lastMaintenanceDate: doc.last_serviced_at ? new Date(doc.last_serviced_at).toISOString().split('T')[0] : ''
     });
   } catch (err) {
     console.error('Error updating equipment:', err);
@@ -153,7 +170,14 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), as
 router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.equipment.delete({ where: { id } });
+    const result = await equipment.deleteOne({
+      $or: [{ _id: id }, { id }]
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: `Equipment with ID ${id} not found.` });
+    }
+
     return res.json({ success: true, message: `Equipment ${id} deleted successfully.` });
   } catch (err) {
     console.error('Error deleting equipment:', err);

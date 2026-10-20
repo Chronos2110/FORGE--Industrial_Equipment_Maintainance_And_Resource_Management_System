@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db');
+const { equipment, workOrders, inventory, users } = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
-const bcrypt = require('bcryptjs');
+const { seedData } = require('../seed');
 
 // GET /api/search?q=<query>
 // Feeds the Ctrl+K Command Palette by executing a fast lookup across equipment,
-// work_orders, and inventory_parts, returning results filtered by the caller's role.
+// work_orders, and inventory_parts in MongoDB.
 router.get('/search', authenticateToken, async (req, res) => {
   try {
     const query = (req.query.q || '').trim();
@@ -14,68 +14,67 @@ router.get('/search', authenticateToken, async (req, res) => {
       return res.json({ equipment: [], work_orders: [], inventory_parts: [] });
     }
 
-    const qLower = query.toLowerCase();
+    const searchRegex = new RegExp(query, 'i');
 
     // 1. Equipment Search
-    const equipment = await prisma.equipment.findMany({
-      where: {
-        OR: [
-          { id: { contains: query } },
-          { name: { contains: query } },
-          { category: { contains: query } },
-          { bay_location: { contains: query } }
-        ]
-      },
-      take: 8
-    });
+    const eqMatches = await equipment.find({
+      $or: [
+        { _id: searchRegex },
+        { name: searchRegex },
+        { category: searchRegex },
+        { bay_location: searchRegex }
+      ]
+    }).limit(8).toArray();
 
     // 2. Work Orders Search
-    const workOrders = await prisma.workOrder.findMany({
-      where: {
-        OR: [
-          { id: { contains: query } },
-          { title: { contains: query } },
-          { description: { contains: query } }
-        ]
-      },
-      include: {
-        equipment: { select: { name: true } },
-        technician: { select: { name: true } }
-      },
-      take: 8
-    });
+    const woMatches = await workOrders.find({
+      $or: [
+        { _id: searchRegex },
+        { title: searchRegex },
+        { description: searchRegex }
+      ]
+    }).limit(8).toArray();
+
+    const enrichedWos = await Promise.all(woMatches.map(async (w) => {
+      const eqDoc = w.equipment_id
+        ? await equipment.findOne({ $or: [{ _id: w.equipment_id }, { id: w.equipment_id }] })
+        : null;
+
+      const tech = w.assigned_to
+        ? await users.findOne({ $or: [{ _id: w.assigned_to }, { id: w.assigned_to }] })
+        : null;
+
+      return {
+        id: w.id || w._id,
+        title: w.title,
+        status: w.status,
+        priority: w.priority,
+        equipment: eqDoc ? eqDoc.name : w.equipment_id,
+        technician: tech ? tech.name : 'Unassigned'
+      };
+    }));
 
     // 3. Inventory Parts Search
-    const inventory = await prisma.inventoryPart.findMany({
-      where: {
-        OR: [
-          { id: { contains: query } },
-          { name: { contains: query } },
-          { category: { contains: query } },
-          { storage_bin: { contains: query } }
-        ]
-      },
-      take: 8
-    });
+    const invMatches = await inventory.find({
+      $or: [
+        { _id: searchRegex },
+        { name: searchRegex },
+        { category: searchRegex },
+        { storage_bin: searchRegex }
+      ]
+    }).limit(8).toArray();
 
     return res.json({
-      equipment: equipment.map(e => ({
-        id: e.id,
+      equipment: eqMatches.map(e => ({
+        id: e.id || e._id,
         name: e.name,
         type: e.category,
         location: e.bay_location,
         status: e.status
       })),
-      work_orders: workOrders.map(w => ({
-        id: w.id,
-        title: w.title,
-        status: w.status,
-        priority: w.priority,
-        equipment: w.equipment ? w.equipment.name : w.equipment_id,
-        technician: w.technician ? w.technician.name : 'Unassigned'
-      })),
-      inventory_parts: inventory.map(p => ({
-        id: p.id,
+      work_orders: enrichedWos,
+      inventory_parts: invMatches.map(p => ({
+        id: p.id || p._id,
         name: p.name,
         category: p.category,
         quantity: p.quantity_on_hand,
@@ -95,15 +94,13 @@ router.get('/search', authenticateToken, async (req, res) => {
 router.get('/telemetry/dock', authenticateToken, async (req, res) => {
   try {
     // Open CRITICAL or HIGH work orders
-    const criticalHighWOs = await prisma.workOrder.count({
-      where: {
-        priority: { in: ['CRITICAL', 'HIGH', 'Critical', 'High'] },
-        status: { notIn: ['COMPLETED', 'Completed', 'CANCELLED', 'Cancelled'] }
-      }
+    const criticalHighWOs = await workOrders.countDocuments({
+      priority: { $in: ['CRITICAL', 'HIGH', 'Critical', 'High'] },
+      status: { $nin: ['COMPLETED', 'Completed', 'CANCELLED', 'Cancelled'] }
     });
 
-    // Inventory SKUs where quantity_on_hand < min_threshold
-    const parts = await prisma.inventoryPart.findMany({});
+    // Inventory SKUs where quantity_on_hand <= min_threshold
+    const parts = await inventory.find({}).toArray();
     const lowStockParts = parts.filter(p => p.quantity_on_hand <= p.min_threshold);
 
     const totalBadgeAlerts = criticalHighWOs + lowStockParts.length;
@@ -114,7 +111,12 @@ router.get('/telemetry/dock', authenticateToken, async (req, res) => {
       badgeCount: totalBadgeAlerts,
       alertItems: {
         orders: criticalHighWOs,
-        lowStockSKUs: lowStockParts.map(p => ({ id: p.id, name: p.name, quantity: p.quantity_on_hand, min: p.min_threshold }))
+        lowStockSKUs: lowStockParts.map(p => ({
+          id: p.id || p._id,
+          name: p.name,
+          quantity: p.quantity_on_hand,
+          min: p.min_threshold
+        }))
       }
     });
   } catch (err) {
@@ -124,26 +126,13 @@ router.get('/telemetry/dock', authenticateToken, async (req, res) => {
 });
 
 // POST /api/dev/reset (Development only)
-// Drops current records and re-runs the seed script so the "Reset Demo Data" frontend button works against the real database.
 router.post('/dev/reset', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
-    // Delete in FK order
-    await prisma.workOrderPart.deleteMany({});
-    await prisma.faultReport.deleteMany({});
-    await prisma.maintenanceSchedule.deleteMany({});
-    await prisma.workOrder.deleteMany({});
-    await prisma.technicianProfile.deleteMany({});
-    await prisma.inventoryPart.deleteMany({});
-    await prisma.equipment.deleteMany({});
-    await prisma.user.deleteMany({});
-
-    // Re-run seed
-    const { execSync } = require('child_process');
-    execSync('node prisma/seed.js', { stdio: 'inherit' });
+    await seedData();
 
     return res.json({
       success: true,
-      message: 'Demo database has been successfully reset and seeded to initial factory state.'
+      message: 'Demo database has been successfully reset and seeded to initial factory state in MongoDB.'
     });
   } catch (err) {
     console.error('Dev reset error:', err);

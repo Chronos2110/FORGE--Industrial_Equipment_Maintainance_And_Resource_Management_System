@@ -12,15 +12,49 @@ Designed with a high-contrast **Obsidian Black + Industrial Gold** visual identi
 
 ---
 
-## 🛠️ Technology Stack (Zero External Dependencies)
+## 🛠️ Technology Stack
 
-- **Structure**: Semantic HTML5 (Accessible modals, data grids, toolbars)
-- **Styling**: Vanilla CSS3 + Bootstrap 5 (Custom "Industrial Technology" design system in `css/style.css`)
-- **Typography**: Inter + IBM Plex Mono (Google Fonts)
-- **Logic**: Pure Vanilla JavaScript (ES6 DOM APIs)
-- **Persistence**: Browser `localStorage` (Reliable client-side JSON data store) & `sessionStorage` (Role state)
+- **Frontend**: Semantic HTML5, Vanilla CSS3 + Bootstrap 5 (Custom "Industrial Technology" design system in `css/style.css`), Inter + IBM Plex Mono fonts, Vanilla JavaScript (ES6 DOM APIs)
+- **Database Engine**: MongoDB with official native MongoDB Driver (`mongodb` MongoClient)
+- **Backend Architecture**: Pure Node.js & Express.js REST API (No Mongoose, No Prisma)
+- **Authentication**: JWT (JSON Web Tokens) with HttpOnly cookies & RBAC guards (Admin, Technician, Operator)
+- **Dual Persistence**: Live synchronization between MongoDB backend and client-side `localStorage` bridge (`js/api.js`) for offline resiliency
 
-> **Note**: This application is completely backend-agnostic and runs 100% client-side without React, Tailwind, TypeScript, or Node.js runtime requirements.
+---
+
+## 🍃 MongoDB Backend Setup
+
+1. **Environment Configuration (`.env`)**:
+   ```env
+   # Local MongoDB:
+   MONGODB_URI=mongodb://127.0.0.1:27017/forge
+
+   # Or Cloud MongoDB Atlas:
+   # MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/forge?retryWrites=true&w=majority
+
+   JWT_SECRET="forge-super-secret-jwt-key-2026-industrial-spec"
+   PORT=5000
+   ```
+
+2. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Seed MongoDB with Demo Factory Data**:
+   ```bash
+   npm run seed
+   ```
+
+4. **Start Backend Server**:
+   ```bash
+   npm start
+   ```
+
+5. **Run Integration Test Suite**:
+   ```bash
+   npm test
+   ```
 
 ---
 

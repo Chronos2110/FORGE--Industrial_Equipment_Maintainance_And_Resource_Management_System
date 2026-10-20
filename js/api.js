@@ -2,7 +2,7 @@
 // FORGE V4 - Backend API Bridge (js/api.js)
 // Transparently hydrates localStorage from the backend REST API on load,
 // so ALL existing page scripts (dashboard.js, workorders.js, etc.) continue
-// to work unchanged while real data comes from the SQLite database.
+// to work unchanged while real data comes from the MongoDB database.
 // ==========================================================================
 
 const FORGE_API = (function () {
@@ -360,6 +360,7 @@ const FORGE_API = (function () {
     return {
         init: initAPIBridge,
         hydrateAll: hydrateAll,
+        syncAll: hydrateAll,
         createWorkOrder: createWorkOrder,
         updateWorkOrderStatus: updateWorkOrderStatus,
         autoAssign: autoAssign,
@@ -372,9 +373,14 @@ const FORGE_API = (function () {
     };
 })();
 
+// Alias for document specification compliance
+window.ForgeAPI = FORGE_API;
+window.FORGE_API = FORGE_API;
+
 // Auto-init when DOM is ready
 document.addEventListener("DOMContentLoaded", function () {
     FORGE_API.init().catch(function (err) {
         console.warn("[FORGE API] Hydration skipped (fallback to localStorage):", err.message);
     });
 });
+

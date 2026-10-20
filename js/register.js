@@ -1,6 +1,6 @@
 // ==========================================================================
 // FORGE V4 - Registration JavaScript (js/register.js)
-// Creates a user via POST /api/auth/register (SQLite users table)
+// Creates a user via POST /api/auth/register (MongoDB users collection)
 // Then redirects to login so the new credentials can be used to sign in
 // ==========================================================================
 

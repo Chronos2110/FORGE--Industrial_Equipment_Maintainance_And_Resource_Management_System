@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db');
+const { workOrders, equipment, faults, inventory } = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
 // GET /api/analytics/summary
@@ -17,19 +17,15 @@ router.get('/summary', authenticateToken, async (req, res) => {
 
     // 1. If TECHNICIAN, compute personal metrics
     if (role === 'TECHNICIAN') {
-      const myCompleted = await prisma.workOrder.findMany({
-        where: {
-          assigned_to: req.user.id,
-          status: 'COMPLETED',
-          completed_at: { not: null }
-        }
-      });
+      const myCompleted = await workOrders.find({
+        assigned_to: req.user.id,
+        status: 'COMPLETED',
+        completed_at: { $ne: null }
+      }).toArray();
 
-      const myActive = await prisma.workOrder.count({
-        where: {
-          assigned_to: req.user.id,
-          status: { in: ['ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] }
-        }
+      const myActive = await workOrders.countDocuments({
+        assigned_to: req.user.id,
+        status: { $in: ['ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] }
       });
 
       let totalRepairHours = 0;
@@ -53,21 +49,19 @@ router.get('/summary', authenticateToken, async (req, res) => {
     }
 
     // 2. Administrator: Full Plant Analytics
-    const equipment = await prisma.equipment.findMany({});
-    const totalEq = equipment.length;
-    const operationalEq = equipment.filter(e => e.status === 'OPERATIONAL').length;
-    const maintenanceEq = equipment.filter(e => e.status === 'MAINTENANCE').length;
-    const downEq = equipment.filter(e => e.status === 'DOWN' || e.status === 'WARNING').length;
+    const allEquipment = await equipment.find({}).toArray();
+    const totalEq = allEquipment.length;
+    const operationalEq = allEquipment.filter(e => e.status === 'OPERATIONAL').length;
+    const maintenanceEq = allEquipment.filter(e => e.status === 'MAINTENANCE').length;
+    const downEq = allEquipment.filter(e => e.status === 'DOWN' || e.status === 'WARNING').length;
 
     const availabilityPct = totalEq > 0 ? Math.round((operationalEq / totalEq) * 100) : 100;
 
     // Completed Work Orders for MTTR calculation
-    const completedOrders = await prisma.workOrder.findMany({
-      where: {
-        status: 'COMPLETED',
-        completed_at: { not: null }
-      }
-    });
+    const completedOrders = await workOrders.find({
+      status: 'COMPLETED',
+      completed_at: { $ne: null }
+    }).toArray();
 
     let totalRepairTimeHours = 0;
     completedOrders.forEach(wo => {
@@ -78,26 +72,25 @@ router.get('/summary', authenticateToken, async (req, res) => {
     const mttrHours = completedOrders.length > 0 ? (totalRepairTimeHours / completedOrders.length).toFixed(1) : '4.2';
 
     // MTBF (Mean Time Between Failures)
-    // Operating time divided by total breakdown count
-    const totalFaults = await prisma.faultReport.count({});
+    const totalFaults = await faults.countDocuments({});
     const baseOperatingHours = totalEq * 720; // 30 days * 24 hours per machine
     const breakdownCount = Math.max(1, totalFaults);
     const mtbfHours = Math.round(baseOperatingHours / breakdownCount);
 
     // Open Orders
-    const openOrdersCount = await prisma.workOrder.count({
-      where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] } }
+    const openOrdersCount = await workOrders.countDocuments({
+      status: { $in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] }
     });
 
     // Low stock inventory count
-    const allParts = await prisma.inventoryPart.findMany({});
+    const allParts = await inventory.find({}).toArray();
     const lowStockCount = allParts.filter(p => p.quantity_on_hand <= p.min_threshold).length;
 
     // Trend: work orders completed over time
     const completionTrends = completedOrders.map(wo => ({
-      id: wo.id,
+      id: wo.id || wo._id,
       title: wo.title,
-      completedDate: wo.completed_at ? wo.completed_at.toISOString().split('T')[0] : '',
+      completedDate: wo.completed_at ? new Date(wo.completed_at).toISOString().split('T')[0] : '',
       durationHours: wo.completed_at ? ((new Date(wo.completed_at) - new Date(wo.created_at)) / (1000 * 3600)).toFixed(1) : '0'
     }));
 

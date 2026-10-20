@@ -1,5 +1,6 @@
 const app = require('../server');
-const http = require('http');
+const { connectDB, closeDB } = require('../src/db');
+const { seedData } = require('../src/seed');
 
 let server;
 const PORT = 5055;
@@ -33,7 +34,11 @@ function assert(condition, message) {
 }
 
 async function runTests() {
-  console.log('\n--- STARTING FORGE BACKEND INTEGRATION TESTS ---\n');
+  console.log('\n--- STARTING FORGE NATIVE MONGODB BACKEND INTEGRATION TESTS ---\n');
+
+  // Connect to MongoDB and seed fresh test dataset
+  await connectDB();
+  await seedData();
 
   // Start temporary test server
   server = app.listen(PORT);
@@ -42,7 +47,7 @@ async function runTests() {
   try {
     // 1. Health check
     const health = await request('GET', '/api/health');
-    assert(health.status === 200 && health.data.status === 'ONLINE', 'API Health Check returns ONLINE');
+    assert(health.status === 200 && health.data.status === 'ONLINE' && health.data.database === 'MongoDB', 'API Health Check returns ONLINE with Node.js + Express.js + MongoDB');
 
     // 2. Authentication: Admin Login
     const adminLogin = await request('POST', '/api/auth/login', {
@@ -129,14 +134,22 @@ async function runTests() {
     const search = await request('GET', '/api/search?q=Compressor', null, adminToken);
     assert(search.status === 200 && search.data.equipment.length > 0, `Ctrl+K search returned ${search.data.equipment.length} equipment matches`);
 
-    console.log('\n🎉 ALL 15 BACKEND TESTS PASSED SUCCESSFULLY!\n');
+    // 16. Verify all 8 core collections populated in MongoDB
+    const { technicianProfiles, workOrderParts } = require('../src/db');
+    const techProfCount = await technicianProfiles.countDocuments();
+    assert(techProfCount > 0, `Technician Profiles collection verified: ${techProfCount} profiles in MongoDB`);
+    const wopCount = await workOrderParts.countDocuments();
+    assert(wopCount > 0, `Work Order Parts collection verified: ${wopCount} part records in MongoDB`);
+
+    console.log('\n🎉 ALL 16 NODE.JS + EXPRESS + MONGODB INTEGRATION TESTS PASSED!\n');
   } finally {
-    server.close();
+    if (server) server.close();
+    await closeDB();
   }
 }
 
 runTests().catch(err => {
   console.error('\n❌ Tests encountered an error:', err);
   if (server) server.close();
-  process.exit(1);
+  closeDB().finally(() => process.exit(1));
 });

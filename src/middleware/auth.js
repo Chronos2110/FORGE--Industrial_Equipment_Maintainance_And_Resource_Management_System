@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const prisma = require('../db');
+const { users } = require('../db');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'forge-super-secret-jwt-key-2026-industrial-spec';
 
@@ -33,10 +33,9 @@ async function authenticateToken(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // Fetch live user status from database to enforce active status
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      include: { technician_profile: true }
+    // Fetch live user status from MongoDB users collection
+    const user = await users.findOne({
+      $or: [{ _id: decoded.id }, { id: decoded.id }]
     });
 
     if (!user) {
@@ -44,7 +43,7 @@ async function authenticateToken(req, res, next) {
     }
 
     req.user = {
-      id: user.id,
+      id: user.id || user._id,
       name: user.name,
       email: user.email,
       role: normalizeRole(user.role),
@@ -79,13 +78,12 @@ async function optionalAuth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      include: { technician_profile: true }
+    const user = await users.findOne({
+      $or: [{ _id: decoded.id }, { id: decoded.id }]
     });
     if (user) {
       req.user = {
-        id: user.id,
+        id: user.id || user._id,
         name: user.name,
         email: user.email,
         role: normalizeRole(user.role),

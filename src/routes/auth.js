@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const prisma = require('../db');
+const crypto = require('crypto');
+const { users } = require('../db');
 const { JWT_SECRET, authenticateToken, normalizeRole } = require('../middleware/auth');
 
 // POST /api/auth/register
@@ -38,42 +39,40 @@ router.post('/register', async (req, res) => {
     // Build the email to store (if raw input has no @, append a forge domain)
     const storedEmail = rawEmail.includes('@') ? rawEmail : rawEmail + '@forge.industrial';
 
-    // Check uniqueness
-    const existing = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: storedEmail },
-          { email: rawEmail }
-        ]
-      }
+    // Check uniqueness in MongoDB
+    const existing = await users.findOne({
+      $or: [
+        { email: storedEmail },
+        { email: rawEmail }
+      ]
     });
     if (existing) {
       return res.status(409).json({ error: `An account with username '${rawEmail}' already exists. Please log in instead.` });
     }
 
     const passwordHash = bcrypt.hashSync(password, 10);
+    const userId = crypto.randomUUID();
 
-    // Create user (and optional technician profile in one go)
-    const newUser = await prisma.user.create({
-      data: {
-        name: displayName,
-        email: storedEmail,
-        password_hash: passwordHash,
-        role: normalizedRole,
-        bay_assignment: bay_assignment || 'Production Floor',
-        status: 'ACTIVE',
-        ...(normalizedRole === 'TECHNICIAN' ? {
-          technician_profile: {
-            create: {
-              specialization: specialization || 'MECHANICAL',
-              max_concurrent_wos: 3,
-              active_wo_count: 0
-            }
-          }
-        } : {})
-      },
-      include: { technician_profile: true }
-    });
+    // Create user in MongoDB
+    const newUser = {
+      _id: userId,
+      id: userId,
+      name: displayName,
+      email: storedEmail,
+      password_hash: passwordHash,
+      role: normalizedRole,
+      bay_assignment: bay_assignment || 'Production Floor',
+      status: 'ACTIVE',
+      technician_profile: normalizedRole === 'TECHNICIAN' ? {
+        specialization: specialization || 'MECHANICAL',
+        max_concurrent_wos: 3,
+        active_wo_count: 0
+      } : null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    await users.insertOne(newUser);
 
     // Issue JWT immediately so they're auto-logged in after registration
     const token = jwt.sign(
@@ -109,7 +108,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
@@ -120,14 +118,11 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username/email and password are required.' });
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: identifier },
-          { email: identifier.includes('@') ? identifier : `${identifier}@forge.industrial` }
-        ]
-      },
-      include: { technician_profile: true }
+    const user = await users.findOne({
+      $or: [
+        { email: identifier },
+        { email: identifier.includes('@') ? identifier : `${identifier}@forge.industrial` }
+      ]
     });
 
     if (!user) {
@@ -153,7 +148,7 @@ router.post('/login', async (req, res) => {
 
     // Generate JWT
     const tokenPayload = {
-      id: user.id,
+      id: user.id || user._id,
       email: user.email,
       role: normalizeRole(user.role),
       name: user.name
@@ -173,7 +168,7 @@ router.post('/login', async (req, res) => {
       success: true,
       token,
       user: {
-        id: user.id,
+        id: user.id || user._id,
         name: user.name,
         email: user.email,
         role: user.role,

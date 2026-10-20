@@ -14,7 +14,7 @@ const inventoryRoutes = require('./src/routes/inventory');
 const analyticsRoutes = require('./src/routes/analytics');
 const shellRoutes = require('./src/routes/shell');
 
-const prisma = require('./src/db');
+const { connectDB, users } = require('./src/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,6 +49,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ONLINE',
     system: 'FORGE - Industrial Maintenance & Resource Management System',
+    stack: 'Node.js + Express.js',
+    database: 'MongoDB',
     timestamp: new Date().toISOString()
   });
 });
@@ -65,20 +67,22 @@ app.get('/', (req, res) => {
 
 async function startServer() {
   try {
-    await prisma.$connect();
-    const userCount = await prisma.user.count();
-    console.log(`  Database connected. Users in SQLite: ${userCount}`);
+    await connectDB();
+    const userCount = await users.countDocuments();
+    console.log(`  MongoDB connected successfully. Users in collection: ${userCount}`);
     if (userCount === 0) {
-      console.log(`  Warning: users table is empty. Run: npm run seed`);
+      console.log(`  Warning: MongoDB users collection is empty. Run: npm run seed`);
     }
   } catch (err) {
-    console.error('  Database connection failed:', err.message);
-    console.error('  Run: npx prisma generate && npx prisma db push && npm run seed');
+    console.error('  MongoDB connection failed:', err.message);
+    console.error('  Ensure MongoDB is running or configure MONGODB_URI in .env (e.g. MongoDB Atlas connection string).');
+    console.error('  Then populate initial data with: npm run seed');
   }
 
   app.listen(PORT, () => {
     console.log(`=======================================================`);
     console.log(`  FORGE Backend Server running on port ${PORT}`);
+    console.log(`  Stack: Node.js + Express.js + Native MongoDB Driver`);
     console.log(`  Open register: http://localhost:${PORT}/register.html`);
     console.log(`  Open login:    http://localhost:${PORT}/login.html`);
     console.log(`  API Status:    http://localhost:${PORT}/api/health`);
