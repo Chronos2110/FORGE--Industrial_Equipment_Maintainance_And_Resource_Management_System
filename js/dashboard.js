@@ -66,57 +66,69 @@ function refreshDashboard() {
 // ==========================================================================
 function loadAdminExceptions() {
     var banner = document.getElementById("adminExceptionsBanner");
-    var list = document.getElementById("adminExceptionsList");
+    var machList = document.getElementById("adminMachineryExceptionsList");
+    var stockList = document.getElementById("adminStockoutExceptionsList");
     var countEl = document.getElementById("adminExceptionsCount");
-    if (!banner || !list) return;
+    var machCountEl = document.getElementById("adminMachineryCount");
+    var stockCountEl = document.getElementById("adminStockoutCount");
+    if (!banner || !machList || !stockList) return;
 
     var equipment = JSON.parse(localStorage.getItem("forge_equipment")) || [];
     var workorders = JSON.parse(localStorage.getItem("forge_workorders")) || [];
     var inventory = JSON.parse(localStorage.getItem("forge_inventory")) || [];
 
-    var exceptions = [];
+    var machExceptions = [];
+    var stockExceptions = [];
 
     // 1. Faulty or Down Machinery
     equipment.forEach(function (eq) {
         if (eq.status === "Faulty") {
-            exceptions.push({
-                type: "danger",
-                tag: "DOWN MACHINERY",
-                title: eq.name + " (" + (eq.location || "Floor") + ")",
-                desc: "Critical breakdown reported — immediate maintenance intervention needed.",
-                actionText: "Inspect Asset",
+            machExceptions.push({
+                id: eq.id,
+                severity: "CRITICAL",
+                tagClass: "badge-danger",
+                name: eq.name,
+                location: eq.location || "Bay 01",
+                desc: "Machinery breakdown reported: immediate intervention required",
+                actionText: "Inspect",
                 actionHref: "equipment.html?id=" + encodeURIComponent(eq.id)
             });
         } else if (eq.status === "Maintenance") {
-            exceptions.push({
-                type: "warning",
-                tag: "UNDER SERVICE",
-                title: eq.name,
-                desc: "Currently offline for preventive service or work order repairs.",
-                actionText: "View Asset",
+            machExceptions.push({
+                id: eq.id,
+                severity: "SERVICE",
+                tagClass: "badge-warning",
+                name: eq.name,
+                location: eq.location || "Floor",
+                desc: "Offline for preventive maintenance or overhaul",
+                actionText: "Inspect",
                 actionHref: "equipment.html?id=" + encodeURIComponent(eq.id)
             });
         }
     });
 
-    // 2. Bottlenecked / High-Priority Work Orders
+    // 2. High-Priority or Bottlenecked Work Orders
     workorders.forEach(function (wo) {
         if (wo.status === "Waiting for Parts") {
-            exceptions.push({
-                type: "warning",
-                tag: "PARTS BOTTLENECK",
-                title: wo.id + " — " + wo.equipment,
-                desc: "Hold: " + (wo.waitingReason || "Awaiting spare parts") + (wo.expectedResumeDate ? " (Est. resume: " + wo.expectedResumeDate + ")" : ""),
-                actionText: "Dispatch Console",
+            machExceptions.push({
+                id: wo.id,
+                severity: "HOLD",
+                tagClass: "badge-warning",
+                name: wo.equipment || "Asset",
+                location: "Warehouse sync",
+                desc: wo.waitingReason || "Awaiting spare parts replenishment",
+                actionText: "Dispatch",
                 actionHref: "workorders.html?id=" + encodeURIComponent(wo.id)
             });
         } else if ((wo.priority === "High" || wo.priority === "Critical") && wo.status !== "Completed" && wo.status !== "Cancelled") {
-            exceptions.push({
-                type: "danger",
-                tag: "CRITICAL DISPATCH",
-                title: wo.id + " — " + wo.equipment,
-                desc: "High priority order assigned to " + (wo.technician || "Unassigned") + ": " + (wo.problem || wo.description || ""),
-                actionText: "Open Order",
+            machExceptions.push({
+                id: wo.id,
+                severity: "DISPATCH",
+                tagClass: "badge-danger",
+                name: wo.equipment || "Asset",
+                location: wo.technician || "Unassigned",
+                desc: wo.problem || wo.description || "High-priority corrective work order",
+                actionText: "Dispatch",
                 actionHref: "workorders.html?id=" + encodeURIComponent(wo.id)
             });
         }
@@ -124,42 +136,75 @@ function loadAdminExceptions() {
 
     // 3. Low-Stock Parts Below Minimum
     inventory.forEach(function (p) {
-        var qty = parseInt(p.quantity) || 0;
-        var min = parseInt(p.minimumStock !== undefined ? p.minimumStock : (p.minStock || 0));
+        var qty = parseInt(p.quantity, 10) || 0;
+        var min = parseInt(p.minimumStock !== undefined ? p.minimumStock : (p.minStock || 0), 10);
         if (qty <= min) {
-            exceptions.push({
-                type: qty === 0 ? "danger" : "warning",
-                tag: qty === 0 ? "OUT OF STOCK" : "STOCKOUT RISK",
-                title: p.name || p.partName,
-                desc: "Available: " + qty + " units | Safety threshold: " + min + " units.",
-                actionText: "Restock Part",
+            stockExceptions.push({
+                id: p.id,
+                severity: qty === 0 ? "DEPLETED" : "DEFICIT",
+                tagClass: qty === 0 ? "badge-danger" : "badge-warning",
+                name: p.name || p.partName,
+                location: p.shelf || p.location || "Main Store",
+                desc: "Available: " + qty + " units | Safety min: " + min + " units",
+                actionText: "Restock",
                 actionHref: "inventory.html?id=" + encodeURIComponent(p.id)
             });
         }
     });
 
-    if (exceptions.length === 0) {
+    var total = machExceptions.length + stockExceptions.length;
+    if (total === 0) {
         banner.classList.add("d-none");
         return;
     }
 
     banner.classList.remove("d-none");
-    if (countEl) countEl.textContent = exceptions.length + " Active Exception" + (exceptions.length === 1 ? "" : "s");
+    if (countEl) countEl.textContent = total + " Active";
+    if (machCountEl) machCountEl.textContent = String(machExceptions.length);
+    if (stockCountEl) stockCountEl.textContent = String(stockExceptions.length);
 
-    list.innerHTML = "";
-    var displayCount = Math.min(exceptions.length, 6);
-    for (var i = 0; i < displayCount; i++) {
-        var ex = exceptions[i];
-        var itemDiv = document.createElement("div");
-        itemDiv.className = "exception-item";
-        itemDiv.innerHTML =
-            "<div class='exception-item-left'>" +
-                "<span class='exception-tag text-" + ex.type + "'>" + ex.tag + "</span>" +
-                "<span class='exception-title'>" + escapeHTML(ex.title) + "</span>" +
-                "<span class='exception-desc'>" + escapeHTML(ex.desc) + "</span>" +
-            "</div>" +
-            "<a href='" + ex.actionHref + "' class='exception-action-btn'>" + ex.actionText + " &rarr;</a>";
-        list.appendChild(itemDiv);
+    // Render Machinery rows (up to 4 scannable rows)
+    machList.innerHTML = "";
+    if (machExceptions.length === 0) {
+        machList.innerHTML = '<div class="exception-empty-row font-mono">No active machinery alerts. All systems nominal.</div>';
+    } else {
+        var machLimit = Math.min(machExceptions.length, 4);
+        for (var i = 0; i < machLimit; i++) {
+            var m = machExceptions[i];
+            var row = document.createElement("div");
+            row.className = "exception-triage-row";
+            row.innerHTML =
+                '<div class="triage-row-main">' +
+                    '<span class="triage-id font-mono">[' + escapeHTML(m.id) + ']</span>' +
+                    '<span class="triage-tag ' + m.tagClass + '">' + m.severity + '</span>' +
+                    '<span class="triage-name" title="' + escapeHTML(m.name + ' - ' + m.desc) + '">' + escapeHTML(m.name) + '</span>' +
+                    '<span class="triage-detail d-none d-xl-inline text-muted">// ' + escapeHTML(m.desc) + '</span>' +
+                '</div>' +
+                '<a href="' + m.actionHref + '" class="triage-action-btn font-mono">' + m.actionText + ' &rarr;</a>';
+            machList.appendChild(row);
+        }
+    }
+
+    // Render Stockout rows (up to 4 scannable rows)
+    stockList.innerHTML = "";
+    if (stockExceptions.length === 0) {
+        stockList.innerHTML = '<div class="exception-empty-row font-mono">Inventory reserves nominal. Zero stockout risks.</div>';
+    } else {
+        var stockLimit = Math.min(stockExceptions.length, 4);
+        for (var j = 0; j < stockLimit; j++) {
+            var s = stockExceptions[j];
+            var srow = document.createElement("div");
+            srow.className = "exception-triage-row";
+            srow.innerHTML =
+                '<div class="triage-row-main">' +
+                    '<span class="triage-id font-mono">[' + escapeHTML(s.id) + ']</span>' +
+                    '<span class="triage-tag ' + s.tagClass + '">' + s.severity + '</span>' +
+                    '<span class="triage-name" title="' + escapeHTML(s.name + ' - ' + s.desc) + '">' + escapeHTML(s.name) + '</span>' +
+                    '<span class="triage-detail d-none d-xl-inline text-muted">// ' + escapeHTML(s.desc) + '</span>' +
+                '</div>' +
+                '<a href="' + s.actionHref + '" class="triage-action-btn font-mono">' + s.actionText + ' &rarr;</a>';
+            stockList.appendChild(srow);
+        }
     }
 }
 

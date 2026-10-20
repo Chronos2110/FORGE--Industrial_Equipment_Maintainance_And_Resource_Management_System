@@ -4,618 +4,843 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FORGE — Industrial Equipment Maintenance & Resource Management</title>
-    <meta name="description" content="FORGE centralizes equipment tracking, preventive maintenance, work order dispatch, technician allocation, and spare parts inventory for manufacturing operations.">
-    <!-- Apply theme before render to prevent flash (default: light) -->
+    <title>FORGE - Industrial Equipment Maintenance and Resource Management System</title>
+    <meta name="description" content="FORGE centralizes equipment telemetry, preventive maintenance, work order dispatch, technician allocation, and spare parts inventory for industrial operations.">
+    <!-- Apply theme before render to prevent flash -->
     <script>
         (function () {
-            var t = localStorage.getItem("forge_theme") || "light";
+            var t = localStorage.getItem("forge_theme") || "dark";
             document.documentElement.setAttribute("data-theme", t);
         })();
     </script>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom Industrial Stylesheet -->
-    <link rel="stylesheet" href="css/style.css?v=5.1">
+    <link rel="stylesheet" href="css/style.css?v=6.0">
 </head>
 
 <body>
 
-    <!-- Sticky Industrial Header -->
-    <header class="landing-nav">
-        <a href="index.html" class="landing-brand">FORGE</a>
+    <!-- Sticky Industrial Navigation -->
+    <header class="landing-nav" id="mainLandingNav">
+        <a href="index.html" class="landing-brand">
+            <span class="landing-brand-mark">F</span>
+            <span>FORGE</span>
+        </a>
 
         <ul class="landing-links" id="landingNavLinks">
-            <li><a href="#problem">The Problem</a></li>
-            <li><a href="#workflow">Workflow</a></li>
-            <li><a href="#platform">Platform</a></li>
-            <li><a href="#intelligence">Intelligence</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#pipeline">Closed-Loop Flow</a></li>
+            <li><a href="#showcase">Subsystems</a></li>
+            <li><a href="#specs">Specifications</a></li>
         </ul>
 
         <div class="landing-nav-actions">
-            <div class="theme-toggle" id="landingThemeToggle" role="group" aria-label="Theme selector">
-                <button class="theme-toggle-btn" id="landingThemeBtnLight" title="Switch to Light Mode" aria-pressed="true">&#9728; Light</button>
-                <span class="theme-toggle-divider" aria-hidden="true"></span>
-                <button class="theme-toggle-btn" id="landingThemeBtnDark" title="Switch to Dark Mode" aria-pressed="false">&#9790; Dark</button>
-            </div>
+            <!-- Compact Single-Button Theme Toggle -->
+            <button class="topbar-icon-btn" id="landingThemeToggleBtn" type="button" title="Toggle Light / Dark Mode" aria-label="Toggle Theme">
+                <svg id="landingThemeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+            </button>
+
             <a href="login.html" class="btn btn-sm btn-outline-primary fw-semibold d-none d-md-inline-block">Sign In</a>
-            <a href="login.html" class="btn btn-sm btn-primary">ENTER FORGE &rarr;</a>
-            <button class="landing-hamburger" id="landingHamburger" aria-label="Toggle navigation">
+            <a href="login.html" class="btn btn-sm btn-primary">LAUNCH CONSOLE &rarr;</a>
+
+            <button class="landing-hamburger" id="landingHamburger" type="button" aria-label="Toggle Navigation">
                 <span></span><span></span><span></span>
             </button>
         </div>
     </header>
 
-    <!-- SECTION 1: HERO -->
-    <section class="landing-hero">
+    <!-- SECTION 1: ARCHITECTURAL HERO -->
+    <section class="landing-hero blueprint-grid" id="architecture">
         <div class="container-xl">
+            <!-- Left Editorial Column -->
             <div class="hero-content">
-                <div class="hero-tagline">
-                    <span>PLANT OPERATION & RESOURCE DISPATCH</span>
+                <div class="hero-pill-badge">
+                    <span class="hero-pill-dot"></span>
+                    <span>SCADA NODE 01 // TELEMETRY DISPATCH</span>
                 </div>
 
-                <h1 class="hero-title">
+                <h1 class="hero-h1">
                     BUILT TO KEEP<br>
-                    <span>INDUSTRY</span> MOVING.
+                    <span class="highlight-gold">INDUSTRY</span> MOVING.
                 </h1>
 
                 <p class="hero-lead">
-                    A centralized maintenance management platform for tracking equipment health, dispatching work orders, coordinating technician schedules, and monitoring critical spare parts inventory.
+                    Unified SCADA plant floor telemetry, OSHA 1910.147 Lockout/Tagout enforcement, transactional spare-parts ledgering, and deterministic technician dispatch.
                 </p>
+
+                <!-- Scannable Operational Metrics Strip -->
+                <div class="hero-stats-strip">
+                    <div class="hero-stat-item">
+                        <span class="hero-stat-val">99.4%</span>
+                        <span class="hero-stat-lbl">Fleet MTBF</span>
+                    </div>
+                    <div class="hero-stat-item">
+                        <span class="hero-stat-val">&lt; 14m</span>
+                        <span class="hero-stat-lbl">Mean Dispatch</span>
+                    </div>
+                    <div class="hero-stat-item">
+                        <span class="hero-stat-val">100%</span>
+                        <span class="hero-stat-lbl">LOTO Verified</span>
+                    </div>
+                    <div class="hero-stat-item">
+                        <span class="hero-stat-val">0.00</span>
+                        <span class="hero-stat-lbl">Stock Drift</span>
+                    </div>
+                </div>
 
                 <div class="hero-actions">
-                    <a href="login.html" class="btn-hero-primary">ENTER FORGE &rarr;</a>
-                    <a href="#platform" class="btn-hero-secondary">EXPLORE PLATFORM</a>
+                    <a href="login.html" class="btn-hero-primary">Launch Operations Console &rarr;</a>
+                    <a href="#pipeline" class="btn-hero-secondary">Explore Architecture</a>
+                </div>
+
+                <div class="mt-4 pt-2 text-muted small" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;">
+                    [PRISMA SQLITE ACID LEDGER] &bull; [ZERO EXTERNAL SAAS OVERHEAD] &bull; [LOCAL-FIRST CONCURRENCY]
                 </div>
             </div>
 
-            <!-- Product Visual: CSS-only realistic FORGE dashboard preview -->
-            <div class="hero-visual" aria-label="FORGE Live Dispatch Console Preview">
-                <div class="hero-visual-topbar">
-                    <div class="hero-visual-dots">
-                        <div class="hero-visual-dot"></div>
-                        <div class="hero-visual-dot"></div>
-                        <div class="hero-visual-dot"></div>
+            <!-- Right Column: Interactive Multi-Layer CAD Plant Bay Schematic -->
+            <div class="cad-schematic-card has-crosshairs" id="cadSchematicFrame">
+                <div class="cad-header">
+                    <div class="cad-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        <span>PLANT BAY 01-04 // TELEMETRY LINK</span>
                     </div>
-                    <div class="hero-visual-title">FORGE // DISPATCH CONSOLE</div>
-                    <div class="hero-visual-topbar-status">
-                        <span class="topbar-pulse-dot"></span>
-                        <span>BAY 04 // LIVE</span>
-                    </div>
-                </div>
-                <div class="hero-visual-body">
-                    <div class="hero-visual-sidebar">
-                        <div>
-                            <div class="hero-visual-nav-header">// MODULES</div>
-                            <div class="hero-visual-nav-item active">
-                                <span class="nav-ico">&#9638;</span>
-                                <span>Dashboard</span>
-                            </div>
-                            <div class="hero-visual-nav-item">
-                                <span class="nav-ico">&#9881;</span>
-                                <span>Equipment</span>
-                            </div>
-                            <div class="hero-visual-nav-item">
-                                <span class="nav-ico">&#128203;</span>
-                                <span>Work Orders</span>
-                            </div>
-                            <div class="hero-visual-nav-item">
-                                <span class="nav-ico">&#128295;</span>
-                                <span>Maintenance</span>
-                            </div>
-                            <div class="hero-visual-nav-item">
-                                <span class="nav-ico">&#128230;</span>
-                                <span>Inventory</span>
-                            </div>
-                            <div class="hero-visual-nav-item">
-                                <span class="nav-ico">&#128101;</span>
-                                <span>Workforce</span>
-                            </div>
-                        </div>
-                        <div class="hero-visual-sidebar-role">
-                            <span class="role-pill">ROLE: ADMIN</span>
-                        </div>
-                    </div>
-                    <div class="hero-visual-main">
-                        <div class="hero-visual-main-header">
-                            <span class="hero-visual-view-title">ACTIVE WORK ORDERS</span>
-                            <span class="hero-visual-view-tag">AUTO-DISPATCH</span>
-                        </div>
-                        <div class="hero-visual-kpis">
-                            <div class="hero-visual-kpi">
-                                <div class="hero-visual-kpi-label">CRITICAL WO</div>
-                                <div class="hero-visual-kpi-value kpi-danger">02</div>
-                                <div class="hero-visual-kpi-sub">FLT-001, FLT-002</div>
-                            </div>
-                            <div class="hero-visual-kpi">
-                                <div class="hero-visual-kpi-label">IN PROGRESS</div>
-                                <div class="hero-visual-kpi-value kpi-warning">02</div>
-                                <div class="hero-visual-kpi-sub">WO-301, WO-302</div>
-                            </div>
-                            <div class="hero-visual-kpi">
-                                <div class="hero-visual-kpi-label">PARTS ALERT</div>
-                                <div class="hero-visual-kpi-value kpi-gold">03</div>
-                                <div class="hero-visual-kpi-sub">&lt; MIN SAFETY</div>
-                            </div>
-                        </div>
-                        <div class="hero-visual-table">
-                            <div class="hero-visual-table-header">
-                                <span class="col-id">WO ID</span>
-                                <span class="col-eq">ASSET</span>
-                                <span class="col-tech">DISPATCHED</span>
-                                <span class="col-st">STATUS</span>
-                            </div>
-                            <div class="hero-visual-table-row">
-                                <span class="col-id">WO-301</span>
-                                <span class="col-eq">Compressor 04</span>
-                                <span class="col-tech">V. Patel</span>
-                                <span class="col-st"><span class="hero-vbadge badge-in-prog">IN PROGRESS</span></span>
-                            </div>
-                            <div class="hero-visual-table-row">
-                                <span class="col-id">WO-302</span>
-                                <span class="col-eq">Hydraulic Press 02</span>
-                                <span class="col-tech">S. Jenkins</span>
-                                <span class="col-st"><span class="hero-vbadge badge-waiting">PARTS HOLD</span></span>
-                            </div>
-                            <div class="hero-visual-table-row">
-                                <span class="col-id">WO-303</span>
-                                <span class="col-eq">Lathe Machine 03</span>
-                                <span class="col-tech">D. Chen</span>
-                                <span class="col-st"><span class="hero-vbadge badge-assigned">ASSIGNED</span></span>
-                            </div>
-                            <div class="hero-visual-table-row">
-                                <span class="col-id">WO-305</span>
-                                <span class="col-eq">CNC Machine 01</span>
-                                <span class="col-tech">R. Kumar</span>
-                                <span class="col-st"><span class="hero-vbadge badge-scheduled">SCHEDULED</span></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Telemetry — Honest System Facts from Seed Architecture -->
-        <div class="container-xl">
-            <div class="hero-telemetry-grid">
-                <div class="hero-telemetry-item">
-                    <div class="telemetry-label">RBAC Security</div>
-                    <div class="telemetry-val gold">3 Active Roles</div>
-                    <div class="telemetry-sub">Admin &bull; Technician &bull; Operator</div>
-                </div>
-                <div class="hero-telemetry-item">
-                    <div class="telemetry-label">Workflow Pipeline</div>
-                    <div class="telemetry-val">5 Lifecycle States</div>
-                    <div class="telemetry-sub">Scheduled &rarr; Parts Hold &rarr; Closed</div>
-                </div>
-                <div class="hero-telemetry-item">
-                    <div class="telemetry-label">Demo Asset Registry</div>
-                    <div class="telemetry-val">6 Seed Units</div>
-                    <div class="telemetry-sub">CNC, Presses, Compressors, Pumps</div>
-                </div>
-                <div class="hero-telemetry-item">
-                    <div class="telemetry-label">Inventory Watchdog</div>
-                    <div class="telemetry-val gold">6 Critical SKUs</div>
-                    <div class="telemetry-sub">Real-Time Min-Threshold Alerts</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 2: THE PROBLEM -->
-    <section class="landing-section" id="problem">
-        <div class="container-xl">
-            <span class="section-eyebrow">OPERATIONAL BOTTLENECKS</span>
-            <h2 class="section-heading">When equipment stops, operations stop.</h2>
-            <p class="section-subtext">
-                Fragmented information between machine health, service history, technician rosters, and warehouse spare parts creates cascading production downtime.
-            </p>
-
-            <div class="row g-4">
-                <div class="col-md-6 col-lg-3">
-                    <div class="problem-card">
-                        <div class="problem-num">FAULT 01 // UNPLANNED DOWNTIME</div>
-                        <h5>Fragmented Asset Records</h5>
-                        <p>
-                            Preventive schedules kept on spreadsheets cause missed inspection cycles, leading to catastrophic spindle, bearing, and motor breakdown.
-                        </p>
-                    </div>
+                    <span class="cad-status-badge">ONLINE &bull; REALTIME</span>
                 </div>
 
-                <div class="col-md-6 col-lg-3">
-                    <div class="problem-card">
-                        <div class="problem-num">FAULT 02 // PARTS BOTTLENECK</div>
-                        <h5>Unsynchronized Inventory</h5>
-                        <p>
-                            Work orders dispatched without warehouse verification stall indefinitely when critical seals, filters, or belts are discovered out of stock.
-                        </p>
-                    </div>
+                <div class="cad-body">
+                    <!-- Bespoke Technical SVG Schematic with Animated Signal Paths -->
+                    <svg class="cad-svg-container" viewBox="0 0 540 320" xmlns="http://www.w3.org/2000/svg" aria-label="Plant Floor Interactive CAD Schematic">
+                        <defs>
+                            <pattern id="cadGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.12" />
+                            </pattern>
+                            <linearGradient id="goldPulse" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#B8941F" stop-opacity="0.8" />
+                                <stop offset="100%" stop-color="#E5A823" stop-opacity="0.2" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Blueprint Background Grid -->
+                        <rect width="100%" height="100%" fill="url(#cadGrid)" />
+
+                        <!-- Bay Boundaries -->
+                        <rect x="20" y="20" width="235" height="125" rx="3" fill="none" stroke="currentColor" stroke-opacity="0.2" stroke-dasharray="4 4" />
+                        <text x="30" y="36" fill="currentColor" fill-opacity="0.4" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="700">BAY 01: MACHINING</text>
+
+                        <rect x="285" y="20" width="235" height="125" rx="3" fill="none" stroke="currentColor" stroke-opacity="0.2" stroke-dasharray="4 4" />
+                        <text x="295" y="36" fill="currentColor" fill-opacity="0.4" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="700">BAY 02: STAMPING</text>
+
+                        <rect x="20" y="165" width="235" height="125" rx="3" fill="none" stroke="currentColor" stroke-opacity="0.2" stroke-dasharray="4 4" />
+                        <text x="30" y="181" fill="currentColor" fill-opacity="0.4" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="700">BAY 03: LOGISTICS</text>
+
+                        <rect x="285" y="165" width="235" height="125" rx="3" fill="none" stroke="currentColor" stroke-opacity="0.2" stroke-dasharray="4 4" />
+                        <text x="295" y="181" fill="currentColor" fill-opacity="0.4" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="700">BAY 04: ROBOTICS</text>
+
+                        <!-- Central SCADA Gateway Hub -->
+                        <circle cx="270" cy="155" r="14" fill="#B8941F" fill-opacity="0.15" stroke="#B8941F" stroke-width="1.5" />
+                        <circle cx="270" cy="155" r="4" fill="#B8941F" />
+                        <text x="270" y="182" text-anchor="middle" fill="#B8941F" font-family="'IBM Plex Mono', monospace" font-size="8" font-weight="700">SCADA RTU</text>
+
+                        <!-- Animated Signal Vectors from Hub to Machine Nodes -->
+                        <path d="M 270 155 L 137 82" stroke="#B8941F" stroke-width="1.5" fill="none" class="svg-pulse-path" stroke-opacity="0.6" />
+                        <path d="M 270 155 L 402 82" stroke="#B8941F" stroke-width="1.5" fill="none" class="svg-pulse-path" stroke-opacity="0.6" />
+                        <path d="M 270 155 L 137 227" stroke="#B8941F" stroke-width="1.5" fill="none" class="svg-pulse-path" stroke-opacity="0.6" />
+                        <path d="M 270 155 L 402 227" stroke="#B8941F" stroke-width="1.5" fill="none" class="svg-pulse-path" stroke-opacity="0.6" />
+
+                        <!-- MACHINE NODE 01: EQ-01 (CNC Milling) -->
+                        <g class="svg-machine-node svg-node-active" id="nodeEq01" onclick="selectSchematicNode('EQ-01')">
+                            <rect x="75" y="52" width="125" height="60" rx="3" fill="var(--card-bg)" stroke="#B8941F" stroke-width="1.5" />
+                            <circle cx="92" cy="72" r="5" fill="#4CAF50" />
+                            <text x="105" y="75" fill="var(--text-primary)" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="700">EQ-01</text>
+                            <text x="105" y="90" fill="var(--text-muted)" font-family="'IBM Plex Mono', monospace" font-size="8">5-Axis CNC Mill</text>
+                            <text x="105" y="103" fill="#4CAF50" font-family="'IBM Plex Mono', monospace" font-size="7.5" font-weight="700">99.2% HEALTH</text>
+                        </g>
+
+                        <!-- MACHINE NODE 02: EQ-02 (Hydraulic Press) -->
+                        <g class="svg-machine-node" id="nodeEq02" onclick="selectSchematicNode('EQ-02')">
+                            <rect x="340" y="52" width="125" height="60" rx="3" fill="var(--card-bg)" stroke="currentColor" stroke-opacity="0.3" stroke-width="1" />
+                            <circle cx="357" cy="72" r="5" fill="#E5A823" />
+                            <text x="370" y="75" fill="var(--text-primary)" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="700">EQ-02</text>
+                            <text x="370" y="90" fill="var(--text-muted)" font-family="'IBM Plex Mono', monospace" font-size="8">500T Hydraulic</text>
+                            <text x="370" y="103" fill="#E5A823" font-family="'IBM Plex Mono', monospace" font-size="7.5" font-weight="700">VIB ANOMALY</text>
+                        </g>
+
+                        <!-- MACHINE NODE 03: EQ-03 (Conveyor System) -->
+                        <g class="svg-machine-node" id="nodeEq03" onclick="selectSchematicNode('EQ-03')">
+                            <rect x="75" y="197" width="125" height="60" rx="3" fill="var(--card-bg)" stroke="currentColor" stroke-opacity="0.3" stroke-width="1" />
+                            <circle cx="92" cy="217" r="5" fill="#4CAF50" />
+                            <text x="105" y="220" fill="var(--text-primary)" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="700">EQ-03</text>
+                            <text x="105" y="235" fill="var(--text-muted)" font-family="'IBM Plex Mono', monospace" font-size="8">Belt Conveyor</text>
+                            <text x="105" y="248" fill="#4CAF50" font-family="'IBM Plex Mono', monospace" font-size="7.5" font-weight="700">NOMINAL LOAD</text>
+                        </g>
+
+                        <!-- MACHINE NODE 04: EQ-04 (Robotic Welder) -->
+                        <g class="svg-machine-node" id="nodeEq04" onclick="selectSchematicNode('EQ-04')">
+                            <rect x="340" y="197" width="125" height="60" rx="3" fill="var(--card-bg)" stroke="currentColor" stroke-opacity="0.3" stroke-width="1" />
+                            <circle cx="357" cy="217" r="5" fill="#4CAF50" />
+                            <text x="370" y="220" fill="var(--text-primary)" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="700">EQ-04</text>
+                            <text x="370" y="235" fill="var(--text-muted)" font-family="'IBM Plex Mono', monospace" font-size="8">6-Axis Arc Cell</text>
+                            <text x="370" y="248" fill="#4CAF50" font-family="'IBM Plex Mono', monospace" font-size="7.5" font-weight="700">CYCLE READY</text>
+                        </g>
+                    </svg>
                 </div>
 
-                <div class="col-md-6 col-lg-3">
-                    <div class="problem-card">
-                        <div class="problem-num">FAULT 03 // ROSTER MISALLOCATION</div>
-                        <h5>Unskilled Dispatching</h5>
-                        <p>
-                            Complex CNC or PLC breakdowns assigned blindly to general mechanics cause extended Mean Time to Repair (MTTR) and safety compliance risks.
-                        </p>
+                <!-- Real-Time Telemetry HUD Strip linked to SVG selection -->
+                <div class="cad-telemetry-hud" id="cadTelemetryHud">
+                    <div class="hud-item">
+                        <span class="hud-label">Selected Node</span>
+                        <span class="hud-val gold" id="hudNodeId">EQ-01 [CNC MILL]</span>
                     </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3">
-                    <div class="problem-card">
-                        <div class="problem-num">FAULT 04 // AUDIT BLINDSPOTS</div>
-                        <h5>Missing Traceability</h5>
-                        <p>
-                            Lack of real-time audit trails makes ISO-55000 asset compliance audits stressful and obscures recurring failure patterns across production shifts.
-                        </p>
+                    <div class="hud-item">
+                        <span class="hud-label">Vibration Telemetry</span>
+                        <span class="hud-val good" id="hudVibVal">0.04 mm/s [NOMINAL]</span>
+                    </div>
+                    <div class="hud-item">
+                        <span class="hud-label">Active Work Order</span>
+                        <span class="hud-val" id="hudWoVal">WO-101 (250h PM)</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- SECTION 3: THE FORGE WORKFLOW -->
-    <section class="landing-section" id="workflow">
+    <!-- SECTION 2: CLOSED-LOOP ENGINEERING FLOW -->
+    <section class="pipeline-section" id="pipeline">
         <div class="container-xl">
-            <span class="section-eyebrow">DETERMINISTIC LIFECYCLE</span>
-            <h2 class="section-heading">The FORGE Workflow</h2>
-            <p class="section-subtext">
-                Rigorous operational state machines govern every service intervention, from fault detection to verified repair and resource decrement.
-            </p>
-
-            <!-- Primary Lifecycle Track -->
-            <div class="lifecycle-container mb-4">
-                <div class="lifecycle-header">
-                    <span class="lifecycle-title">Primary Operational Track</span>
-                    <span class="badge bg-secondary font-mono">ASSET LIFECYCLE</span>
-                </div>
-
-                <div class="lifecycle-track">
-                    <div class="lifecycle-step">
-                        <span class="lifecycle-step-num">PHASE 01</span>
-                        <span class="lifecycle-step-name">SCHEDULED</span>
-                    </div>
-
-                    <div class="lifecycle-arrow">&rarr;</div>
-
-                    <div class="lifecycle-step">
-                        <span class="lifecycle-step-num">PHASE 02</span>
-                        <span class="lifecycle-step-name">ASSIGNED</span>
-                    </div>
-
-                    <div class="lifecycle-arrow">&rarr;</div>
-
-                    <div class="lifecycle-step">
-                        <span class="lifecycle-step-num">PHASE 03</span>
-                        <span class="lifecycle-step-name">IN PROGRESS</span>
-                    </div>
-
-                    <div class="lifecycle-arrow">&rarr;</div>
-
-                    <div class="lifecycle-step">
-                        <span class="lifecycle-step-num">PHASE 04</span>
-                        <span class="lifecycle-step-name">COMPLETED</span>
-                    </div>
-                </div>
-
-                <!-- Exception Loop: Waiting for Parts -->
-                <div class="lifecycle-exception-box mt-3">
-                    <div class="lifecycle-exception-label">
-                        <span>&#9888; EXCEPTION PATHWAY:</span>
-                        <span>SPARE PARTS BOTTLENECK</span>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2 flex-wrap font-mono" style="font-size:0.76rem;">
-                        <span class="badge-status badge-in-progress">In Progress</span>
-                        <span class="text-gold">&rarr;</span>
-                        <span class="badge-status badge-waiting">Waiting for Parts</span>
-                        <span class="text-gold">&rarr;</span>
-                        <span class="badge-status badge-ready-resume">Ready to Resume</span>
-                        <span class="text-gold">&rarr;</span>
-                        <span class="badge-status badge-in-progress">In Progress</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-4 mt-1">
-                <div class="col-md-6">
-                    <div class="p-3 bg-industrial-surface border border-industrial" style="border-radius: 3px;">
-                        <h6 class="text-gold font-mono mb-2" style="font-size:0.76rem; letter-spacing: 0.5px;">AUTOMATIC STATUS SYNCHRONIZATION</h6>
-                        <p class="text-muted small mb-0">
-                            Whenever a work order transitions to <em>In Progress</em> or <em>Waiting for Parts</em>, the underlying machinery status is automatically synchronized to <em>Maintenance</em> across the factory floor. Upon completion, the machine returns to <em>Operational</em> status immediately.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="p-3 bg-industrial-surface border border-industrial" style="border-radius: 3px;">
-                        <h6 class="text-gold font-mono mb-2" style="font-size:0.76rem; letter-spacing: 0.5px;">DYNAMIC WORKLOAD BALANCING</h6>
-                        <p class="text-muted small mb-0">
-                            Technicians tied up with active orders have their workload tracked dynamically. When a task transitions to <em>Waiting for Parts</em>, the technician's active workload count decreases, enabling temporary dispatch to other urgent jobs.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 4: PLATFORM MODULES -->
-    <section class="landing-section" id="platform">
-        <div class="container-xl">
-            <span class="section-eyebrow">INTEGRATED ARCHITECTURE</span>
-            <h2 class="section-heading">Platform Modules</h2>
-            <p class="section-subtext">
-                Six tightly integrated modules delivering unified command over machinery, personnel, schedules, and spare parts.
-            </p>
-
-            <div class="row g-4">
-                <!-- Equipment -->
-                <div class="col-md-6 col-lg-4">
-                    <div class="module-card">
-                        <div>
-                            <div class="module-code">MOD-01 // ASSET REGISTRY</div>
-                            <h4>Equipment</h4>
-                            <p>
-                                Complete catalog of industrial plant machinery, physical locations, operational status indicators, and next inspection countdowns.
-                            </p>
-                        </div>
-                        <div class="module-meta">
-                            <span>CNC &bull; Hydraulic &bull; Compressors &bull; Turbines</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Maintenance -->
-                <div class="col-md-6 col-lg-4">
-                    <div class="module-card">
-                        <div>
-                            <div class="module-code">MOD-02 // SERVICE LOGS</div>
-                            <h4>Maintenance</h4>
-                            <p>
-                                Calendar scheduling and execution logs for preventive maintenance and corrective overhaul, tied directly to equipment health.
-                            </p>
-                        </div>
-                        <div class="module-meta">
-                            <span>Preventive &bull; Corrective &bull; Rescheduling Log</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Work Orders -->
-                <div class="col-md-6 col-lg-4">
-                    <div class="module-card">
-                        <div>
-                            <div class="module-code">MOD-03 // DISPATCH SYSTEM</div>
-                            <h4>Work Orders</h4>
-                            <p>
-                                High-priority fault tickets, technician assignment dispatching, diagnosis documentation, and parts availability validation.
-                            </p>
-                        </div>
-                        <div class="module-meta">
-                            <span>High / Med / Low &bull; Live Progression Track</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Workforce -->
-                <div class="col-md-6 col-lg-4">
-                    <div class="module-card">
-                        <div>
-                            <div class="module-code">MOD-04 // PERSONNEL ROSTER</div>
-                            <h4>Workforce</h4>
-                            <p>
-                                Certified technician registry, specialization domains, real-time availability states, and active order counts for workload balancing.
-                            </p>
-                        </div>
-                        <div class="module-meta">
-                            <span>Skill Keywords &bull; CMRP &bull; Vibration Level 2</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Inventory -->
-                <div class="col-md-6 col-lg-4">
-                    <div class="module-card">
-                        <div>
-                            <div class="module-code">MOD-05 // SPARE WAREHOUSE</div>
-                            <h4>Inventory</h4>
-                            <p>
-                                Critical component reserves, minimum safety stock thresholds, supplier references, and automated replenishment triggers.
-                            </p>
-                        </div>
-                        <div class="module-meta">
-                            <span>Bearings &bull; Filters &bull; Valves &bull; Lubricants</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Analytics -->
-                <div class="col-md-6 col-lg-4">
-                    <div class="module-card">
-                        <div>
-                            <div class="module-code">MOD-06 // INTELLIGENCE</div>
-                            <h4>Analytics</h4>
-                            <p>
-                                Quantitative efficiency indices, equipment reliability percentages, failure distribution bars, and warehouse consumption audit feeds.
-                            </p>
-                        </div>
-                        <div class="module-meta">
-                            <span>Reliability Index &bull; Preventive Ratio &bull; MTBF</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 5: OPERATIONAL INTELLIGENCE -->
-    <section class="landing-section" id="intelligence">
-        <div class="container-xl">
-            <span class="section-eyebrow">DETERMINISTIC SYSTEMS</span>
-            <h2 class="section-heading">Operational Intelligence</h2>
-            <p class="section-subtext">
-                Embedded algorithms that eliminate manual guesswork across technician allocation, equipment health tracking, and inventory safety.
-            </p>
-
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="intel-card">
-                        <h5>01 // SMART TECHNICIAN ASSIGNMENT</h5>
-                        <p>
-                            Matches machine technical domains with certified technician skills (e.g. CNC, Hydraulics, Pneumatics). When multiple qualified technicians are found, dispatches the one with the lowest active workload count to eliminate scheduling bottlenecks.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="intel-card">
-                        <h5>02 // RESOURCE-AWARE MAINTENANCE</h5>
-                        <p>
-                            Work order completion automatically decrements required spare parts directly from the warehouse registry. If parts are insufficient, orders seamlessly divert into a controlled <em>Waiting for Parts</em> state until replenishment is registered.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="intel-card">
-                        <h5>03 // EQUIPMENT STATUS TRACKING</h5>
-                        <p>
-                            Bidirectional status synchronization continuously propagates machine states across all plant views. Machine status automatically turns to <em>Maintenance</em> upon active work and returns to <em>Operational</em> with updated service dates upon job verification.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="intel-card">
-                        <h5>04 // INVENTORY MONITORING</h5>
-                        <p>
-                            Dynamic threshold evaluation warns maintenance engineers the instant critical component stock falls below safety minimums. High-visibility warehouse alerts prevent stockout delays before technicians are dispatched.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 6: FINAL CTA -->
-    <section class="landing-cta" id="cta">
-        <div class="container-xl">
-            <div class="landing-cta-frame">
-                <div class="cta-terminal-tag">SYSTEM ACCESS &bull; SEEDED ENVIRONMENT READY</div>
-                <h2>KEEP YOUR OPERATION MOVING.</h2>
-                <p>
-                    Centralize your machinery registry, workforce coordination, and preventive maintenance schedule with FORGE.
+            <div class="section-tag-strip">
+                <div class="section-kicker">CLOSED-LOOP RELIABILITY ENGINEERING</div>
+                <h2 class="section-heading">FAIL-SAFE OPERATIONS LIFECYCLE</h2>
+                <p class="section-subhead">
+                    Every factory floor anomaly cascades deterministically through five hardened checkpoints to ensure full traceability and zero inventory drift.
                 </p>
-                <div class="landing-cta-actions">
-                    <a href="login.html" class="btn-hero-primary cta-btn-main">
-                        ENTER FORGE &rarr;
-                    </a>
-                    <a href="#platform" class="btn-hero-secondary cta-btn-sub">
-                        EXPLORE PLATFORM
-                    </a>
+            </div>
+
+            <div class="pipeline-diagram">
+                <!-- Step 1 -->
+                <div class="pipeline-step-card has-crosshairs">
+                    <div class="pipeline-step-num">STAGE 01 // DETECT</div>
+                    <div class="pipeline-step-title">SCADA Telemetry Fault</div>
+                    <div class="pipeline-step-desc">
+                        Edge sensor registers vibration or temperature excursion outside the ±2.5σ baseline envelope.
+                    </div>
+                    <div class="pipeline-step-meta">
+                        <span>LATENCY: &lt; 50ms</span>
+                        <span>AUTO-FLAG</span>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="pipeline-step-card has-crosshairs">
+                    <div class="pipeline-step-num">STAGE 02 // DISPATCH</div>
+                    <div class="pipeline-step-title">Autonomous Dispatch</div>
+                    <div class="pipeline-step-desc">
+                        Work order generated with skill-matched technician routing and automated priority queueing.
+                    </div>
+                    <div class="pipeline-step-meta">
+                        <span>TIER: LVL 2 CERT</span>
+                        <span>ROUTED</span>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="pipeline-step-card has-crosshairs">
+                    <div class="pipeline-step-num">STAGE 03 // SAFETY</div>
+                    <div class="pipeline-step-title">OSHA 1910.147 LOTO</div>
+                    <div class="pipeline-step-desc">
+                        Lockout/Tagout isolation verified with cryptographic checklist completion prior to cabinet access.
+                    </div>
+                    <div class="pipeline-step-meta">
+                        <span>ZERO-ENERGY</span>
+                        <span>COMPLIANT</span>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="pipeline-step-card has-crosshairs">
+                    <div class="pipeline-step-num">STAGE 04 // INVENTORY</div>
+                    <div class="pipeline-step-title">Atomic Part Deduction</div>
+                    <div class="pipeline-step-desc">
+                        Bill of materials deducted within an ACID SQLite transaction, preventing race conditions or ghost stock.
+                    </div>
+                    <div class="pipeline-step-meta">
+                        <span>PRISMA ORM</span>
+                        <span>TRANSACTIONAL</span>
+                    </div>
+                </div>
+
+                <!-- Step 5 -->
+                <div class="pipeline-step-card has-crosshairs">
+                    <div class="pipeline-step-num">STAGE 05 // ANALYTICS</div>
+                    <div class="pipeline-step-title">MTBF Recalibration</div>
+                    <div class="pipeline-step-desc">
+                        Work order closure triggers real-time Weibull reliability modeling and fleet health recalculation.
+                    </div>
+                    <div class="pipeline-step-meta">
+                        <span>CLOSED LOOP</span>
+                        <span>SYNCED</span>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
+    <!-- SECTION 3: LIVE PLATFORM SHOWCASE TABS -->
+    <section class="showcase-section" id="showcase">
+        <div class="container-xl">
+            <div class="section-tag-strip">
+                <div class="section-kicker">INTERACTIVE PLATFORM INSPECTION</div>
+                <h2 class="section-heading">OPERATIONAL COMMAND CORE</h2>
+                <p class="section-subhead">
+                    Examine live working models of the four critical pillars running on the plant floor. Click tabs to inspect each subsystem.
+                </p>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="showcase-tabs" role="tablist">
+                <button class="showcase-tab-btn active" type="button" role="tab" onclick="switchShowcaseTab(0)">
+                    <span>01 // SCADA Plant Floor</span>
+                </button>
+                <button class="showcase-tab-btn" type="button" role="tab" onclick="switchShowcaseTab(1)">
+                    <span>02 // Kanban & LOTO Safety</span>
+                </button>
+                <button class="showcase-tab-btn" type="button" role="tab" onclick="switchShowcaseTab(2)">
+                    <span>03 // 360° Asset & Inventory Sync</span>
+                </button>
+                <button class="showcase-tab-btn" type="button" role="tab" onclick="switchShowcaseTab(3)">
+                    <span>04 // Role-Based Operations</span>
+                </button>
+            </div>
+
+            <!-- Showcase Frame -->
+            <div class="showcase-frame has-crosshairs">
+                <div class="showcase-frame-bar">
+                    <span id="showcaseSubsystemTitle">SUBSYSTEM 01 // SCADA TELEMETRY & EQUIPMENT VITAL SIGNS</span>
+                    <span style="color: var(--primary);">LOCAL NODE: ACTIVE</span>
+                </div>
+
+                <div class="showcase-frame-content">
+                    <!-- Pane 0: SCADA Floor Tiles -->
+                    <div class="showcase-pane active" id="pane0">
+                        <div class="showcase-scada-grid">
+                            <div class="scada-tile active" onclick="simulateTileSelect(this, '0.04 mm/s', '62.4°C', '99.2%')">
+                                <div class="scada-tile-head">
+                                    <span>[EQ-01] CNC MILL</span>
+                                    <span style="color: var(--success);">&#9679; NOMINAL</span>
+                                </div>
+                                <div class="scada-tile-metric">0.04 mm/s</div>
+                                <div class="scada-tile-sub">VIB: 0.04 | TEMP: 62.4°C | UPTIME: 99.2%</div>
+                            </div>
+
+                            <div class="scada-tile" onclick="simulateTileSelect(this, '4.82 mm/s', '88.1°C', '81.4%')">
+                                <div class="scada-tile-head">
+                                    <span>[EQ-02] HYD PRESS</span>
+                                    <span style="color: var(--warning);">&#9679; INSPECT</span>
+                                </div>
+                                <div class="scada-tile-metric" style="color: var(--warning);">4.82 mm/s</div>
+                                <div class="scada-tile-sub">VIB: 4.82 | TEMP: 88.1°C | UPTIME: 81.4%</div>
+                            </div>
+
+                            <div class="scada-tile" onclick="simulateTileSelect(this, '0.12 mm/s', '45.0°C', '98.7%')">
+                                <div class="scada-tile-head">
+                                    <span>[EQ-03] CONVEYOR</span>
+                                    <span style="color: var(--success);">&#9679; NOMINAL</span>
+                                </div>
+                                <div class="scada-tile-metric">0.12 mm/s</div>
+                                <div class="scada-tile-sub">VIB: 0.12 | TEMP: 45.0°C | UPTIME: 98.7%</div>
+                            </div>
+
+                            <div class="scada-tile" onclick="simulateTileSelect(this, '0.08 mm/s', '54.2°C', '99.8%')">
+                                <div class="scada-tile-head">
+                                    <span>[EQ-04] WELD ROBOT</span>
+                                    <span style="color: var(--success);">&#9679; NOMINAL</span>
+                                </div>
+                                <div class="scada-tile-metric">0.08 mm/s</div>
+                                <div class="scada-tile-sub">VIB: 0.08 | TEMP: 54.2°C | UPTIME: 99.8%</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-3 rounded" style="background-color: var(--bg-body); border: 1px solid var(--border-color); font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span style="color: var(--primary); font-weight: 700;">EDGE STREAM:</span>
+                                    <span class="text-muted ms-2" id="scadaLiveStreamText">Polling 4 machine nodes at 250ms cadence. Serial bus zero packet loss.</span>
+                                </div>
+                                <a href="pages/equipment.html" class="btn btn-sm btn-outline-primary" style="font-size: 0.7rem; padding: 3px 10px;">Inspect Fleet &rarr;</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pane 1: Kanban Dispatch & LOTO Safety -->
+                    <div class="showcase-pane" id="pane1">
+                        <div class="showcase-kanban-cols">
+                            <div class="showcase-kanban-col">
+                                <div class="showcase-kanban-header">
+                                    <span>SCHEDULED</span>
+                                    <span>(1)</span>
+                                </div>
+                                <div class="showcase-kanban-card">
+                                    <div class="fw-bold" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;">WO-103 &bull; P2 MEDIUM</div>
+                                    <div class="text-muted mt-1">Conveyor Roller Bearing Lubrication</div>
+                                    <div class="mt-2 text-secondary" style="font-size: 0.65rem;">Tech: S. Vance &bull; 45m est</div>
+                                </div>
+                            </div>
+
+                            <div class="showcase-kanban-col">
+                                <div class="showcase-kanban-header">
+                                    <span>IN PROGRESS</span>
+                                    <span>(1)</span>
+                                </div>
+                                <div class="showcase-kanban-card urgent">
+                                    <div class="fw-bold" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--danger);">WO-104 &bull; P1 URGENT</div>
+                                    <div class="text-muted mt-1">Hydraulic Seal Replacement [EQ-02]</div>
+                                    <div class="mt-2 text-secondary" style="font-size: 0.65rem;">Tech: M. Rodriguez &bull; LOTO ACTIVE</div>
+                                </div>
+                            </div>
+
+                            <div class="showcase-kanban-col">
+                                <div class="showcase-kanban-header">
+                                    <span>PENDING QA</span>
+                                    <span>(1)</span>
+                                </div>
+                                <div class="showcase-kanban-card">
+                                    <div class="fw-bold" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;">WO-102 &bull; P2 MEDIUM</div>
+                                    <div class="text-muted mt-1">Spindle Runout Calibration Test</div>
+                                    <div class="mt-2 text-secondary" style="font-size: 0.65rem;">Tech: K. Chen &bull; Waiting Signoff</div>
+                                </div>
+                            </div>
+
+                            <div class="showcase-kanban-col">
+                                <div class="showcase-kanban-header">
+                                    <span>CLOSED</span>
+                                    <span>(12)</span>
+                                </div>
+                                <div class="showcase-kanban-card" style="border-left-color: var(--success); opacity: 0.85;">
+                                    <div class="fw-bold" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;">WO-100 &bull; P3 LOW</div>
+                                    <div class="text-muted mt-1">Cabinet Filter Replacement</div>
+                                    <div class="mt-2 text-success" style="font-size: 0.65rem;">Signed Off &bull; MTTR: 22m</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LOTO Traveler Mini Preview -->
+                        <div class="mt-3 p-3 rounded d-flex justify-content-between align-items-center" style="background-color: var(--bg-body); border: 1px solid var(--border-color); font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;">
+                            <div>
+                                <span class="badge bg-danger me-2">OSHA 1910.147 COMPLIANT</span>
+                                <span>LOTO TRAVELER #LT-2026-088 VERIFIED &bull; 4 ISOLATION POINTS LOCKED</span>
+                            </div>
+                            <a href="pages/workorders.html" class="btn btn-sm btn-outline-primary" style="font-size: 0.7rem; padding: 3px 10px;">Dispatch Board &rarr;</a>
+                        </div>
+                    </div>
+
+                    <!-- Pane 2: Transactional Inventory Ledger with Live Deduction Simulation -->
+                    <div class="showcase-pane" id="pane2">
+                        <div class="showcase-inventory-split">
+                            <!-- Table of Parts -->
+                            <div style="background-color: var(--bg-body); border: 1px solid var(--border-color); border-radius: 3px; padding: 12px; overflow-x: auto;">
+                                <table class="ledger-preview-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Part SKU</th>
+                                            <th>Description</th>
+                                            <th>Stock</th>
+                                            <th>Min</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="simulatedPartsTable">
+                                        <tr>
+                                            <td><strong>PRT-01</strong></td>
+                                            <td>Spindle Angular Bearing 7008</td>
+                                            <td id="simQty01">14 ea</td>
+                                            <td>4 ea</td>
+                                            <td><span class="badge bg-success">NOMINAL</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>PRT-02</strong></td>
+                                            <td>Polyurethane Piston Seal Kit</td>
+                                            <td id="simQty02" style="font-weight: 700; color: var(--primary);">8 kit</td>
+                                            <td>3 kit</td>
+                                            <td id="simStatus02"><span class="badge bg-success">HEALTHY</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>PRT-03</strong></td>
+                                            <td>EP High-Pressure Grease (14oz)</td>
+                                            <td id="simQty03">22 tube</td>
+                                            <td>8 tube</td>
+                                            <td><span class="badge bg-success">NOMINAL</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>PRT-04</strong></td>
+                                            <td>Proximity Sensor M12 PNP</td>
+                                            <td id="simQty04">3 ea</td>
+                                            <td>5 ea</td>
+                                            <td><span class="badge bg-warning text-dark">REORDER</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Live Simulation Action Box -->
+                            <div class="ledger-sim-card">
+                                <div>
+                                    <div class="text-uppercase fw-bold" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--primary); margin-bottom: 6px;">
+                                        // Transactional Deduct Simulator
+                                    </div>
+                                    <p class="text-muted small mb-3">
+                                        When a technician completes a work order requiring parts, FORGE executes an ACID transaction:
+                                    </p>
+                                    <div class="p-2 mb-3 rounded" style="background-color: var(--card-bg); border: 1px solid var(--border-subtle); font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;" id="simTransactionLedger">
+                                        <code>BEGIN TRANSACTION;<br>UPDATE Inventory SET qty = qty - 1 WHERE id = 'PRT-02';<br>INSERT INTO StockLedger (wo_id, part, delta);<br>COMMIT;</code>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-sm btn-outline-primary w-100" type="button" id="btnSimulateDeduct" style="padding: 10px 14px; font-weight: 700; letter-spacing: 0.4px;" onclick="simulatePartDeduction()">
+                                    Simulate WO-104 Parts Deduction (-1 Seal Kit)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pane 3: Role-Based Operations -->
+                    <div class="showcase-pane" id="pane3">
+                        <div class="showcase-role-matrix">
+                            <div class="role-preview-card has-crosshairs">
+                                <div class="role-badge-tag">ROLE: PLANT ADMINISTRATOR</div>
+                                <h5 class="fw-bold" style="font-size: 0.95rem;">Operational Governance</h5>
+                                <p class="text-muted small">
+                                    Full access to budget analytics, technician certifications, system audit logs, MTBF/MTTR fleet dashboards, and master data controls.
+                                </p>
+                                <div class="mt-2 text-secondary" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;">
+                                    ACCESS: MASTER (READ / WRITE / AUDIT)
+                                </div>
+                            </div>
+
+                            <div class="role-preview-card has-crosshairs">
+                                <div class="role-badge-tag">ROLE: LEAD TECHNICIAN</div>
+                                <h5 class="fw-bold" style="font-size: 0.95rem;">Tactical Execution & Safety</h5>
+                                <p class="text-muted small">
+                                    Mobile-optimized dispatch queue, step-by-step Lockout/Tagout checklists, real-time parts reserve, and shift signoff travelers.
+                                </p>
+                                <div class="mt-2 text-secondary" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;">
+                                    ACCESS: WORK ORDERS + LOTO + PARTS
+                                </div>
+                            </div>
+
+                            <div class="role-preview-card has-crosshairs">
+                                <div class="role-badge-tag">ROLE: MACHINE OPERATOR</div>
+                                <h5 class="fw-bold" style="font-size: 0.95rem;">Floor Anomaly Reporting</h5>
+                                <p class="text-muted small">
+                                    One-tap emergency breakdown logging, real-time machine run state visibility, and direct paging to assigned bay technicians.
+                                </p>
+                                <div class="mt-2 text-secondary" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;">
+                                    ACCESS: TELEMETRY + LOG BREAKDOWN
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 p-3 rounded d-flex justify-content-between align-items-center" style="background-color: var(--bg-body); border: 1px solid var(--border-color); font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;">
+                            <span>ROLE-BASED ACCESS CONTROL (RBAC) ENFORCED AT BOTH API GATEWAY AND CLIENT VIEWS</span>
+                            <a href="login.html" class="btn btn-sm btn-primary" style="font-size: 0.7rem; padding: 3px 12px;">Sign In with Any Role &rarr;</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 4: TECHNICAL SPECIFICATIONS GRID -->
+    <section class="system-specs-section" id="specs">
+        <div class="container-xl">
+            <div class="section-tag-strip">
+                <div class="section-kicker">ENGINEERING BENCHMARKS</div>
+                <h2 class="section-heading">SYSTEM SPECIFICATIONS</h2>
+                <p class="section-subhead">
+                    Engineered for high-duty manufacturing plants where network partitions, harsh conditions, and zero data loss are non-negotiable.
+                </p>
+            </div>
+
+            <div class="specs-grid">
+                <div class="spec-tile has-crosshairs">
+                    <div class="spec-num">SPEC 01 // PERFORMANCE</div>
+                    <div class="spec-title">Sub-Second Telemetry</div>
+                    <p class="spec-desc">
+                        Lightweight Node.js event-driven architecture handles edge vibration and temperature packets with sub-10ms processing latency.
+                    </p>
+                </div>
+
+                <div class="spec-tile has-crosshairs">
+                    <div class="spec-num">SPEC 02 // RELIABILITY</div>
+                    <div class="spec-title">ACID Data Integrity</div>
+                    <p class="spec-desc">
+                        Backed by Prisma ORM and WAL-mode SQLite storage. Guarantees zero ghost records or concurrent inventory discrepancies.
+                    </p>
+                </div>
+
+                <div class="spec-tile has-crosshairs">
+                    <div class="spec-num">SPEC 03 // AIR-GAP COMPLIANT</div>
+                    <div class="spec-title">Zero Cloud Leaks</div>
+                    <p class="spec-desc">
+                        Runs 100% locally on premise without external SaaS phone-homes, meeting strict defense and precision industrial criteria.
+                    </p>
+                </div>
+
+                <div class="spec-tile has-crosshairs">
+                    <div class="spec-num">SPEC 04 // SAFETY GOVERNANCE</div>
+                    <div class="spec-title">OSHA Audit Trail</div>
+                    <p class="spec-desc">
+                        Every Lockout/Tagout isolation, checklist confirmation, and technician shift handoff is permanently preserved in the ledger.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 5: CALL TO ACTION -->
+    <section class="landing-cta blueprint-grid">
+        <div class="container-xl">
+            <div class="landing-cta-frame has-crosshairs">
+                <div class="cta-terminal-tag">[ READY FOR INDUSTRIAL DEPLOYMENT ]</div>
+                <h2>TAKE COMMAND OF YOUR FACTORY FLOOR.</h2>
+                <p>
+                    Deploy FORGE across your plant network in seconds. Zero subscription traps. Uncompromising speed and reliability.
+                </p>
+
+                <div class="landing-cta-actions">
+                    <a href="login.html" class="btn-hero-primary">Launch Operations Console &rarr;</a>
+                    <a href="register.html" class="btn-hero-secondary">Create Personnel Account</a>
+                </div>
+
+                <div class="mt-4 pt-3 border-top border-secondary-subtle" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--text-muted);">
+                    <span>Quick Demo Credentials:</span>
+                    <strong class="text-primary ms-1">admin@forge.local</strong>
+                    <span class="ms-1">/</span>
+                    <strong class="text-primary ms-1">forge2026</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
     <footer class="landing-footer">
         <div class="container-xl">
             <div class="landing-footer-inner">
                 <div>
                     <div class="landing-footer-brand">FORGE</div>
                     <p class="landing-footer-desc">
-                        Industrial Equipment Maintenance & Resource Management System. Built with HTML5, CSS3, Bootstrap 5, and Vanilla JavaScript.
+                        Industrial Equipment Maintenance and Resource Management System. Built for high-reliability manufacturing operations.
                     </p>
                 </div>
+
                 <div>
-                    <div class="landing-footer-heading">Platform</div>
+                    <div class="landing-footer-heading">OPERATIONS</div>
                     <ul class="landing-footer-links">
-                        <li><a href="pages/equipment.html">Equipment</a></li>
-                        <li><a href="pages/maintenance.html">Maintenance</a></li>
-                        <li><a href="pages/workorders.html">Work Orders</a></li>
-                        <li><a href="pages/inventory.html">Inventory</a></li>
+                        <li><a href="pages/dashboard.html">Command Dashboard</a></li>
+                        <li><a href="pages/equipment.html">Equipment Fleet</a></li>
+                        <li><a href="pages/workorders.html">Work Order Kanban</a></li>
+                        <li><a href="pages/inventory.html">Spare Parts Ledger</a></li>
                     </ul>
                 </div>
+
                 <div>
-                    <div class="landing-footer-heading">Operations</div>
+                    <div class="landing-footer-heading">SAFETY & DOCS</div>
                     <ul class="landing-footer-links">
-                        <li><a href="pages/dashboard.html">Dashboard</a></li>
-                        <li><a href="pages/workforce.html">Workforce</a></li>
-                        <li><a href="pages/analytics.html">Analytics</a></li>
+                        <li><a href="#pipeline">OSHA 1910.147 Flow</a></li>
+                        <li><a href="#specs">System Benchmarks</a></li>
+                        <li><a href="pages/analytics.html">Reliability Analytics</a></li>
+                        <li><a href="pages/technicians.html">Personnel Dossiers</a></li>
                     </ul>
                 </div>
+
                 <div>
-                    <div class="landing-footer-heading">System</div>
+                    <div class="landing-footer-heading">SECURITY</div>
                     <ul class="landing-footer-links">
-                        <li><a href="login.html">Sign In</a></li>
-                        <li><a href="#workflow">Lifecycle</a></li>
-                        <li><a href="#intelligence">Intelligence</a></li>
+                        <li><a href="login.html">Personnel Login</a></li>
+                        <li><a href="register.html">Account Registration</a></li>
+                        <li><a href="#architecture">Air-Gap Deployment</a></li>
+                        <li><a href="#specs">Audit Compliance</a></li>
                     </ul>
                 </div>
             </div>
+
             <div class="landing-footer-bottom">
-                <span>&copy; 2026 FORGE &mdash; Web Programming Lab Project</span>
-                <span>ZERO EXTERNAL DEPENDENCIES &bull; CLIENT-SIDE PERSISTENCE</span>
+                <span>&copy; 2026 FORGE Industrial Systems. All rights reserved.</span>
+                <span class="landing-footer-status">SYSTEM OPERATIONAL &bull; LOCAL NODE 127.0.0.1:5000</span>
+                <span>FORGE v2.4-STABLE</span>
             </div>
         </div>
     </footer>
 
-    <!-- Bootstrap 5 Bundle JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Landing Page Scripts -->
+    <!-- INTERACTIVE SCRIPTS -->
     <script>
         (function () {
-            // Theme toggle
-            var currentTheme = localStorage.getItem("forge_theme") || "light";
-            var btnLight = document.getElementById("landingThemeBtnLight");
-            var btnDark = document.getElementById("landingThemeBtnDark");
+            // 1. Theme Toggle Logic
+            var themeBtn = document.getElementById("landingThemeToggleBtn");
+            var themeIcon = document.getElementById("landingThemeIcon");
 
-            function syncLandingToggle(theme) {
-                if (!btnLight || !btnDark) return;
-                btnLight.classList.toggle("active", theme === "light");
-                btnLight.setAttribute("aria-pressed", String(theme === "light"));
-                btnDark.classList.toggle("active", theme === "dark");
-                btnDark.setAttribute("aria-pressed", String(theme === "dark"));
+            function updateThemeIcon(t) {
+                if (!themeIcon) return;
+                if (t === "light") {
+                    // Moon SVG
+                    themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+                } else {
+                    // Sun SVG
+                    themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+                }
             }
 
-            syncLandingToggle(currentTheme);
+            var currentTheme = localStorage.getItem("forge_theme") || "dark";
+            updateThemeIcon(currentTheme);
 
-            if (btnLight) {
-                btnLight.addEventListener("click", function () {
-                    document.documentElement.setAttribute("data-theme", "light");
-                    localStorage.setItem("forge_theme", "light");
-                    syncLandingToggle("light");
+            if (themeBtn) {
+                themeBtn.addEventListener("click", function () {
+                    var cur = document.documentElement.getAttribute("data-theme") || "dark";
+                    var next = cur === "dark" ? "light" : "dark";
+                    document.documentElement.setAttribute("data-theme", next);
+                    localStorage.setItem("forge_theme", next);
+                    updateThemeIcon(next);
                 });
             }
 
-            if (btnDark) {
-                btnDark.addEventListener("click", function () {
-                    document.documentElement.setAttribute("data-theme", "dark");
-                    localStorage.setItem("forge_theme", "dark");
-                    syncLandingToggle("dark");
-                });
-            }
-
-            // Mobile hamburger toggle
+            // 2. Mobile Hamburger Menu
             var hamburger = document.getElementById("landingHamburger");
             var navLinks = document.getElementById("landingNavLinks");
             if (hamburger && navLinks) {
                 hamburger.addEventListener("click", function () {
-                    navLinks.classList.toggle("mobile-open");
+                    navLinks.classList.toggle("open");
                 });
-
-                // Close on link click
                 navLinks.querySelectorAll("a").forEach(function (link) {
                     link.addEventListener("click", function () {
-                        navLinks.classList.remove("mobile-open");
+                        navLinks.classList.remove("open");
                     });
                 });
             }
 
-            // Smooth scroll for anchor links
+            // 3. Showcase Tabs Controller
+            var titles = [
+                "SUBSYSTEM 01 // SCADA TELEMETRY & EQUIPMENT VITAL SIGNS",
+                "SUBSYSTEM 02 // KANBAN DISPATCH & OSHA 1910.147 LOTO SAFETY",
+                "SUBSYSTEM 03 // 360° ASSET DOSSIER & ACID INVENTORY LEDGER",
+                "SUBSYSTEM 04 // ROLE-BASED ACCESS CONTROL & WORKFLOW ISOLATION"
+            ];
+
+            window.switchShowcaseTab = function (idx) {
+                var btns = document.querySelectorAll(".showcase-tab-btn");
+                var panes = document.querySelectorAll(".showcase-pane");
+                var titleEl = document.getElementById("showcaseSubsystemTitle");
+
+                btns.forEach(function (b, i) {
+                    b.classList.toggle("active", i === idx);
+                });
+                panes.forEach(function (p, i) {
+                    p.classList.toggle("active", i === idx);
+                });
+                if (titleEl && titles[idx]) {
+                    titleEl.textContent = titles[idx];
+                }
+            };
+
+            // 4. CAD Schematic Interactive Node Selector
+            var nodeTelemetryData = {
+                "EQ-01": { name: "EQ-01 [CNC MILL]", vib: "0.04 mm/s [NOMINAL]", wo: "WO-101 (250h PM)", color: "good" },
+                "EQ-02": { name: "EQ-02 [HYD PRESS]", vib: "4.82 mm/s [ALERT]", wo: "WO-104 (Seal Kit)", color: "warn" },
+                "EQ-03": { name: "EQ-03 [CONVEYOR]", vib: "0.12 mm/s [NOMINAL]", wo: "WO-103 (Lube 50h)", color: "good" },
+                "EQ-04": { name: "EQ-04 [WELD ROBOT]", vib: "0.08 mm/s [NOMINAL]", wo: "IDLE (Cycle Ready)", color: "good" }
+            };
+
+            window.selectSchematicNode = function (eqId) {
+                document.querySelectorAll(".svg-machine-node").forEach(function (node) {
+                    node.classList.remove("svg-node-active");
+                });
+
+                var activeG = document.getElementById("node" + eqId.replace("-", "").toUpperCase().replace("EQ0", "Eq0"));
+                if (activeG) activeG.classList.add("svg-node-active");
+
+                var data = nodeTelemetryData[eqId];
+                if (data) {
+                    var idEl = document.getElementById("hudNodeId");
+                    var vibEl = document.getElementById("hudVibVal");
+                    var woEl = document.getElementById("hudWoVal");
+
+                    if (idEl) idEl.textContent = data.name;
+                    if (vibEl) {
+                        vibEl.textContent = data.vib;
+                        vibEl.className = "hud-val " + data.color;
+                    }
+                    if (woEl) woEl.textContent = data.wo;
+                }
+            };
+
+            // 5. SCADA Tile Interactive Selection
+            window.simulateTileSelect = function (tileEl, vib, temp, uptime) {
+                document.querySelectorAll(".scada-tile").forEach(function (t) {
+                    t.classList.remove("active");
+                });
+                tileEl.classList.add("active");
+                var textEl = document.getElementById("scadaLiveStreamText");
+                if (textEl) {
+                    textEl.textContent = "Telemetry locked: VIB " + vib + " | CORE " + temp + " | FLEET UPTIME " + uptime + " [RTU BUS 250ms OK]";
+                }
+            };
+
+            // 6. Transactional Inventory Deduction Simulator
+            var simulatedStock = 8;
+            window.simulatePartDeduction = function () {
+                var btn = document.getElementById("btnSimulateDeduct");
+                var qtyEl = document.getElementById("simQty02");
+                var statusEl = document.getElementById("simStatus02");
+                var ledgerEl = document.getElementById("simTransactionLedger");
+
+                if (simulatedStock > 0) {
+                    simulatedStock -= 1;
+                    if (qtyEl) qtyEl.textContent = simulatedStock + " kit";
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.textContent = "Deducting in SQLite Transaction...";
+                    }
+                    if (ledgerEl) {
+                        ledgerEl.innerHTML = '<span style="color: #4CAF50;">[TRANSACTION COMMITTED]</span><br><code>PRT-02 balance updated to ' + simulatedStock + ' kit.<br>StockLedger ID #TX-9042 created with cryptographic timestamp.</code>';
+                    }
+
+                    setTimeout(function () {
+                        if (simulatedStock <= 3 && statusEl) {
+                            statusEl.innerHTML = '<span class="badge bg-danger">STOCKOUT RISK</span>';
+                            if (qtyEl) qtyEl.style.color = "var(--danger)";
+                        }
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = "Simulate Another Deduction (" + simulatedStock + " Remaining)";
+                        }
+                    }, 500);
+                } else {
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.textContent = "Zero Stock Remaining [REORDER TRIGGERED]";
+                    }
+                }
+            };
+
+            var simBtnEl = document.getElementById("btnSimulateDeduct");
+            if (simBtnEl) {
+                simBtnEl.addEventListener("click", window.simulatePartDeduction);
+            }
+
+            // 7. Smooth Anchor Scroll
             document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
                 anchor.addEventListener("click", function (e) {
                     var target = document.querySelector(this.getAttribute("href"));

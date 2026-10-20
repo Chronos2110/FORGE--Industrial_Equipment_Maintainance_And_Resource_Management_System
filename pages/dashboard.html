@@ -89,14 +89,47 @@
                 <!-- ========== PANEL: ADMINISTRATOR ========== -->
                 <div id="panelAdmin" class="role-view-panel">
 
-                <!-- Operational Exceptions & Bottlenecks Strip -->
+                <!-- Operational Exceptions & Bottlenecks Strip (High-Density Industrial Triage) -->
                 <div id="adminExceptionsBanner" class="admin-exceptions-strip mb-4 d-none">
                     <div class="exceptions-header">
-                        <span class="exceptions-badge">⚠️ OPERATIONAL EXCEPTIONS &amp; BOTTLENECKS</span>
-                        <span class="exceptions-count" id="adminExceptionsCount">0 Active Exceptions</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="exceptions-pulse-dot" aria-hidden="true"></span>
+                            <span class="exceptions-badge">OPERATIONAL EXCEPTIONS &amp; BOTTLENECK TRIAGE</span>
+                            <span class="exceptions-count font-mono" id="adminExceptionsCount">0 Active</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="exceptions-subtag font-mono d-none d-md-inline">REAL-TIME SCADA DISPATCH STREAM</span>
+                            <span class="badge bg-secondary font-mono" style="font-size:0.65rem;">ISO-55000</span>
+                        </div>
                     </div>
-                    <div class="exceptions-grid" id="adminExceptionsList">
-                        <!-- Populated dynamically by dashboard.js -->
+                    <div class="exceptions-triage-split">
+                        <!-- Left Column: Critical Machinery & Dispatch Alerts -->
+                        <div class="exceptions-col">
+                            <div class="exceptions-col-header">
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="exceptions-col-dot dot-critical" aria-hidden="true"></span>
+                                    <span class="exceptions-col-title">CRITICAL MACHINERY &amp; DISPATCH ALERTS</span>
+                                </div>
+                                <span class="exceptions-subcount font-mono" id="adminMachineryCount">0</span>
+                            </div>
+                            <div class="exceptions-rows" id="adminMachineryExceptionsList">
+                                <!-- Populated dynamically by dashboard.js -->
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Inventory Stockout Risks -->
+                        <div class="exceptions-col">
+                            <div class="exceptions-col-header">
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="exceptions-col-dot dot-warning" aria-hidden="true"></span>
+                                    <span class="exceptions-col-title">INVENTORY STOCKOUT RISKS</span>
+                                </div>
+                                <span class="exceptions-subcount font-mono" id="adminStockoutCount">0</span>
+                            </div>
+                            <div class="exceptions-rows" id="adminStockoutExceptionsList">
+                                <!-- Populated dynamically by dashboard.js -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 

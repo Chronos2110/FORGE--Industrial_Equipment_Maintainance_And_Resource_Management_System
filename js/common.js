@@ -65,6 +65,28 @@ function migrateLegacyKeys() {
 }
 
 // ==========================================================================
+// FORGE Monochromatic Technical SVG Icon Suite (stroke-width: 1.75, 16px)
+// ==========================================================================
+var SVG_ICONS = {
+    dashboard: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+    equipment: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    maintenance: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+    workorders: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>',
+    workforce: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    inventory: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+    analytics: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><path d="M3 20h18"/></svg>',
+    faults: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    sun: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+    moon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+    bell: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+    sidebar: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><path d="m14 9-3 3 3 3"/></svg>',
+    plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    reset: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
+    check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>'
+};
+
+// ==========================================================================
 // initCommon: Nav, Role Badge, Theme Toggle, Logout, Sidebar Active Link
 // ==========================================================================
 function initCommon() {
@@ -77,22 +99,23 @@ function initCommon() {
 
     var topbarRight = document.querySelector(".topbar-right");
 
-    // 2. Inject theme toggle
-    if (topbarRight && !document.getElementById("forgeThemeToggle")) {
+    // 2. Inject compact single-button theme toggle
+    if (topbarRight && !document.getElementById("forgeThemeToggleBtn")) {
         var currentTheme = localStorage.getItem("forge_theme") || "light";
-        var toggleWrapper = document.createElement("div");
-        toggleWrapper.className = "theme-toggle";
-        toggleWrapper.id = "forgeThemeToggle";
-        toggleWrapper.setAttribute("role", "group");
-        toggleWrapper.setAttribute("aria-label", "Theme selector");
-        toggleWrapper.innerHTML =
-            '<button class="theme-toggle-btn ' + (currentTheme === "light" ? "active" : "") + '" id="themeBtnLight" title="Light Mode" aria-pressed="' + (currentTheme === "light") + '">&#9728; Light</button>' +
-            '<span class="theme-toggle-divider" aria-hidden="true"></span>' +
-            '<button class="theme-toggle-btn ' + (currentTheme === "dark" ? "active" : "") + '" id="themeBtnDark" title="Dark Mode" aria-pressed="' + (currentTheme === "dark") + '">&#9790; Dark</button>';
-        topbarRight.insertBefore(toggleWrapper, topbarRight.firstChild);
+        var themeBtn = document.createElement("button");
+        themeBtn.type = "button";
+        themeBtn.className = "topbar-icon-btn";
+        themeBtn.id = "forgeThemeToggleBtn";
+        themeBtn.setAttribute("title", "Current theme: " + currentTheme.toUpperCase() + " (Click to toggle, or press T)");
+        themeBtn.setAttribute("aria-label", "Toggle color theme");
+        themeBtn.innerHTML = '<span class="theme-icon" aria-hidden="true">' + (currentTheme === "dark" ? SVG_ICONS.sun : SVG_ICONS.moon) + '</span>';
 
-        document.getElementById("themeBtnLight").addEventListener("click", function () { applyTheme("light"); });
-        document.getElementById("themeBtnDark").addEventListener("click",  function () { applyTheme("dark");  });
+        topbarRight.insertBefore(themeBtn, topbarRight.firstChild);
+
+        themeBtn.addEventListener("click", function () {
+            var cur = localStorage.getItem("forge_theme") || "light";
+            applyTheme(cur === "dark" ? "light" : "dark");
+        });
     }
 
     // 3. Quick role switcher (Demonstration Override)
@@ -238,6 +261,15 @@ function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("forge_theme", theme);
 
+    // Sync topbar single icon button
+    var themeBtn = document.getElementById("forgeThemeToggleBtn");
+    if (themeBtn) {
+        themeBtn.innerHTML = '<span class="theme-icon" aria-hidden="true">' + (theme === "dark" ? SVG_ICONS.sun : SVG_ICONS.moon) + '</span>';
+        themeBtn.setAttribute("title", "Current theme: " + theme.toUpperCase() + " (Click to toggle, or press T)");
+        themeBtn.setAttribute("aria-label", "Current theme " + theme + ", switch to " + (theme === "dark" ? "light" : "dark"));
+    }
+
+    // Sync legacy/dual toggles if present
     var btnLight = document.getElementById("themeBtnLight");
     var btnDark  = document.getElementById("themeBtnDark");
     if (btnLight && btnDark) {
@@ -257,10 +289,20 @@ function applyTheme(theme) {
         lBtnD.setAttribute("aria-pressed", String(theme === "dark"));
     }
 
+    // Sync landing page toggles if present
+    var landBtnL = document.getElementById("landingThemeBtnLight");
+    var landBtnD = document.getElementById("landingThemeBtnDark");
+    if (landBtnL && landBtnD) {
+        landBtnL.classList.toggle("active", theme === "light");
+        landBtnD.classList.toggle("active", theme === "dark");
+        landBtnL.setAttribute("aria-pressed", String(theme === "light"));
+        landBtnD.setAttribute("aria-pressed", String(theme === "dark"));
+    }
+
     // Sync dock theme icon
     var dockThemeIcon = document.getElementById("dockThemeIcon");
     if (dockThemeIcon) {
-        dockThemeIcon.textContent = theme === "dark" ? "☀" : "🌙";
+        dockThemeIcon.innerHTML = theme === "dark" ? SVG_ICONS.sun : SVG_ICONS.moon;
     }
 }
 
@@ -577,7 +619,15 @@ function showAlert(message, type) {
 
     var alertDiv = document.createElement("div");
     alertDiv.className = "custom-alert custom-alert-" + type;
-    alertDiv.innerHTML = "<span>" + message + "</span><button type='button' class='btn-close btn-close-sm' aria-label='Close'></button>";
+    alertDiv.setAttribute("role", "status");
+    alertDiv.innerHTML =
+        '<div class="alert-content-wrap">' +
+            '<span class="alert-icon-wrap" aria-hidden="true">' +
+                (type === "danger" ? SVG_ICONS.faults : (type === "warning" ? SVG_ICONS.bell : (type === "info" ? SVG_ICONS.workorders : SVG_ICONS.check))) +
+            '</span>' +
+            '<span class="alert-msg">' + message + '</span>' +
+        '</div>' +
+        '<button type="button" class="btn-close btn-close-sm" aria-label="Close alert"></button>';
     alertDiv.querySelector(".btn-close").addEventListener("click", function () { alertDiv.remove(); });
     container.appendChild(alertDiv);
 
@@ -1173,15 +1223,15 @@ var PAGE_CONTEXT_MAP = {
 };
 
 var NAV_ICON_MAP = {
-    "dashboard":   "⊞",
-    "equipment":   "⚙",
-    "maintenance": "🛠",
-    "workorders":  "📋",
-    "work orders": "📋",
-    "workforce":   "👥",
-    "inventory":   "📦",
-    "analytics":   "📈",
-    "faults":      "⚠️"
+    "dashboard":   SVG_ICONS.dashboard,
+    "equipment":   SVG_ICONS.equipment,
+    "maintenance": SVG_ICONS.maintenance,
+    "workorders":  SVG_ICONS.workorders,
+    "work orders": SVG_ICONS.workorders,
+    "workforce":   SVG_ICONS.workforce,
+    "inventory":   SVG_ICONS.inventory,
+    "analytics":   SVG_ICONS.analytics,
+    "faults":      SVG_ICONS.faults
 };
 
 // ==========================================================================
@@ -1321,7 +1371,7 @@ function initTopbarShell() {
         toggleBtn.setAttribute("type", "button");
         toggleBtn.setAttribute("aria-label", "Toggle navigation rail");
         toggleBtn.setAttribute("title", "Toggle navigation rail ([)");
-        toggleBtn.innerHTML = '<span class="toggle-icon" aria-hidden="true">☰</span>';
+        toggleBtn.innerHTML = '<span class="toggle-icon" aria-hidden="true">' + SVG_ICONS.sidebar + '</span>';
         topbarLeft.insertBefore(toggleBtn, topbarLeft.firstChild);
 
         toggleBtn.addEventListener("click", toggleSidebar);
@@ -1374,7 +1424,7 @@ function initTopbarShell() {
         searchTrigger.setAttribute("type", "button");
         searchTrigger.setAttribute("aria-label", "Search records or jump to... (" + shortcutText + ")");
         searchTrigger.innerHTML =
-            '<span class="search-ico" aria-hidden="true">⌕</span>' +
+            '<span class="search-ico" aria-hidden="true">' + SVG_ICONS.search + '</span>' +
             '<span class="search-text">Search records or jump to...</span>' +
             '<span class="search-shortcut">' + shortcutText + '</span>';
 
@@ -1399,23 +1449,7 @@ function initTopbarShell() {
         topbarRight.insertBefore(indicator, topbarRight.firstChild);
     }
 
-    // D. Refine topbar accessibility & add Reset Demo Data action
-    if (topbarRight && !document.getElementById("topbarResetDemoBtn")) {
-        var resetBtn = document.createElement("button");
-        resetBtn.className = "btn btn-sm btn-outline-secondary font-mono d-none d-sm-inline-flex align-items-center gap-1";
-        resetBtn.id = "topbarResetDemoBtn";
-        resetBtn.setAttribute("type", "button");
-        resetBtn.setAttribute("title", "Restore Factory Demo Baseline");
-        resetBtn.setAttribute("aria-label", "Restore Factory Demo Baseline");
-        resetBtn.style.cssText = "font-size: 0.72rem; padding: 3px 8px; border-color: var(--border-color); color: var(--text-muted);";
-        resetBtn.innerHTML = '<span aria-hidden="true">↺</span> Reset Data';
-        resetBtn.addEventListener("click", function () {
-            resetDemoData(false);
-        });
-        topbarRight.insertBefore(resetBtn, topbarRight.firstChild);
-    }
-
-    // E. Shift Handover & ISO-55000 Audit Log Trigger
+    // D. Shift Handover & ISO-55000 Audit Log Trigger (Compact Technical Button)
     if (topbarRight && !document.getElementById("topbarShiftLogBtn")) {
         var shiftLogBtn = document.createElement("button");
         shiftLogBtn.className = "btn btn-sm btn-outline-secondary font-mono d-none d-md-inline-flex align-items-center gap-1";
@@ -1423,28 +1457,12 @@ function initTopbarShell() {
         shiftLogBtn.setAttribute("type", "button");
         shiftLogBtn.setAttribute("title", "Plant Shift Handover & ISO-55000 Audit Log");
         shiftLogBtn.setAttribute("aria-label", "Plant Shift Log");
-        shiftLogBtn.style.cssText = "font-size: 0.72rem; padding: 3px 8px; border-color: var(--border-color); color: var(--text-muted);";
-        shiftLogBtn.innerHTML = '<span aria-hidden="true">📋</span> Shift Log';
+        shiftLogBtn.style.cssText = "font-size: 0.72rem; padding: 4px 8px; border-color: var(--border-color); color: var(--text-muted);";
+        shiftLogBtn.innerHTML = '<span class="shift-log-icon" aria-hidden="true">' + SVG_ICONS.workorders + '</span><span class="d-none d-lg-inline">Shift Log</span>';
         shiftLogBtn.addEventListener("click", function () {
             openAuditDrawer();
         });
         topbarRight.insertBefore(shiftLogBtn, topbarRight.firstChild);
-    }
-
-    // F. Keyboard Shortcuts Guide Trigger (?)
-    if (topbarRight && !document.getElementById("topbarShortcutsBtn")) {
-        var shortcutsBtn = document.createElement("button");
-        shortcutsBtn.className = "btn btn-sm btn-outline-secondary font-mono d-none d-lg-inline-flex align-items-center justify-content-center";
-        shortcutsBtn.id = "topbarShortcutsBtn";
-        shortcutsBtn.setAttribute("type", "button");
-        shortcutsBtn.setAttribute("title", "Keyboard Shortcuts Reference (?)");
-        shortcutsBtn.setAttribute("aria-label", "Keyboard Shortcuts");
-        shortcutsBtn.style.cssText = "font-size: 0.75rem; padding: 3px 7px; border-color: var(--border-color); color: var(--text-muted); font-weight:700;";
-        shortcutsBtn.innerHTML = '?';
-        shortcutsBtn.addEventListener("click", function () {
-            openKeyboardShortcutsModal();
-        });
-        topbarRight.insertBefore(shortcutsBtn, topbarRight.firstChild);
     }
 
     var roleBadge = topbar.querySelector(".role-badge");
@@ -1508,7 +1526,7 @@ function initControlDock() {
 
     // Role-specific action config
     var actionConfig = {
-        icon: "+",
+        icon: SVG_ICONS.plus,
         label: "CREATE WO",
         title: "Create Work Order (Shortcut: N)",
         handler: function () {
@@ -1522,7 +1540,7 @@ function initControlDock() {
     };
     if (role === "Technician") {
         actionConfig = {
-            icon: "🛠",
+            icon: SVG_ICONS.maintenance,
             label: "LOG WO",
             title: "Log or Update Work Order (Shortcut: L)",
             handler: function () {
@@ -1531,7 +1549,7 @@ function initControlDock() {
         };
     } else if (role === "Operator") {
         actionConfig = {
-            icon: "⚠️",
+            icon: SVG_ICONS.faults,
             label: "FAULT",
             title: "Report Equipment Breakdown (Shortcut: F)",
             handler: function () {
@@ -1553,13 +1571,13 @@ function initControlDock() {
 
     dock.innerHTML =
         '<button class="dock-btn" id="dockSearchBtn" type="button" title="Search records or actions (' + (isMac ? 'Cmd+K' : 'Ctrl+K') + ')" aria-label="Search records">' +
-            '<span class="dock-icon" aria-hidden="true">⌕</span>' +
+            '<span class="dock-icon" aria-hidden="true">' + SVG_ICONS.search + '</span>' +
             '<span class="dock-label">SEARCH</span>' +
             '<span class="dock-shortcut">' + kbdSearch + '</span>' +
         '</button>' +
         '<span class="dock-divider" aria-hidden="true"></span>' +
         '<a href="dashboard.html" class="dock-btn ' + (isDash ? 'active' : '') + '" id="dockDashBtn" title="Jump to Operations Dashboard (D)" aria-label="Dashboard">' +
-            '<span class="dock-icon" aria-hidden="true">⊞</span>' +
+            '<span class="dock-icon" aria-hidden="true">' + SVG_ICONS.dashboard + '</span>' +
             '<span class="dock-label">DASH</span>' +
             '<span class="dock-shortcut">D</span>' +
         '</a>' +
@@ -1568,17 +1586,17 @@ function initControlDock() {
             '<span class="dock-label">' + actionConfig.label + '</span>' +
         '</button>' +
         '<button class="dock-btn" id="dockAlertsBtn" type="button" title="Urgent Alerts: ' + urgentCount + ' active items" aria-label="Urgent alerts (' + urgentCount + ')">' +
-            '<span class="dock-icon" style="color:var(--danger);" aria-hidden="true">⚡</span>' +
+            '<span class="dock-icon" style="color:var(--danger);" aria-hidden="true">' + SVG_ICONS.bell + '</span>' +
             '<span class="dock-label">ALERTS</span>' +
             (urgentCount > 0 ? '<span class="dock-badge" id="dockAlertsBadge">' + urgentCount + '</span>' : '') +
         '</button>' +
         '<span class="dock-divider" aria-hidden="true"></span>' +
         '<button class="dock-btn" id="dockSidebarBtn" type="button" title="Toggle Sidebar Rail ([)" aria-label="Toggle Sidebar">' +
-            '<span class="dock-icon" aria-hidden="true">⫷</span>' +
+            '<span class="dock-icon" aria-hidden="true">' + SVG_ICONS.sidebar + '</span>' +
             '<span class="dock-shortcut">[</span>' +
         '</button>' +
         '<button class="dock-btn" id="dockThemeBtn" type="button" title="Toggle Theme (T)" aria-label="Toggle Theme">' +
-            '<span class="dock-icon" id="dockThemeIcon" aria-hidden="true">' + (currentTheme === "dark" ? "☀" : "🌙") + '</span>' +
+            '<span class="dock-icon" id="dockThemeIcon" aria-hidden="true">' + (currentTheme === "dark" ? SVG_ICONS.sun : SVG_ICONS.moon) + '</span>' +
             '<span class="dock-shortcut">T</span>' +
         '</button>';
 
@@ -4363,7 +4381,39 @@ function openPersonnelProfileModal() {
                     '<div class="font-mono small p-2 profile-info-box text-muted" title="' + (session ? session.token : '') + '">' + escapeHTML(tokenStr) + '</div>' +
                 '</div>' +
             '</div>' +
+            '<div class="profile-utilities-box mt-3 pt-3 border-top" style="border-color: var(--border-color) !important;">' +
+                '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                    '<span class="font-mono small text-muted" style="font-size:0.7rem; letter-spacing:0.4px;">SYSTEM UTILITIES // ERGONOMICS</span>' +
+                    '<span class="font-mono text-gold" style="font-size:0.68rem;">LOCAL CONTROLS</span>' +
+                '</div>' +
+                '<div class="d-flex gap-2 flex-wrap">' +
+                    '<button type="button" class="btn btn-sm btn-outline-secondary font-mono d-inline-flex align-items-center gap-1" id="profileShortcutsTrigger" style="font-size:0.75rem; padding:4px 9px;">' +
+                        '<span aria-hidden="true">?</span> Shortcuts Reference' +
+                    '</button>' +
+                    '<button type="button" class="btn btn-sm btn-outline-warning font-mono d-inline-flex align-items-center gap-1" id="profileResetDemoTrigger" style="font-size:0.75rem; padding:4px 9px;">' +
+                        '<span aria-hidden="true">&#8634;</span> Reset Factory Data' +
+                    '</button>' +
+                '</div>' +
+            '</div>' +
         '</div>';
+
+    // Wire shortcuts and reset triggers
+    var scBtn = body.querySelector("#profileShortcutsTrigger");
+    if (scBtn) {
+        scBtn.addEventListener("click", function () {
+            var bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (bsModal) bsModal.hide();
+            openKeyboardShortcutsModal();
+        });
+    }
+    var rdBtn = body.querySelector("#profileResetDemoTrigger");
+    if (rdBtn) {
+        rdBtn.addEventListener("click", function () {
+            var bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (bsModal) bsModal.hide();
+            resetDemoData(false);
+        });
+    }
 
     // Wire radio buttons
     body.querySelectorAll("input[name='shiftStatusRadio']").forEach(function (radio) {
