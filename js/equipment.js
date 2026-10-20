@@ -23,6 +23,12 @@ document.addEventListener("DOMContentLoaded", function () {
     let statusFilter = document.getElementById("statusFilter");
     if (statusFilter) statusFilter.addEventListener("change", filterAndRenderTable);
 
+    // 3b. Bind Segmented View Switcher (Table vs Floor Schematic)
+    let btnTable = document.getElementById("btnEquipmentViewTable");
+    let btnSchematic = document.getElementById("btnEquipmentViewSchematic");
+    if (btnTable) btnTable.addEventListener("click", function () { setEquipmentView("table"); });
+    if (btnSchematic) btnSchematic.addEventListener("click", function () { setEquipmentView("schematic"); });
+
     // 4. Bind Add Equipment button
     let addBtn = document.getElementById("addNewEquipmentBtn");
     if (addBtn) addBtn.addEventListener("click", resetForm);
@@ -31,13 +37,37 @@ document.addEventListener("DOMContentLoaded", function () {
     let formEl = document.getElementById("equipmentForm");
     if (formEl) formEl.addEventListener("submit", handleFormSubmit);
 
-    // 6. Handle URL parameters (?action=new, ?id=EQ001)
+    // 6. Handle URL parameters (?action=new, ?id=EQ001, ?view=schematic)
     handleUrlParams();
 
     // 7. Bind Export CSV button
     let exportBtn = document.getElementById("exportEquipmentCsvBtn");
     if (exportBtn) exportBtn.addEventListener("click", exportEquipmentCSV);
 });
+
+// Switch between Register Table and Live Floor Schematic View
+function setEquipmentView(view) {
+    let btnTable = document.getElementById("btnEquipmentViewTable");
+    let btnSchematic = document.getElementById("btnEquipmentViewSchematic");
+    let tableView = document.getElementById("equipmentTableView");
+    let schematicView = document.getElementById("equipmentSchematicView");
+
+    if (view === "schematic") {
+        if (btnSchematic) btnSchematic.classList.add("active");
+        if (btnTable) btnTable.classList.remove("active");
+        if (schematicView) schematicView.classList.remove("d-none");
+        if (tableView) tableView.classList.add("d-none");
+        if (typeof ForgeFloorSchematic !== "undefined") {
+            ForgeFloorSchematic.render("equipmentFloorSchematicContainer");
+        }
+    } else {
+        if (btnTable) btnTable.classList.add("active");
+        if (btnSchematic) btnSchematic.classList.remove("active");
+        if (tableView) tableView.classList.remove("d-none");
+        if (schematicView) schematicView.classList.add("d-none");
+        filterAndRenderTable();
+    }
+}
 
 // Load data from localStorage
 function loadEquipmentData() {
@@ -178,6 +208,11 @@ function handleUrlParams() {
             input.value = search;
             filterAndRenderTable();
         }
+    }
+
+    var viewParam = params.get("view");
+    if (viewParam === "schematic") {
+        setEquipmentView("schematic");
     }
 }
 

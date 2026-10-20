@@ -21,13 +21,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 3. Bind search and filter events
     let sInput = document.getElementById("searchInput");
-    if (sInput) sInput.addEventListener("input", filterAndRenderTable);
+    if (sInput) sInput.addEventListener("input", function () { filterAndRenderTable(); renderComplianceTimeline(); });
 
     let tFilter = document.getElementById("typeFilter");
-    if (tFilter) tFilter.addEventListener("change", filterAndRenderTable);
+    if (tFilter) tFilter.addEventListener("change", function () { filterAndRenderTable(); renderComplianceTimeline(); });
 
     let stFilter = document.getElementById("statusFilter");
-    if (stFilter) stFilter.addEventListener("change", filterAndRenderTable);
+    if (stFilter) stFilter.addEventListener("change", function () { filterAndRenderTable(); renderComplianceTimeline(); });
+
+    // 3b. Bind Segmented View Switcher (Schedule Table vs Compliance Timeline)
+    let btnTable = document.getElementById("btnMaintViewTable");
+    let btnTimeline = document.getElementById("btnMaintViewTimeline");
+    if (btnTable) btnTable.addEventListener("click", function () { setMaintenanceView("table"); });
+    if (btnTimeline) btnTimeline.addEventListener("click", function () { setMaintenanceView("timeline"); });
 
     // 4. Bind Add button
     let addBtn = document.getElementById("addNewMaintBtn");
@@ -41,13 +47,35 @@ document.addEventListener("DOMContentLoaded", function () {
     let reschedForm = document.getElementById("rescheduleForm");
     if (reschedForm) reschedForm.addEventListener("submit", handleRescheduleSubmit);
 
-    // 7. Handle URL parameters (?action=new, ?id=MNT-001)
+    // 7. Handle URL parameters (?action=new, ?id=MNT-001, ?view=timeline)
     handleUrlParams();
 
     // 8. Bind Export CSV button
     let exportBtn = document.getElementById("exportMaintenanceCsvBtn");
     if (exportBtn) exportBtn.addEventListener("click", exportMaintenanceCSV);
 });
+
+// Switch between Schedule Table Register and Visual Compliance Timeline View
+function setMaintenanceView(view) {
+    let btnTable = document.getElementById("btnMaintViewTable");
+    let btnTimeline = document.getElementById("btnMaintViewTimeline");
+    let tableView = document.getElementById("maintTableView");
+    let timelineView = document.getElementById("maintTimelineView");
+
+    if (view === "timeline") {
+        if (btnTimeline) btnTimeline.classList.add("active");
+        if (btnTable) btnTable.classList.remove("active");
+        if (timelineView) timelineView.classList.remove("d-none");
+        if (tableView) tableView.classList.add("d-none");
+        renderComplianceTimeline();
+    } else {
+        if (btnTable) btnTable.classList.add("active");
+        if (btnTimeline) btnTimeline.classList.remove("active");
+        if (tableView) tableView.classList.remove("d-none");
+        if (timelineView) timelineView.classList.add("d-none");
+        filterAndRenderTable();
+    }
+}
 
 // Load records from localStorage
 function loadMaintenanceData() {
@@ -58,6 +86,7 @@ function loadMaintenanceData() {
         maintenanceList = [];
     }
     filterAndRenderTable();
+    renderComplianceTimeline();
     updateKpiCards();
     populateFormDropdowns();
 }
@@ -255,6 +284,11 @@ function handleUrlParams() {
             input.value = search;
             filterAndRenderTable();
         }
+    }
+
+    var viewParam = params.get("view");
+    if (viewParam === "timeline") {
+        setMaintenanceView("timeline");
     }
 }
 
@@ -520,5 +554,218 @@ function exportMaintenanceCSV() {
 
     exportTableToCSV("forge_maintenance_schedules_" + new Date().toISOString().split("T")[0] + ".csv", rows);
 }
+
+// ==========================================================================
+// PREVENTIVE MAINTENANCE VISUAL COMPLIANCE TIMELINE (MILESTONE 6)
+// Dynamic Compliance Gauge & 4-Lane Milestone Matrix
+// ==========================================================================
+
+function renderComplianceTimeline() {
+    let timelineContainer = document.getElementById("maintTimelineView");
+    if (!timelineContainer) return;
+
+    let role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+    let isReadOnly = (role === "Operator");
+
+    let laneOverdue = document.getElementById("timelineCardsOverdue");
+    let laneDueWeek = document.getElementById("timelineCardsDueWeek");
+    let laneUpcoming = document.getElementById("timelineCardsUpcoming");
+    let laneCompleted = document.getElementById("timelineCardsCompleted");
+
+    if (laneOverdue) laneOverdue.innerHTML = "";
+    if (laneDueWeek) laneDueWeek.innerHTML = "";
+    if (laneUpcoming) laneUpcoming.innerHTML = "";
+    if (laneCompleted) laneCompleted.innerHTML = "";
+
+    let equipmentList = (typeof getEquipmentList === "function") ? getEquipmentList() : [];
+    let workforce = (typeof getTechniciansList === "function") ? getTechniciansList() : [];
+
+    let now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    let counts = { overdue: 0, dueWeek: 0, upcoming: 0, completed: 0 };
+
+    let query = (document.getElementById("searchInput") ? document.getElementById("searchInput").value : "").toLowerCase().trim();
+    let typeFilter = document.getElementById("typeFilter") ? document.getElementById("typeFilter").value : "All";
+    let statusFilter = document.getElementById("statusFilter") ? document.getElementById("statusFilter").value : "All";
+
+    maintenanceList.forEach(function (m) {
+        let matchesQuery = !query ||
+            m.id.toLowerCase().includes(query) ||
+            m.equipment.toLowerCase().includes(query) ||
+            m.technician.toLowerCase().includes(query);
+        let matchesType = (typeFilter === "All") || (m.type === typeFilter);
+        let matchesStatus = (statusFilter === "All") || (m.status === statusFilter);
+
+        if (!matchesQuery || !matchesType || !matchesStatus) return;
+
+        let schedDate = m.scheduledDate || "";
+        let mDate = new Date(schedDate);
+        mDate.setHours(0, 0, 0, 0);
+        let diffDays = Math.round((mDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        let eqObj = equipmentList.find(function (e) { return e.name === m.equipment || e.id === m.equipmentId; });
+        let eqId = eqObj ? eqObj.id : (m.equipmentId || "ASSET");
+
+        let techObj = workforce.find(function (t) { return t.name === m.technician; });
+        let techSkill = techObj ? techObj.specialization || techObj.skill : "Technician Specialist";
+
+        // Determine destination lane
+        let laneTarget = null;
+        let countdownBadgeHtml = "";
+
+        if (m.status === "Completed") {
+            laneTarget = laneCompleted;
+            counts.completed++;
+            countdownBadgeHtml = '<span class="timeline-countdown-badge countdown-completed">✓ Verified &amp; Closed</span>';
+        } else if (diffDays < 0) {
+            laneTarget = laneOverdue;
+            counts.overdue++;
+            let daysPast = Math.abs(diffDays);
+            countdownBadgeHtml = '<span class="timeline-countdown-badge countdown-overdue">⚠️ Overdue (' + daysPast + 'd past)</span>';
+        } else if (diffDays <= 7) {
+            laneTarget = laneDueWeek;
+            counts.dueWeek++;
+            let dueText = diffDays === 0 ? "⚡ Due Today" : "⏳ Due in " + diffDays + "d";
+            countdownBadgeHtml = '<span class="timeline-countdown-badge countdown-due-soon">' + dueText + '</span>';
+        } else {
+            laneTarget = laneUpcoming;
+            counts.upcoming++;
+            countdownBadgeHtml = '<span class="timeline-countdown-badge countdown-upcoming">📅 In ' + diffDays + 'd</span>';
+        }
+
+        // Quick action button
+        let actionBtnHtml = "";
+        if (!isReadOnly && m.status !== "Completed") {
+            actionBtnHtml = '<button type="button" class="btn-pm-complete" onclick="quickCompleteMaintenance(\'' + escapeHTML(m.id) + '\')">✓ Mark Complete</button>';
+        }
+
+        let editBtnHtml = "";
+        if (!isReadOnly) {
+            editBtnHtml = '<button type="button" class="btn btn-sm btn-outline-secondary font-mono" style="font-size:0.68rem; padding: 2px 6px;" onclick="editMaintenance(\'' + escapeHTML(m.id) + '\')">Edit</button>';
+        }
+
+        let card = document.createElement("div");
+        card.className = "timeline-node-card";
+        card.innerHTML =
+            '<div class="timeline-node-top">' +
+                '<span class="timeline-pm-id">' + escapeHTML(m.id) + '</span>' +
+                countdownBadgeHtml +
+            '</div>' +
+            '<div class="timeline-node-asset">' +
+                '<a href="javascript:void(0)" data-action="view-dossier" data-equipment-id="' + escapeHTML(eqId) + '" title="Open 360° Technical Dossier">' +
+                    escapeHTML(eqId) + ' // ' + escapeHTML(m.equipment) +
+                '</a>' +
+            '</div>' +
+            '<div class="timeline-node-details">' +
+                '<div class="d-flex justify-content-between mb-1">' +
+                    '<span>Procedure: <strong class="text-gold">' + escapeHTML(m.type) + '</strong></span>' +
+                    '<span class="font-mono text-muted">' + escapeHTML(schedDate) + '</span>' +
+                '</div>' +
+                '<div>' +
+                    '<span>Lead: ' + escapeHTML(m.technician) + ' <small class="text-muted">(' + escapeHTML(techSkill) + ')</small></span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="timeline-node-actions">' +
+                '<div>' + editBtnHtml + '</div>' +
+                '<div>' + actionBtnHtml + '</div>' +
+            '</div>';
+
+        if (laneTarget) laneTarget.appendChild(card);
+    });
+
+    // Update counts & compliance index
+    let totalPMs = maintenanceList.length;
+    let complianceRate = 100;
+    if (totalPMs > 0) {
+        complianceRate = Math.max(0, Math.min(100, Math.round(((totalPMs - counts.overdue) / totalPMs) * 100)));
+    }
+
+    let gaugeCircle = document.getElementById("pmGaugeCircle");
+    let gaugeVal = document.getElementById("pmGaugeValue");
+    let gaugeLabel = document.getElementById("pmComplianceLabel");
+
+    if (gaugeCircle) gaugeCircle.style.setProperty("--gauge-percent", complianceRate + "%");
+    if (gaugeVal) gaugeVal.textContent = complianceRate + "%";
+    if (gaugeLabel) {
+        if (complianceRate >= 90) {
+            gaugeLabel.textContent = "Compliant & Healthy";
+            gaugeLabel.className = "text-success font-weight-bold";
+        } else {
+            gaugeLabel.textContent = "Overdue Actions Require Resolution";
+            gaugeLabel.className = "text-danger font-weight-bold";
+        }
+    }
+
+    if (document.getElementById("statOverdueCount")) document.getElementById("statOverdueCount").textContent = counts.overdue;
+    if (document.getElementById("statDueWeekCount")) document.getElementById("statDueWeekCount").textContent = counts.dueWeek;
+    if (document.getElementById("statUpcomingCount")) document.getElementById("statUpcomingCount").textContent = counts.upcoming;
+    if (document.getElementById("statVerifiedCount")) document.getElementById("statVerifiedCount").textContent = counts.completed;
+
+    if (document.getElementById("laneCountOverdue")) document.getElementById("laneCountOverdue").textContent = counts.overdue;
+    if (document.getElementById("laneCountDueWeek")) document.getElementById("laneCountDueWeek").textContent = counts.dueWeek;
+    if (document.getElementById("laneCountUpcoming")) document.getElementById("laneCountUpcoming").textContent = counts.upcoming;
+    if (document.getElementById("laneCountCompleted")) document.getElementById("laneCountCompleted").textContent = counts.completed;
+
+    // Empty states
+    if (laneOverdue && counts.overdue === 0) laneOverdue.innerHTML = '<div class="bay-empty-placeholder">NO OVERDUE SCHEDULES</div>';
+    if (laneDueWeek && counts.dueWeek === 0) laneDueWeek.innerHTML = '<div class="bay-empty-placeholder">NO SCHEDULES DUE THIS WEEK</div>';
+    if (laneUpcoming && counts.upcoming === 0) laneUpcoming.innerHTML = '<div class="bay-empty-placeholder">NO FUTURE SCHEDULES PENDING</div>';
+    if (laneCompleted && counts.completed === 0) laneCompleted.innerHTML = '<div class="bay-empty-placeholder">NO COMPLETED LOGS IN PERIOD</div>';
+}
+
+function quickCompleteMaintenance(id) {
+    let role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
+    if (role === "Operator") {
+        showAlert("Operator role cannot execute or verify preventive maintenance.", "warning");
+        return;
+    }
+
+    let mIndex = maintenanceList.findIndex(function (item) { return item.id === id; });
+    if (mIndex === -1) return;
+
+    let m = maintenanceList[mIndex];
+    m.status = "Completed";
+
+    let today = new Date();
+    let todayStr = today.toISOString().split("T")[0];
+
+    // Compute next maintenance date (+30 days)
+    let nextDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    // Synchronize equipment register
+    let eqList = (typeof getEquipmentList === "function") ? getEquipmentList() : [];
+    let eqTarget = eqList.find(function (e) { return e.name === m.equipment || e.id === m.equipmentId; });
+    if (eqTarget) {
+        eqTarget.lastMaintenance = todayStr;
+        eqTarget.lastMaintenanceDate = todayStr;
+        eqTarget.nextMaintenance = nextDate;
+        if (eqTarget.status === "Maintenance") {
+            eqTarget.status = "Operational";
+        }
+        localStorage.setItem("forge_equipment", JSON.stringify(eqList));
+        localStorage.setItem("iemrs_equipment", JSON.stringify(eqList));
+        if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+            ForgeSync.broadcast("equipment", "UPDATE", eqTarget);
+        }
+    }
+
+    localStorage.setItem("forge_maintenance", JSON.stringify(maintenanceList));
+    localStorage.setItem("iemrs_maintenance", JSON.stringify(maintenanceList));
+
+    if (typeof logActivity === "function") {
+        logActivity(m.equipment, "PM Log " + m.id + " completed & verified for " + m.equipment, "badge-completed");
+    }
+
+    if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
+        ForgeSync.broadcast("maintenance", "UPDATE", m);
+    }
+
+    showAlert("✓ Preventive maintenance " + m.id + " successfully completed and verified.", "success");
+    filterAndRenderTable();
+    renderComplianceTimeline();
+    updateKpiCards();
+}
+
 
 

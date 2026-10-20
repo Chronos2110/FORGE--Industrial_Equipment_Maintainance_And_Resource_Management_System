@@ -158,9 +158,18 @@
                     </div>
                 </div>
 
-                <!-- Action Toolbar: Search, Filters, Add Button -->
+                <!-- Action Toolbar: Search, Filters, Add Button & View Switcher -->
                 <div class="action-toolbar">
                     <div class="search-filter-group">
+                        <!-- Segmented View Switcher: Schedule Table vs Compliance Timeline -->
+                        <div class="view-segmented-switcher me-2" id="maintenanceViewSwitcher" role="group" aria-label="Maintenance Display View Mode">
+                            <button type="button" class="view-btn active" id="btnMaintViewTable" data-view="table">
+                                <span aria-hidden="true">☰</span> Schedule Table
+                            </button>
+                            <button type="button" class="view-btn" id="btnMaintViewTimeline" data-view="timeline">
+                                <span aria-hidden="true">📅</span> Compliance Timeline
+                            </button>
+                        </div>
                         <input type="text" id="searchInput" class="search-input" placeholder="Search by ID, Equipment, or Technician...">
                         <select id="typeFilter" class="filter-select">
                             <option value="All">All Types</option>
@@ -188,37 +197,137 @@
                     </div>
                 </div>
 
-                <!-- Main Section: Maintenance Table -->
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h4>Maintenance Schedules & Execution Logs</h4>
-                        <span class="badge bg-secondary font-mono" id="recordsCount">0 Records</span>
-                    </div>
+                <!-- VIEW 1: Maintenance Schedule Table Register -->
+                <div id="maintTableView" class="maint-view-mode">
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h4>Maintenance Schedules & Execution Logs</h4>
+                            <span class="badge bg-secondary font-mono" id="recordsCount">0 Records</span>
+                        </div>
 
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Log ID</th>
-                                    <th>Equipment</th>
-                                    <th>Type</th>
-                                    <th>Technician</th>
-                                    <th>Scheduled Date</th>
-                                    <th>Status</th>
-                                    <th class="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="maintenanceTableBody">
-                                <!-- Populated dynamically by maintenance.js -->
-                            </tbody>
-                        </table>
-                    </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Log ID</th>
+                                        <th>Equipment</th>
+                                        <th>Type</th>
+                                        <th>Technician</th>
+                                        <th>Scheduled Date</th>
+                                        <th>Status</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="maintenanceTableBody">
+                                    <!-- Populated dynamically by maintenance.js -->
+                                </tbody>
+                            </table>
+                        </div>
 
-                    <!-- Empty State for Searches / No Data -->
-                    <div id="maintenanceEmptyState" class="empty-state d-none">
-                        <div class="empty-state-icon">📋</div>
-                        <h5>No Maintenance Records Found</h5>
-                        <p>No records match your search filter criteria. Try adjusting or resetting filters.</p>
+                        <!-- Empty State for Searches / No Data -->
+                        <div id="maintenanceEmptyState" class="empty-state d-none">
+                            <div class="empty-state-icon">📋</div>
+                            <h5>No Maintenance Records Found</h5>
+                            <p>No records match your search filter criteria. Try adjusting or resetting filters.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: Visual PM Compliance Timeline & Matrix (Milestone 6) -->
+                <div id="maintTimelineView" class="maint-view-mode d-none">
+                    <div class="timeline-matrix-container mb-4">
+                        <!-- PM Compliance Score & Metrics Banner -->
+                        <div class="pm-compliance-banner" id="pmComplianceBanner">
+                            <div class="pm-gauge-box">
+                                <div class="pm-gauge-circle" id="pmGaugeCircle" style="--gauge-percent: 92%;">
+                                    <div class="pm-gauge-circle-inner">
+                                        <span class="pm-gauge-val" id="pmGaugeValue">92%</span>
+                                        <span class="pm-gauge-unit font-mono">RATE</span>
+                                    </div>
+                                </div>
+                                <div class="pm-gauge-text">
+                                    <h4>PM Compliance Index</h4>
+                                    <p>ISO-55000 Target: &ge;90% &bull; <span id="pmComplianceLabel" class="text-success font-weight-bold">Compliant &amp; Healthy</span></p>
+                                </div>
+                            </div>
+                            <div class="pm-stats-strip">
+                                <div class="pm-stat-box">
+                                    <div class="pm-stat-num text-danger" id="statOverdueCount">0</div>
+                                    <div class="pm-stat-lbl">Overdue Critical</div>
+                                </div>
+                                <div class="pm-stat-box">
+                                    <div class="pm-stat-num text-warning" id="statDueWeekCount">0</div>
+                                    <div class="pm-stat-lbl">Due This Week</div>
+                                </div>
+                                <div class="pm-stat-box">
+                                    <div class="pm-stat-num text-primary" id="statUpcomingCount">0</div>
+                                    <div class="pm-stat-lbl">Upcoming Schedule</div>
+                                </div>
+                                <div class="pm-stat-box">
+                                    <div class="pm-stat-num text-success" id="statVerifiedCount">0</div>
+                                    <div class="pm-stat-lbl">Completed &amp; Verified</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4 Timeline Lanes Matrix -->
+                        <div class="timeline-lanes-matrix">
+                            <!-- Lane 1: Overdue / Critical -->
+                            <div class="timeline-lane" id="laneOverdue">
+                                <div class="timeline-lane-header lane-header-critical">
+                                    <div class="timeline-lane-title">
+                                        <span class="node-led-dot led-faulty"></span>
+                                        <span>Overdue / Critical</span>
+                                    </div>
+                                    <span class="badge bg-danger font-mono" id="laneCountOverdue">0</span>
+                                </div>
+                                <div class="timeline-lane-cards" id="timelineCardsOverdue">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Lane 2: Due This Week -->
+                            <div class="timeline-lane" id="laneDueWeek">
+                                <div class="timeline-lane-header lane-header-thisweek">
+                                    <div class="timeline-lane-title">
+                                        <span class="node-led-dot led-maintenance"></span>
+                                        <span>Due This Week</span>
+                                    </div>
+                                    <span class="badge bg-warning font-mono text-dark" id="laneCountDueWeek">0</span>
+                                </div>
+                                <div class="timeline-lane-cards" id="timelineCardsDueWeek">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Lane 3: Upcoming Schedule -->
+                            <div class="timeline-lane" id="laneUpcoming">
+                                <div class="timeline-lane-header lane-header-upcoming">
+                                    <div class="timeline-lane-title">
+                                        <span class="node-led-dot" style="background:#3b82f6;"></span>
+                                        <span>Upcoming Schedule</span>
+                                    </div>
+                                    <span class="badge bg-primary font-mono" id="laneCountUpcoming">0</span>
+                                </div>
+                                <div class="timeline-lane-cards" id="timelineCardsUpcoming">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Lane 4: Completed / Verified -->
+                            <div class="timeline-lane" id="laneCompleted">
+                                <div class="timeline-lane-header lane-header-completed">
+                                    <div class="timeline-lane-title">
+                                        <span class="node-led-dot led-operational"></span>
+                                        <span>Completed / Verified</span>
+                                    </div>
+                                    <span class="badge bg-success font-mono" id="laneCountCompleted">0</span>
+                                </div>
+                                <div class="timeline-lane-cards" id="timelineCardsCompleted">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

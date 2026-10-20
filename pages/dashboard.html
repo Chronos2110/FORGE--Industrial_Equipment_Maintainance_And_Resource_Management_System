@@ -137,6 +137,20 @@
                     </div>
                 </div>
 
+                <!-- Interactive 2D Plant Floor Schematic & Bay Telemetry Map (Milestone 6) -->
+                <div class="dashboard-section mb-4">
+                    <div class="section-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <h4>Plant Floor Spatial Schematic &amp; Bay Telemetry</h4>
+                            <span class="badge bg-secondary font-mono" style="font-size:0.7rem;">SCADA 2D GRID</span>
+                        </div>
+                        <a href="equipment.html?view=schematic" class="btn btn-sm btn-outline-primary">Full Schematic Console &rarr;</a>
+                    </div>
+                    <div class="schematic-blueprint" id="adminFloorSchematicContainer">
+                        <!-- Populated dynamically by ForgeFloorSchematic -->
+                    </div>
+                </div>
+
                 <!-- Section 1: UPCOMING MAINTENANCE -->
                 <div class="dashboard-section mb-4">
                     <div class="section-header">
@@ -377,20 +391,17 @@
                         <button type="button" class="btn btn-primary" onclick="openQuickFaultModal()">&plus; Report Fault</button>
                     </div>
 
-                    <!-- Plant Floor Machine Status Grid -->
+                    <!-- Plant Floor Machine Status Grid & Schematic Blueprint -->
                     <div class="dashboard-section mb-4">
                         <div class="section-header">
-                            <h4>Plant Floor Machine Status</h4>
-                            <a href="equipment.html" class="btn btn-sm btn-outline-primary">Asset Registry &rarr;</a>
-                        </div>
-                        <div class="row g-3" id="operatorMachineGrid">
-                            <div class="col-12">
-                                <div class="empty-state">
-                                    <div class="empty-state-icon">🏭</div>
-                                    <h5>No Equipment Registered</h5>
-                                    <p>Equipment records will appear here once added.</p>
-                                </div>
+                            <div>
+                                <h4 class="mb-0">Plant Floor Machine Telemetry</h4>
+                                <span class="font-mono text-muted small" style="font-size: 0.72rem;">SCADA 2D Spatial Layout // Click any node for 360° Technical Dossier</span>
                             </div>
+                            <a href="equipment.html?view=schematic" class="btn btn-sm btn-outline-primary">Asset Registry &rarr;</a>
+                        </div>
+                        <div class="schematic-blueprint" id="operatorFloorSchematicContainer">
+                            <!-- Populated dynamically by ForgeFloorSchematic -->
                         </div>
                     </div>
 

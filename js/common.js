@@ -3898,5 +3898,247 @@ function openPersonnelProfileModal() {
     bsModal.show();
 }
 
+// ==========================================================================
+// FORGE FLOOR SCHEMATIC ENGINE (MILESTONE 6)
+// Interactive 2D Plant Floor Schematic Blueprint & Bay Telemetry Map
+// ==========================================================================
+var ForgeFloorSchematic = (function () {
+    var BAYS_DEF = [
+        {
+            id: "Bay 01",
+            name: "Machining Complex",
+            coord: "SEC A-01 // LAT 18.5204° N, 73.8567° E",
+            temp: "23.4°C",
+            humidity: "44% RH",
+            vibration: "0.02 mm/s",
+            power: "142 kW"
+        },
+        {
+            id: "Bay 02",
+            name: "Heavy Press & Forming",
+            coord: "SEC A-02 // LAT 18.5209° N, 73.8572° E",
+            temp: "25.8°C",
+            humidity: "48% RH",
+            vibration: "0.05 mm/s",
+            power: "310 kW"
+        },
+        {
+            id: "Bay 03",
+            name: "Fluid & Pneumatics",
+            coord: "SEC B-01 // LAT 18.5215° N, 73.8578° E",
+            temp: "22.1°C",
+            humidity: "51% RH",
+            vibration: "0.03 mm/s",
+            power: "185 kW"
+        },
+        {
+            id: "Bay 04",
+            name: "Assembly Lines 1 & 2",
+            coord: "SEC B-02 // LAT 18.5220° N, 73.8584° E",
+            temp: "24.0°C",
+            humidity: "46% RH",
+            vibration: "0.01 mm/s",
+            power: "95 kW"
+        },
+        {
+            id: "Bay 05",
+            name: "Quality & Metrology",
+            coord: "SEC C-01 // LAT 18.5226° N, 73.8590° E",
+            temp: "21.0°C",
+            humidity: "42% RH",
+            vibration: "0.005 mm/s",
+            power: "45 kW"
+        },
+        {
+            id: "Bay 06",
+            name: "Utilities & Powerhouse",
+            coord: "SEC C-02 // LAT 18.5231° N, 73.8596° E",
+            temp: "27.5°C",
+            humidity: "53% RH",
+            vibration: "0.04 mm/s",
+            power: "580 kW"
+        }
+    ];
+
+    function mapEquipmentToBay(eq) {
+        if (eq.bay) return eq.bay;
+        var name = (eq.name || "").toLowerCase();
+        var type = (eq.type || "").toLowerCase();
+        var loc = (eq.location || "").toLowerCase();
+
+        if (name.includes("cnc") || type.includes("cnc") || name.includes("lathe") || type.includes("lathe") || loc.includes("machin") || loc.includes("production floor")) {
+            return "Bay 01";
+        }
+        if (name.includes("press") || type.includes("press") || loc.includes("workshop a") || loc.includes("forming")) {
+            return "Bay 02";
+        }
+        if (name.includes("compressor") || type.includes("compressor") || name.includes("pump") || type.includes("pump") || loc.includes("cooling") || loc.includes("utility area")) {
+            return "Bay 03";
+        }
+        if (name.includes("conveyor") || type.includes("conveyor") || name.includes("assembly") || loc.includes("assembly")) {
+            return "Bay 04";
+        }
+        if (name.includes("inspection") || name.includes("cmm") || name.includes("metrology") || loc.includes("quality")) {
+            return "Bay 05";
+        }
+        if (name.includes("generator") || type.includes("generator") || loc.includes("powerhouse") || loc.includes("power")) {
+            return "Bay 06";
+        }
+        var num = parseInt((eq.id || "").replace(/\D/g, ""), 10) || 1;
+        var bayIdx = ((num - 1) % 6) + 1;
+        return "Bay 0" + bayIdx;
+    }
+
+    function render(containerId, activeFilter) {
+        var container = document.getElementById(containerId);
+        if (!container) return;
+        activeFilter = activeFilter || "All";
+
+        var equipment = (typeof getEquipmentList === "function") ? getEquipmentList() : [];
+        var workorders = (typeof getWorkOrdersList === "function") ? getWorkOrdersList() : [];
+
+        // Build bay map
+        var bayMap = {};
+        BAYS_DEF.forEach(function (b) { bayMap[b.id] = []; });
+
+        equipment.forEach(function (eq) {
+            var isFault = (eq.status === "Faulty");
+            var isMaint = (eq.status === "Maintenance");
+            var isNominal = (eq.status === "Operational");
+
+            if (activeFilter === "Faulty" && !isFault) return;
+            if (activeFilter === "Maintenance" && !isMaint) return;
+            if (activeFilter === "Nominal" && !isNominal) return;
+
+            var bayId = mapEquipmentToBay(eq);
+            if (!bayMap[bayId]) bayMap[bayId] = [];
+            bayMap[bayId].push(eq);
+        });
+
+        // Compute overall counts for filter badges
+        var totalCount = equipment.length;
+        var faultCount = equipment.filter(function (e) { return e.status === "Faulty"; }).length;
+        var maintCount = equipment.filter(function (e) { return e.status === "Maintenance"; }).length;
+        var nominalCount = equipment.filter(function (e) { return e.status === "Operational"; }).length;
+
+        var headerHtml =
+            '<div class="schematic-header-bar">' +
+                '<div>' +
+                    '<div class="schematic-meta-tag mb-1">PLANT SPATIAL BLUEPRINT // SCADA 2D GRID // ISO-55000</div>' +
+                    '<h5 class="mb-0 font-weight-bold" style="font-size:0.95rem; color:var(--text-primary);">' +
+                        'FACILITY TELEMETRY: BAYS 01 &mdash; 06' +
+                    '</h5>' +
+                '</div>' +
+                '<div class="schematic-filter-pills" role="radiogroup" aria-label="Schematic Telemetry Filter">' +
+                    '<button type="button" class="filter-pill ' + (activeFilter === "All" ? "active" : "") + '" data-filter="All">All Bays (' + totalCount + ')</button>' +
+                    '<button type="button" class="filter-pill ' + (activeFilter === "Faulty" ? "active" : "") + '" data-filter="Faulty">Active Faults (' + faultCount + ')</button>' +
+                    '<button type="button" class="filter-pill ' + (activeFilter === "Maintenance" ? "active" : "") + '" data-filter="Maintenance">Under Maintenance (' + maintCount + ')</button>' +
+                    '<button type="button" class="filter-pill ' + (activeFilter === "Nominal" ? "active" : "") + '" data-filter="Nominal">Nominal (' + nominalCount + ')</button>' +
+                '</div>' +
+            '</div>';
+
+        var baysHtml = '<div class="bays-spatial-grid">';
+
+        BAYS_DEF.forEach(function (b) {
+            var machines = bayMap[b.id] || [];
+            var activeMachinesCount = machines.filter(function (m) { return m.status === "Operational"; }).length;
+
+            var machinesListHtml = '';
+            if (machines.length === 0) {
+                machinesListHtml = '<div class="bay-empty-placeholder">NO MATCHING ASSETS IN ' + b.id + '</div>';
+            } else {
+                machines.forEach(function (eq) {
+                    var isOp = (eq.status === "Operational");
+                    var isMaint = (eq.status === "Maintenance");
+                    var isFault = (eq.status === "Faulty");
+
+                    var ledClass = isOp ? "led-operational" : (isMaint ? "led-maintenance" : "led-faulty");
+                    var statusBadgeClass = isOp ? "status-badge-op" : (isMaint ? "status-badge-maint" : "status-badge-fault");
+                    var healthFillClass = isOp ? "health-fill-op" : (isMaint ? "health-fill-maint" : "health-fill-fault");
+                    var healthPct = isOp ? 96 : (isMaint ? 64 : 18);
+                    if (eq.health) healthPct = Number(eq.health);
+
+                    // Check for attached open Work Order
+                    var attachedWO = workorders.find(function (w) {
+                        return (w.equipment === eq.name || w.equipmentId === eq.id) && w.status !== "Completed" && w.status !== "Cancelled";
+                    });
+
+                    var alertHtml = '';
+                    if (attachedWO) {
+                        alertHtml = '<div class="node-active-wo" title="Work order ' + escapeHTML(attachedWO.id) + ' is in state ' + escapeHTML(attachedWO.status) + '">📋 ' + escapeHTML(attachedWO.id) + ' [' + escapeHTML(attachedWO.status) + ']</div>';
+                    } else if (isFault) {
+                        alertHtml = '<div class="node-active-alert" title="Machine requires immediate overhaul">⚡ FAULT REPORTED</div>';
+                    }
+
+                    machinesListHtml +=
+                        '<div class="machine-node-card" data-action="view-dossier" data-equipment-id="' + escapeHTML(eq.id) + '" title="Click to open 360° Technical Dossier for ' + escapeHTML(eq.name) + '">' +
+                            '<div class="node-top-row">' +
+                                '<div class="node-id-group">' +
+                                    '<span class="node-led-dot ' + ledClass + '"></span>' +
+                                    '<span class="node-eq-id">' + escapeHTML(eq.id) + '</span>' +
+                                '</div>' +
+                                '<span class="node-status-badge ' + statusBadgeClass + '">' + escapeHTML(eq.status) + '</span>' +
+                            '</div>' +
+                            '<div class="node-eq-name mb-1">' + escapeHTML(eq.name) + '</div>' +
+                            '<div class="node-middle-row">' +
+                                '<span>' + escapeHTML(eq.type || "Machinery") + '</span>' +
+                                '<span class="font-mono text-gold" style="font-size:0.65rem;">Dossier ↗</span>' +
+                            '</div>' +
+                            '<div class="node-health-wrapper">' +
+                                '<div class="node-health-meta">' +
+                                    '<span>HEALTH STATUS</span>' +
+                                    '<span class="font-weight-bold">' + healthPct + '%</span>' +
+                                '</div>' +
+                                '<div class="node-health-bar">' +
+                                    '<div class="node-health-fill ' + healthFillClass + '" style="width: ' + healthPct + '%;"></div>' +
+                                '</div>' +
+                            '</div>' +
+                            alertHtml +
+                        '</div>';
+                });
+            }
+
+            baysHtml +=
+                '<div class="plant-bay-card">' +
+                    '<div class="bay-card-header">' +
+                        '<div>' +
+                            '<span class="bay-id-badge">' + b.id + '</span>' +
+                            '<span class="bay-name">' + b.name + '</span>' +
+                        '</div>' +
+                        '<div class="bay-coord">' + b.coord.split("//")[0].trim() + '</div>' +
+                    '</div>' +
+                    '<div class="bay-env-readout-bar">' +
+                        '<div class="env-item">TEMP<span>' + b.temp + '</span></div>' +
+                        '<div class="env-item">HUMID<span>' + b.humidity + '</span></div>' +
+                        '<div class="env-item">VIB<span>' + b.vibration + '</span></div>' +
+                        '<div class="env-item">ACTIVE<span>' + activeMachinesCount + '/' + machines.length + '</span></div>' +
+                    '</div>' +
+                    '<div class="bay-machines-container">' +
+                        machinesListHtml +
+                    '</div>' +
+                '</div>';
+        });
+
+        baysHtml += '</div>';
+
+        container.innerHTML = headerHtml + baysHtml;
+
+        // Wire filter pills
+        container.querySelectorAll(".schematic-filter-pills .filter-pill").forEach(function (pill) {
+            pill.addEventListener("click", function () {
+                var f = this.getAttribute("data-filter");
+                render(containerId, f);
+            });
+        });
+    }
+
+    return {
+        render: render,
+        getBays: function () { return BAYS_DEF; },
+        mapEquipmentToBay: mapEquipmentToBay
+    };
+})();
+
+
 
 

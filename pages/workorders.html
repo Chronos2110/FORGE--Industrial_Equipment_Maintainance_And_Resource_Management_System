@@ -103,9 +103,18 @@
                     </div>
                 </div>
 
-                <!-- Action Toolbar: Search, Filters, Add Button -->
+                <!-- Action Toolbar: Search, Filters, Add Button & View Switcher -->
                 <div class="action-toolbar">
                     <div class="search-filter-group">
+                        <!-- Segmented View Switcher: Table Register vs Kanban Board -->
+                        <div class="view-segmented-switcher me-2" id="workOrdersViewSwitcher" role="group" aria-label="Work Orders Display View Mode">
+                            <button type="button" class="view-btn active" id="btnWoViewTable" data-view="table">
+                                <span aria-hidden="true">☰</span> Table Register
+                            </button>
+                            <button type="button" class="view-btn" id="btnWoViewKanban" data-view="kanban">
+                                <span aria-hidden="true">⊞</span> Kanban Board
+                            </button>
+                        </div>
                         <input type="text" id="searchInput" class="search-input" placeholder="Search by Order ID, Asset, Fault description, or Technician...">
                         <select id="priorityFilter" class="filter-select">
                             <option value="All">All Priorities</option>
@@ -134,38 +143,111 @@
                     </div>
                 </div>
 
-                <!-- Main Section: Work Orders Dispatch Table -->
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h4>Active Maintenance Dispatch Roster</h4>
-                        <span class="badge bg-secondary font-mono" id="recordsCount">0 Orders</span>
-                    </div>
+                <!-- VIEW 1: Work Orders Dispatch Table Register -->
+                <div id="woTableView" class="wo-view-mode">
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h4>Active Maintenance Dispatch Roster</h4>
+                            <span class="badge bg-secondary font-mono" id="recordsCount">0 Orders</span>
+                        </div>
 
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Work Order ID</th>
-                                    <th>Equipment</th>
-                                    <th>Problem Description</th>
-                                    <th>Technician</th>
-                                    <th>Priority</th>
-                                    <th>Date</th>
-                                    <th>Status</th>
-                                    <th class="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="workordersTableBody">
-                                <!-- Populated dynamically by workorders.js -->
-                            </tbody>
-                        </table>
-                    </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Work Order ID</th>
+                                        <th>Equipment</th>
+                                        <th>Problem Description</th>
+                                        <th>Technician</th>
+                                        <th>Priority</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="workordersTableBody">
+                                    <!-- Populated dynamically by workorders.js -->
+                                </tbody>
+                            </table>
+                        </div>
 
-                    <!-- Empty State for Searches / No Data -->
-                    <div id="workordersEmptyState" class="empty-state d-none">
-                        <div class="empty-state-icon">📋</div>
-                        <h5>No Work Orders Found</h5>
-                        <p>No work orders match your search filter criteria. Try adjusting or resetting filters.</p>
+                        <!-- Empty State for Searches / No Data -->
+                        <div id="workordersEmptyState" class="empty-state d-none">
+                            <div class="empty-state-icon">📋</div>
+                            <h5>No Work Orders Found</h5>
+                            <p>No work orders match your search filter criteria. Try adjusting or resetting filters.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: Interactive Work Order Kanban Board (Milestone 6) -->
+                <div id="woKanbanView" class="wo-view-mode d-none">
+                    <div class="kanban-board-container mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <h4 class="mb-0">Dispatch Workflow Kanban</h4>
+                                <span class="badge bg-secondary font-mono" style="font-size:0.7rem;">HTML5 DRAG &amp; DROP</span>
+                            </div>
+                            <span id="kanbanRoleNotice" class="font-mono text-muted small" style="font-size: 0.72rem;">Drag cards between stages to dispatch &amp; complete work orders</span>
+                        </div>
+
+                        <div class="kanban-board-wrapper" id="workOrdersKanbanWrapper">
+                            <!-- Column 1: Pending / Open -->
+                            <div class="kanban-column" data-stage="Pending">
+                                <div class="kanban-column-header col-header-open">
+                                    <div class="kanban-col-title">
+                                        <span class="status-indicator-dot" style="background:#6b7280;"></span>
+                                        <span>Pending / Open</span>
+                                    </div>
+                                    <span class="kanban-col-count" id="kanbanCountPending">0</span>
+                                </div>
+                                <div class="kanban-cards-area" id="kanbanCardsPending" data-stage="Pending">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Column 2: Assigned -->
+                            <div class="kanban-column" data-stage="Assigned">
+                                <div class="kanban-column-header col-header-assigned">
+                                    <div class="kanban-col-title">
+                                        <span class="status-indicator-dot" style="background:#3b82f6;"></span>
+                                        <span>Assigned</span>
+                                    </div>
+                                    <span class="kanban-col-count" id="kanbanCountAssigned">0</span>
+                                </div>
+                                <div class="kanban-cards-area" id="kanbanCardsAssigned" data-stage="Assigned">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Column 3: In Progress -->
+                            <div class="kanban-column" data-stage="In Progress">
+                                <div class="kanban-column-header col-header-progress">
+                                    <div class="kanban-col-title">
+                                        <span class="status-indicator-dot" style="background:#f59e0b;"></span>
+                                        <span>In Progress</span>
+                                    </div>
+                                    <span class="kanban-col-count" id="kanbanCountInProgress">0</span>
+                                </div>
+                                <div class="kanban-cards-area" id="kanbanCardsInProgress" data-stage="In Progress">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Column 4: Completed -->
+                            <div class="kanban-column" data-stage="Completed">
+                                <div class="kanban-column-header col-header-completed">
+                                    <div class="kanban-col-title">
+                                        <span class="status-indicator-dot" style="background:#10b981;"></span>
+                                        <span>Completed</span>
+                                    </div>
+                                    <span class="kanban-col-count" id="kanbanCountCompleted">0</span>
+                                </div>
+                                <div class="kanban-cards-area" id="kanbanCardsCompleted" data-stage="Completed">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

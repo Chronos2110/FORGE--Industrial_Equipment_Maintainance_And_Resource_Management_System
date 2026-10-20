@@ -103,9 +103,18 @@
                     </div>
                 </div>
 
-                <!-- Action Toolbar: Clean Rectangular Search, Filter, Add Button -->
+                <!-- Action Toolbar: Clean Rectangular Search, Filter, Add Button & View Switcher -->
                 <div class="action-toolbar">
                     <div class="search-filter-group">
+                        <!-- Segmented View Switcher -->
+                        <div class="view-segmented-switcher me-2" id="equipmentViewSwitcher" role="group" aria-label="Equipment Display View Mode">
+                            <button type="button" class="view-btn active" id="btnEquipmentViewTable" data-view="table">
+                                <span aria-hidden="true">☰</span> Register Table
+                            </button>
+                            <button type="button" class="view-btn" id="btnEquipmentViewSchematic" data-view="schematic">
+                                <span aria-hidden="true">⊞</span> Live Floor Schematic
+                            </button>
+                        </div>
                         <input type="text" id="searchInput" class="search-input" placeholder="Search by ID, Name, Type, or Location...">
                         <select id="statusFilter" class="filter-select">
                             <option value="All">All Status</option>
@@ -125,38 +134,47 @@
                     </div>
                 </div>
 
-                <!-- Main Section: Equipment Table -->
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h4>Plant Machinery Master Register</h4>
-                        <span class="badge bg-secondary font-mono" id="recordsCount">0 Records</span>
-                    </div>
+                <!-- VIEW 1: Main Section - Equipment Table Register -->
+                <div id="equipmentTableView" class="equipment-view-mode">
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h4>Plant Machinery Master Register</h4>
+                            <span class="badge bg-secondary font-mono" id="recordsCount">0 Records</span>
+                        </div>
 
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Asset ID</th>
-                                    <th>Equipment Name</th>
-                                    <th>Machine Type</th>
-                                    <th>Location</th>
-                                    <th>Status</th>
-                                    <th>Last Maintenance</th>
-                                    <th>Next Maintenance</th>
-                                    <th class="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="equipmentTableBody">
-                                <!-- Populated dynamically by equipment.js -->
-                            </tbody>
-                        </table>
-                    </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Asset ID</th>
+                                        <th>Equipment Name</th>
+                                        <th>Machine Type</th>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                        <th>Last Maintenance</th>
+                                        <th>Next Maintenance</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="equipmentTableBody">
+                                    <!-- Populated dynamically by equipment.js -->
+                                </tbody>
+                            </table>
+                        </div>
 
-                    <!-- Empty State for Searches / No Data -->
-                    <div id="equipmentEmptyState" class="empty-state d-none">
-                        <div class="empty-state-icon">⚙️</div>
-                        <h5>No Equipment Found</h5>
-                        <p>No machinery matches your search query or filter criteria. Try resetting filters.</p>
+                        <!-- Empty State for Searches / No Data -->
+                        <div id="equipmentEmptyState" class="empty-state d-none">
+                            <div class="empty-state-icon">⚙️</div>
+                            <h5>No Equipment Found</h5>
+                            <p>No machinery matches your search query or filter criteria. Try resetting filters.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: 2D Plant Floor Schematic Blueprint & Bay Telemetry Map -->
+                <div id="equipmentSchematicView" class="equipment-view-mode d-none">
+                    <div class="schematic-blueprint" id="equipmentFloorSchematicContainer">
+                        <!-- Populated dynamically by ForgeFloorSchematic -->
                     </div>
                 </div>
 

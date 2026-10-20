@@ -39,6 +39,9 @@ function refreshDashboard() {
     if (role === "Administrator") {
         loadAdminExceptions();
         loadAdminMetrics();
+        if (typeof ForgeFloorSchematic !== "undefined") {
+            ForgeFloorSchematic.render("adminFloorSchematicContainer");
+        }
         loadUpcomingMaintenance();
         loadOpenWorkOrders();
         loadInventoryAlerts();
@@ -51,6 +54,9 @@ function refreshDashboard() {
 
     } else if (role === "Operator") {
         loadOperatorDashboard();
+        if (typeof ForgeFloorSchematic !== "undefined") {
+            ForgeFloorSchematic.render("operatorFloorSchematicContainer");
+        }
         applyRolePermissions();
     }
 }
