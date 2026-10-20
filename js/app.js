@@ -98,11 +98,21 @@ document.addEventListener("DOMContentLoaded", function () {
                 window.location.href = "pages/dashboard.html";
             }, 400);
         } catch (err) {
-            console.error("Login request error:", err);
+            console.warn("Backend server offline, activating offline fallback:", err.message);
             if (messageEl) {
-                messageEl.textContent = "Cannot reach the FORGE server on port 5000. Run npm start, then try again.";
-                messageEl.style.color = "#e74c3c";
+                messageEl.textContent = "Live backend offline. Entering in Offline Demo Mode...";
+                messageEl.style.color = "#d97706";
             }
+            sessionStorage.setItem("forge_role", role);
+            sessionStorage.setItem("iemrs_role", role);
+            sessionStorage.setItem("forge_user", JSON.stringify({
+                name: username,
+                email: (username.includes('@') ? username : username + '@forge.industrial'),
+                role: role
+            }));
+            setTimeout(function () {
+                window.location.href = "pages/dashboard.html";
+            }, 500);
         }
     });
 });
