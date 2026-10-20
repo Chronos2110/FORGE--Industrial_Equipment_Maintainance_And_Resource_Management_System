@@ -1,0 +1,158 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. users: id (UUID), name, email (Unique), password_hash, role (ADMIN, TECHNICIAN, OPERATOR), bay_assignment, status (ACTIVE, OFF_SHIFT)
+model User {
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  password_hash  String
+  role           String   // ADMIN, TECHNICIAN, OPERATOR
+  bay_assignment String?
+  status         String   @default("ACTIVE") // ACTIVE, OFF_SHIFT
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  technician_profile    TechnicianProfile?
+  assigned_work_orders  WorkOrder[]           @relation("AssignedTech")
+  created_work_orders   WorkOrder[]           @relation("CreatedByUser")
+  reported_faults       FaultReport[]         @relation("ReportedByUser")
+  maintenance_schedules MaintenanceSchedule[] @relation("AssignedMaintenanceTech")
+
+  @@map("users")
+}
+
+// 2. technician_profiles: id (UUID), user_id references users(id) (One-to-One), specialization, max_concurrent_wos (Int), active_wo_count (Int)
+model TechnicianProfile {
+  id                 String   @id @default(uuid())
+  user_id            String   @unique
+  user               User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  specialization     String   // MECHANICAL, ELECTRICAL, PLC_AUTOMATION, HYDRAULICS, etc.
+  max_concurrent_wos Int      @default(3)
+  active_wo_count    Int      @default(0)
+
+  @@map("technician_profiles")
+}
+
+// 3. equipment: id (String, e.g. EQ-101), name, category, bay_location, status (OPERATIONAL, MAINTENANCE, WARNING, DOWN), health_score (Int), last_serviced_at
+model Equipment {
+  id               String    @id
+  name             String
+  category         String
+  bay_location     String
+  status           String    @default("OPERATIONAL") // OPERATIONAL, MAINTENANCE, WARNING, DOWN
+  health_score     Int       @default(100)
+  last_serviced_at DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  work_orders           WorkOrder[]
+  maintenance_schedules MaintenanceSchedule[]
+  fault_reports         FaultReport[]
+
+  @@index([status])
+  @@index([bay_location])
+  @@map("equipment")
+}
+
+// 4. inventory_parts: id (String, e.g. SKU-402), name, category, quantity_on_hand (Int), min_threshold (Int), unit_cost (Float), storage_bin
+model InventoryPart {
+  id               String          @id
+  name             String
+  category         String
+  quantity_on_hand Int             @default(0)
+  min_threshold    Int             @default(5)
+  unit_cost        Float           @default(0.0)
+  storage_bin      String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  work_order_parts WorkOrderPart[]
+
+  @@map("inventory_parts")
+}
+
+// 5. work_orders: id (String, e.g. WO-2041), title, description, priority (CRITICAL, HIGH, MEDIUM, LOW), status (OPEN, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED), created_at, completed_at
+model WorkOrder {
+  id           String    @id
+  title        String
+  description  String
+  priority     String    @default("MEDIUM") // CRITICAL, HIGH, MEDIUM, LOW
+  status       String    @default("OPEN")   // OPEN, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
+  created_at   DateTime  @default(now())
+  completed_at DateTime?
+
+  equipment_id String
+  equipment    Equipment @relation(fields: [equipment_id], references: [id], onDelete: Cascade)
+
+  assigned_to  String?
+  technician   User?     @relation("AssignedTech", fields: [assigned_to], references: [id], onDelete: SetNull)
+
+  created_by   String?
+  creator      User?     @relation("CreatedByUser", fields: [created_by], references: [id], onDelete: SetNull)
+
+  parts_required WorkOrderPart[]
+  fault_reports  FaultReport[]
+
+  @@map("work_orders")
+}
+
+// 6. work_order_parts: id (UUID), work_order_id references work_orders(id), part_id references inventory_parts(id), quantity_required (Int), quantity_deducted (Boolean)
+model WorkOrderPart {
+  id                String        @id @default(uuid())
+  work_order_id     String
+  work_order        WorkOrder     @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
+  part_id           String
+  part              InventoryPart @relation(fields: [part_id], references: [id], onDelete: Cascade)
+  quantity_required Int           @default(1)
+  quantity_deducted Boolean       @default(false)
+
+  @@map("work_order_parts")
+}
+
+// 7. maintenance_schedules: id (String, e.g. PM-301), task_name, frequency_days (Int), next_due_date, compliance_status (SCHEDULED, OVERDUE, COMPLETED)
+model MaintenanceSchedule {
+  id                String    @id
+  task_name         String
+  frequency_days    Int       @default(30)
+  next_due_date     DateTime
+  compliance_status String    @default("SCHEDULED") // SCHEDULED, OVERDUE, COMPLETED
+
+  equipment_id      String
+  equipment         Equipment @relation(fields: [equipment_id], references: [id], onDelete: Cascade)
+
+  assigned_tech_id  String?
+  assigned_tech     User?     @relation("AssignedMaintenanceTech", fields: [assigned_tech_id], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("maintenance_schedules")
+}
+
+// 8. fault_reports: id (String, e.g. FLT-109), equipment_id, reported_by, severity (CRITICAL, HIGH, MEDIUM, LOW), description, status (REPORTED, CONVERTED_TO_WO, RESOLVED), linked_wo_id, created_at
+model FaultReport {
+  id           String     @id
+  equipment_id String
+  equipment    Equipment  @relation(fields: [equipment_id], references: [id], onDelete: Cascade)
+
+  reported_by  String
+  reporter     User       @relation("ReportedByUser", fields: [reported_by], references: [id], onDelete: Cascade)
+
+  severity     String     @default("MEDIUM") // CRITICAL, HIGH, MEDIUM, LOW
+  description  String
+  status       String     @default("REPORTED") // REPORTED, CONVERTED_TO_WO, RESOLVED
+
+  linked_wo_id String?
+  work_order   WorkOrder? @relation(fields: [linked_wo_id], references: [id], onDelete: SetNull)
+
+  created_at   DateTime   @default(now())
+
+  @@map("fault_reports")
+}

@@ -611,7 +611,13 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-primary); font-weight: 700; letter-sp
 .quick-role-presets { display: flex; gap: 8px; margin-top: 16px; margin-bottom: 20px; }
 .btn-role-preset { flex: 1; background-color: var(--btn-role-preset-bg); border: 1px solid var(--border-color); color: var(--btn-role-preset-text); font-size: 0.72rem; padding: 6px 8px; border-radius: 2px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; cursor: pointer; transition: all 0.12s ease; }
 .btn-role-preset:hover { border-color: var(--primary); color: var(--primary); background-color: var(--card-bg-elevated); }
-#loginMessage { min-height: 22px; font-size: 0.84rem; font-weight: 600; text-align: center; margin-top: 14px; font-family: 'IBM Plex Mono', monospace; }
+#loginMessage,
+#registerMessage { min-height: 22px; font-size: 0.84rem; font-weight: 600; text-align: center; margin-top: 14px; font-family: 'IBM Plex Mono', monospace; }
+.auth-switch-text { text-align: center; margin-top: 16px; margin-bottom: 0; font-size: 0.82rem; color: var(--text-muted); }
+.auth-switch-text a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.auth-switch-text a:hover { text-decoration: underline; }
+.register-split-card { min-height: 560px; }
+.login-form-panel .btn:disabled { opacity: 0.7; cursor: not-allowed; }
 
 /* ========== Bootstrap Overrides ========== */
 .text-danger { color: var(--danger) !important; }
