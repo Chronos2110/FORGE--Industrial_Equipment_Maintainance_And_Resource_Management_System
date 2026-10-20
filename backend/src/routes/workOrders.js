@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { logActivity } = require('../utils/activity');
 
 // Map specialization to equipment category keywords
 function isSpecializationMatch(specialization, equipmentCategory) {
@@ -18,8 +19,8 @@ function isSpecializationMatch(specialization, equipmentCategory) {
   if (spec.includes('ELECTRICAL') && (cat.includes('ELECTRICAL') || cat.includes('GENERATOR') || cat.includes('POWER') || cat.includes('PLC'))) {
     return true;
   }
-  if (spec.includes('PLC') || spec.includes('AUTOMATION')) {
-    if (cat.includes('PLC') || cat.includes('AUTOMATION') || cat.includes('GENERATOR') || cat.includes('CNC')) {
+  if (spec.includes('PLC') || spec.includes('AUTOMATION') || spec.includes('SENSOR')) {
+    if (cat.includes('PLC') || cat.includes('AUTOMATION') || cat.includes('GENERATOR') || cat.includes('CNC') || cat.includes('MEASURING') || cat.includes('CMM') || cat.includes('SENSOR')) {
       return true;
     }
   }
@@ -209,7 +210,7 @@ router.post('/', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), async 
           data: {
             work_order_id: wo.id,
             part_id: resolvedPartId,
-            quantity_required: parseInt(requiredQuantity),
+            quantity_required: parseInt(requiredQuantity, 10),
             quantity_deducted: false
           }
         });
@@ -232,6 +233,15 @@ router.post('/', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), async 
       }
 
       return wo;
+    });
+
+    await logActivity({
+      actor: req.user?.name || 'Supervisor',
+      role: req.user?.role || 'ADMIN',
+      action: 'CREATED_WORK_ORDER',
+      target: `${createdWo.id} - ${createdWo.title}`,
+      category: 'WORK_ORDERS',
+      badge_class: 'badge-scheduled'
     });
 
     const fullWo = await prisma.workOrder.findUnique({
@@ -340,6 +350,15 @@ router.post('/:id/auto-assign', authenticateToken, requireRole(['ADMIN', 'TECHNI
       return updated;
     });
 
+    await logActivity({
+      actor: req.user?.name || 'Dispatcher',
+      role: req.user?.role || 'ADMIN',
+      action: 'AUTO_ASSIGNED_TECHNICIAN',
+      target: `${workOrder.id} -> ${topCandidate.name} (${topCandidate.technician_profile.specialization})`,
+      category: 'WORK_ORDERS',
+      badge_class: 'badge-scheduled'
+    });
+
     return res.json({
       success: true,
       message: `Assigned to ${topCandidate.name} [${topCandidate.technician_profile.specialization}] based on category match and workload balance.`,
@@ -367,7 +386,7 @@ router.patch('/:id/status', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN
     // Case 1: Transactional Work Order Completion and Inventory Sync
     if (normalizedStatus === 'COMPLETED') {
       const result = await prisma.$transaction(async (tx) => {
-        // Step 1: Verify work order is currently in IN_PROGRESS or ASSIGNED state
+        // Step 1: Verify work order state
         const wo = await tx.workOrder.findUnique({
           where: { id },
           include: {
@@ -476,6 +495,15 @@ router.patch('/:id/status', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN
         return completedWo;
       });
 
+      await logActivity({
+        actor: req.user?.name || 'Technician',
+        role: req.user?.role || 'TECHNICIAN',
+        action: 'COMPLETED_WORK_ORDER',
+        target: `${id} - ${result.title} (Parts consumed, equipment operational)`,
+        category: 'WORK_ORDERS',
+        badge_class: 'badge-operational'
+      });
+
       return res.json({
         success: true,
         message: `Work Order ${id} completed successfully. Inventory deducted and equipment status restored.`,
@@ -509,7 +537,7 @@ router.patch('/:id/status', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN
       return await tx.workOrder.update({
         where: { id },
         data: {
-          status: status // retain user representation or normalized
+          status: status
         },
         include: {
           equipment: true,
@@ -517,6 +545,15 @@ router.patch('/:id/status', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN
           parts_required: { include: { part: true } }
         }
       });
+    });
+
+    await logActivity({
+      actor: req.user?.name || 'Operator',
+      role: req.user?.role || 'TECHNICIAN',
+      action: `TRANSITIONED_TO_${normalizedStatus}`,
+      target: `${id} - ${updated.title}`,
+      category: 'WORK_ORDERS',
+      badge_class: normalizedStatus === 'IN_PROGRESS' ? 'badge-maintenance' : 'badge-scheduled'
     });
 
     return res.json({
@@ -549,7 +586,19 @@ router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res
       });
     }
 
+    await prisma.workOrderPart.deleteMany({ where: { work_order_id: id } });
+    await prisma.faultReport.updateMany({ where: { linked_wo_id: id }, data: { linked_wo_id: null } });
     await prisma.workOrder.delete({ where: { id } });
+
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: 'ADMIN',
+      action: 'DELETED_WORK_ORDER',
+      target: `${id} - ${wo.title}`,
+      category: 'WORK_ORDERS',
+      badge_class: 'badge-faulty'
+    });
+
     return res.json({ success: true, message: `Work Order ${id} deleted.` });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to delete work order', details: err.message });

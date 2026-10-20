@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const { execSync } = require('child_process');
 const prisma = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
-const bcrypt = require('bcryptjs');
+const { logActivity } = require('../utils/activity');
 
 // GET /api/search?q=<query>
 // Feeds the Ctrl+K Command Palette by executing a fast lookup across equipment,
@@ -13,8 +15,6 @@ router.get('/search', authenticateToken, async (req, res) => {
     if (!query) {
       return res.json({ equipment: [], work_orders: [], inventory_parts: [] });
     }
-
-    const qLower = query.toLowerCase();
 
     // 1. Equipment Search
     const equipment = await prisma.equipment.findMany({
@@ -102,7 +102,7 @@ router.get('/telemetry/dock', authenticateToken, async (req, res) => {
       }
     });
 
-    // Inventory SKUs where quantity_on_hand < min_threshold
+    // Inventory SKUs where quantity_on_hand <= min_threshold
     const parts = await prisma.inventoryPart.findMany({});
     const lowStockParts = parts.filter(p => p.quantity_on_hand <= p.min_threshold);
 
@@ -124,22 +124,27 @@ router.get('/telemetry/dock', authenticateToken, async (req, res) => {
 });
 
 // POST /api/dev/reset (Development only)
-// Drops current records and re-runs the seed script so the "Reset Demo Data" frontend button works against the real database.
+// Re-runs the full seed logic cleanly so the frontend "Reset Factory Data" button restores the entire SQLite database on demand.
 router.post('/dev/reset', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
-    // Delete in FK order
-    await prisma.workOrderPart.deleteMany({});
-    await prisma.faultReport.deleteMany({});
-    await prisma.maintenanceSchedule.deleteMany({});
-    await prisma.workOrder.deleteMany({});
-    await prisma.technicianProfile.deleteMany({});
-    await prisma.inventoryPart.deleteMany({});
-    await prisma.equipment.deleteMany({});
-    await prisma.user.deleteMany({});
+    const seedScriptPath = path.resolve(__dirname, '../../prisma/seed.js');
+    const backendRoot = path.resolve(__dirname, '../..');
 
-    // Re-run seed
-    const { execSync } = require('child_process');
-    execSync('node prisma/seed.js', { stdio: 'inherit' });
+    // Execute seed script
+    execSync(`node "${seedScriptPath}"`, {
+      stdio: 'inherit',
+      cwd: backendRoot,
+      env: process.env
+    });
+
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: 'ADMIN',
+      action: 'DATABASE_FACTORY_RESET',
+      target: 'SQLite Plant Database',
+      category: 'SYSTEM',
+      badge_class: 'badge-faulty'
+    });
 
     return res.json({
       success: true,

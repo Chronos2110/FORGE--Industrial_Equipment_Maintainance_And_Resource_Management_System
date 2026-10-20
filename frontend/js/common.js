@@ -2428,7 +2428,8 @@ var ForgeApiClient = (function () {
                 request("GET", "/api/work-orders"),
                 request("GET", "/api/maintenance"),
                 request("GET", "/api/inventory"),
-                request("GET", "/api/faults")
+                request("GET", "/api/faults"),
+                request("GET", "/api/activity")
             ]);
 
             var eqRes = results[0];
@@ -2436,6 +2437,7 @@ var ForgeApiClient = (function () {
             var pmRes = results[2];
             var invRes = results[3];
             var fltRes = results[4];
+            var actRes = results[5];
 
             if (eqRes.ok && Array.isArray(eqRes.data)) {
                 var mappedEq = eqRes.data.map(function (eq) {
@@ -2586,6 +2588,29 @@ var ForgeApiClient = (function () {
                     };
                 });
                 safeSetJSON("forge_faults", mappedFlt);
+            }
+
+            if (actRes && actRes.ok && Array.isArray(actRes.data)) {
+                var mappedAct = actRes.data.map(function (a) {
+                    return {
+                        id: a.id,
+                        timestamp: a.timestamp || a.time || new Date().toISOString(),
+                        time: a.time || (a.timestamp ? String(a.timestamp).replace("T", " ").substring(0, 19) : ""),
+                        actor: a.actor || a.user || "System",
+                        user: a.actor || a.user || "System",
+                        role: a.role || "SYSTEM",
+                        action: a.action || a.activity || "",
+                        activity: a.action || a.activity || "",
+                        target: a.target || a.item || "",
+                        item: a.target || a.item || "",
+                        category: a.category || "SYSTEM",
+                        badge_class: a.badge_class || a.statusClass || "badge-operational",
+                        statusClass: a.badge_class || a.statusClass || "badge-operational"
+                    };
+                });
+                safeSetJSON("forge_activity", mappedAct);
+                safeSetJSON("iemrs_activities", mappedAct);
+                syncLegacyKey("activities", mappedAct);
             }
 
             updateDockAlertsCount();
@@ -2804,6 +2829,12 @@ var ForgeDataService = {
                     if (isNew) {
                         ForgeApiClient.request("POST", "/api/faults", item);
                     }
+                } else if (entity === "technicians" || entity === "workforce") {
+                    if (isNew) {
+                        ForgeApiClient.request("POST", "/api/workforce", item);
+                    } else {
+                        ForgeApiClient.request("PATCH", "/api/workforce/" + encodeURIComponent(item.id), item);
+                    }
                 }
             } catch (apiErr) {
                 console.warn("[ForgeDataService] Background API sync error:", apiErr);
@@ -2830,6 +2861,12 @@ var ForgeDataService = {
                     ForgeApiClient.request("DELETE", "/api/work-orders/" + encodeURIComponent(id));
                 } else if (entity === "inventory") {
                     ForgeApiClient.request("DELETE", "/api/inventory/" + encodeURIComponent(id));
+                } else if (entity === "maintenance") {
+                    ForgeApiClient.request("DELETE", "/api/maintenance/" + encodeURIComponent(id));
+                } else if (entity === "technicians" || entity === "workforce") {
+                    ForgeApiClient.request("DELETE", "/api/workforce/" + encodeURIComponent(id));
+                } else if (entity === "faults") {
+                    ForgeApiClient.request("DELETE", "/api/faults/" + encodeURIComponent(id));
                 }
             } catch (delErr) {
                 console.warn("[ForgeDataService] Background API delete error:", delErr);
@@ -3190,6 +3227,13 @@ var ForgeDataService = {
 
         this.logActivity("Profile", "Updated profile attributes for " + currentUser.badgeId + " // " + currentUser.name, "badge-operational");
         updateTopbarIdentityUI();
+
+        if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.isOnline()) {
+            ForgeApiClient.request("PATCH", "/api/auth/profile", updates).catch(function(e) {
+                console.warn("[ForgeDataService] Profile sync error:", e);
+            });
+        }
+
         return true;
     },
 

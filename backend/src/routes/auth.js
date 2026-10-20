@@ -4,13 +4,40 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../db');
 const { JWT_SECRET, authenticateToken, normalizeRole } = require('../middleware/auth');
+const { logActivity } = require('../utils/activity');
+
+function formatUserResponse(u) {
+  if (!u) return null;
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    badgeId: u.badge_id || '',
+    badge_id: u.badge_id || '',
+    bay_assignment: u.bay_assignment || 'Production Floor',
+    bay: u.bay_assignment || 'Production Floor',
+    shift_pattern: u.shift_pattern || 'Day Shift',
+    shiftPattern: u.shift_pattern || 'Day Shift',
+    assigned_machine: u.assigned_machine || '',
+    assignedMachine: u.assigned_machine || '',
+    availability_status: u.availability_status || 'Available',
+    availabilityStatus: u.availability_status || 'Available',
+    status: u.status,
+    technician_profile: u.technician_profile
+  };
+}
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, username, password, confirmPassword, role, bay_assignment, specialization } = req.body;
+    const {
+      name, email, username, password, confirmPassword, role,
+      bay_assignment, bay, specialization, certifications,
+      badge_id, badgeId, shift_pattern, shiftPattern,
+      assigned_machine, assignedMachine, availability_status, availabilityStatus
+    } = req.body;
 
-    // Resolve identifier: prefer email, fall back to username
     const rawEmail = (email || username || '').trim().toLowerCase();
     const displayName = (name || rawEmail.split('@')[0]).trim();
 
@@ -35,8 +62,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: `Invalid role '${role}'. Must be Administrator, Technician, or Operator.` });
     }
 
-    // Build the email to store (if raw input has no @, append a forge domain)
-    const storedEmail = rawEmail.includes('@') ? rawEmail : rawEmail + '@forge.industrial';
+    const storedEmail = rawEmail.includes('@') ? rawEmail : `${rawEmail}@forge.industrial`;
 
     // Check uniqueness
     const existing = await prisma.user.findFirst({
@@ -52,20 +78,29 @@ router.post('/register', async (req, res) => {
     }
 
     const passwordHash = bcrypt.hashSync(password, 10);
+    const resolvedBadge = badge_id || badgeId || null;
+    const resolvedShift = shift_pattern || shiftPattern || 'Day Shift';
+    const resolvedMachine = assigned_machine || assignedMachine || null;
+    const resolvedAvail = availability_status || availabilityStatus || 'Available';
+    const resolvedBay = bay_assignment || bay || 'Production Floor';
 
-    // Create user (and optional technician profile in one go)
     const newUser = await prisma.user.create({
       data: {
         name: displayName,
         email: storedEmail,
         password_hash: passwordHash,
         role: normalizedRole,
-        bay_assignment: bay_assignment || 'Production Floor',
+        badge_id: resolvedBadge,
+        bay_assignment: resolvedBay,
+        shift_pattern: resolvedShift,
+        assigned_machine: resolvedMachine,
+        availability_status: resolvedAvail,
         status: 'ACTIVE',
         ...(normalizedRole === 'TECHNICIAN' ? {
           technician_profile: {
             create: {
               specialization: specialization || 'MECHANICAL',
+              certifications: certifications || 'ISO-9001 Safety / Master Tech',
               max_concurrent_wos: 3,
               active_wo_count: 0
             }
@@ -75,7 +110,15 @@ router.post('/register', async (req, res) => {
       include: { technician_profile: true }
     });
 
-    // Issue JWT immediately so they're auto-logged in after registration
+    await logActivity({
+      actor: newUser.name,
+      role: newUser.role,
+      action: `Personnel registered & provisioned (${newUser.badge_id || 'ID'})`,
+      target: newUser.badge_id || newUser.name,
+      category: 'SYSTEM',
+      badge_class: 'badge-scheduled'
+    });
+
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, role: normalizedRole, name: newUser.name },
       JWT_SECRET,
@@ -93,15 +136,7 @@ router.post('/register', async (req, res) => {
       success: true,
       message: `Account created successfully. Welcome to FORGE, ${newUser.name}!`,
       token,
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        bay_assignment: newUser.bay_assignment,
-        status: newUser.status,
-        technician_profile: newUser.technician_profile
-      }
+      user: formatUserResponse(newUser)
     });
   } catch (err) {
     console.error('Registration error:', err);
@@ -109,24 +144,33 @@ router.post('/register', async (req, res) => {
   }
 });
 
-
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
     const { email, username, password, role } = req.body;
-    const identifier = (email || username || '').trim().toLowerCase();
+    const identifier = (email || username || '').trim();
 
     if (!identifier || !password) {
       return res.status(400).json({ error: 'Username/email and password are required.' });
     }
 
+    const idLower = identifier.toLowerCase();
+    const idUpper = identifier.toUpperCase();
+
+    const queryOr = [
+      { email: idLower },
+      { email: idLower.includes('@') ? idLower : `${idLower}@forge.industrial` },
+      { email: idLower.includes('@') ? idLower : `${idLower}@forge.io` },
+      { badge_id: idUpper },
+      { badge_id: identifier },
+      { name: { contains: identifier } }
+    ];
+
+    if (idLower === 'op_floor') queryOr.push({ email: 'operator@forge.io' });
+    if (idLower === 'tech_rajesh') queryOr.push({ email: 'rajesh@forge.io' });
+
     const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: identifier },
-          { email: identifier.includes('@') ? identifier : `${identifier}@forge.industrial` }
-        ]
-      },
+      where: { OR: queryOr },
       include: { technician_profile: true }
     });
 
@@ -134,13 +178,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials. User not found.' });
     }
 
-    // Verify password hash
     const isPasswordValid = bcrypt.compareSync(password, user.password_hash);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials. Incorrect password.' });
     }
 
-    // If a role was explicitly specified in the login form, check compatibility
     if (role) {
       const normalizedReqRole = normalizeRole(role);
       const normalizedUserRole = normalizeRole(user.role);
@@ -151,7 +193,6 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    // Generate JWT
     const tokenPayload = {
       id: user.id,
       email: user.email,
@@ -161,7 +202,6 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
 
-    // Set HttpOnly cookie
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -169,18 +209,19 @@ router.post('/login', async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000
     });
 
+    await logActivity({
+      actor: user.name,
+      role: user.role,
+      action: `Personnel logged in to terminal`,
+      target: user.badge_id || user.name,
+      category: 'SYSTEM',
+      badge_class: 'badge-scheduled'
+    });
+
     return res.json({
       success: true,
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        bay_assignment: user.bay_assignment,
-        status: user.status,
-        technician_profile: user.technician_profile
-      }
+      user: formatUserResponse(user)
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -191,12 +232,95 @@ router.post('/login', async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticateToken, async (req, res) => {
   try {
+    const fullUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: { technician_profile: true }
+    });
+
+    if (!fullUser) {
+      return res.status(404).json({ error: 'User record not found.' });
+    }
+
     return res.json({
       success: true,
-      user: req.user
+      user: formatUserResponse(fullUser)
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve session', details: err.message });
+  }
+});
+
+// PATCH /api/auth/profile
+// Allows logged-in personnel to update their operational profile attributes in SQLite
+router.patch('/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      name, bay_assignment, bay, shift_pattern, shift,
+      assigned_machine, machine, availability_status, status,
+      specialization, certifications
+    } = req.body;
+
+    const userData = {};
+    if (name) userData.name = name.trim();
+    if (bay_assignment || bay) userData.bay_assignment = (bay_assignment || bay).trim();
+    if (shift_pattern || shift) userData.shift_pattern = (shift_pattern || shift).trim();
+    if (assigned_machine !== undefined || machine !== undefined) {
+      userData.assigned_machine = (assigned_machine !== undefined ? assigned_machine : machine) || null;
+    }
+    if (availability_status || status) {
+      const avail = (availability_status || status).trim();
+      userData.availability_status = avail;
+      if (avail.toUpperCase() === 'OFF SHIFT' || avail.toUpperCase() === 'OFF_SHIFT') {
+        userData.status = 'OFF_SHIFT';
+      } else {
+        userData.status = 'ACTIVE';
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: userData,
+      include: { technician_profile: true }
+    });
+
+    if (updatedUser.role === 'TECHNICIAN' && (specialization || certifications)) {
+      await prisma.technicianProfile.upsert({
+        where: { user_id: userId },
+        create: {
+          user_id: userId,
+          specialization: specialization || 'MECHANICAL',
+          certifications: certifications || 'ISO-9001 Safety / Master Tech'
+        },
+        update: {
+          ...(specialization ? { specialization } : {}),
+          ...(certifications ? { certifications } : {})
+        }
+      });
+    }
+
+    const finalUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { technician_profile: true }
+    });
+
+    await logActivity({
+      actor: finalUser.name,
+      role: finalUser.role,
+      action: `Updated personnel profile attributes & shift status (${finalUser.availability_status})`,
+      target: finalUser.badge_id || finalUser.name,
+      category: 'SYSTEM',
+      badge_class: 'badge-operational'
+    });
+
+    return res.json({
+      success: true,
+      message: 'Personnel profile successfully updated.',
+      user: formatUserResponse(finalUser)
+    });
+  } catch (err) {
+    console.error('Error updating profile:', err);
+    return res.status(500).json({ error: 'Failed to update personnel profile', details: err.message });
   }
 });
 

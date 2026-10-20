@@ -79,12 +79,13 @@ var FORGE_API = (function () {
         var token = getToken();
         if (!token) return false;
 
-        var [equipment, workorders, maintenance, inventory, faults] = await Promise.all([
+        var [equipment, workorders, maintenance, inventory, faults, activities] = await Promise.all([
             request("GET", "/api/equipment"),
             request("GET", "/api/work-orders"),
             request("GET", "/api/maintenance"),
             request("GET", "/api/inventory"),
-            request("GET", "/api/faults")
+            request("GET", "/api/faults"),
+            request("GET", "/api/activity")
         ]);
 
         if (equipment && Array.isArray(equipment)) {
@@ -237,6 +238,28 @@ var FORGE_API = (function () {
                 };
             });
             localStorage.setItem("forge_faults", JSON.stringify(mappedFlt));
+        }
+
+        if (activities && Array.isArray(activities)) {
+            var mappedAct = activities.map(function (a) {
+                return {
+                    id: a.id,
+                    timestamp: a.timestamp || a.time || new Date().toISOString(),
+                    time: a.time || (a.timestamp ? String(a.timestamp).replace("T", " ").substring(0, 19) : ""),
+                    actor: a.actor || a.user || "System",
+                    user: a.actor || a.user || "System",
+                    role: a.role || "SYSTEM",
+                    action: a.action || a.activity || "",
+                    activity: a.action || a.activity || "",
+                    target: a.target || a.item || "",
+                    item: a.target || a.item || "",
+                    category: a.category || "SYSTEM",
+                    badge_class: a.badge_class || a.statusClass || "badge-operational",
+                    statusClass: a.badge_class || a.statusClass || "badge-operational"
+                };
+            });
+            localStorage.setItem("forge_activity", JSON.stringify(mappedAct));
+            localStorage.setItem("iemrs_activities", JSON.stringify(mappedAct));
         }
 
         return true;

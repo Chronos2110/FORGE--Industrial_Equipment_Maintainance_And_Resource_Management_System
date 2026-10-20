@@ -1,23 +1,34 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const prisma = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { logActivity } = require('../utils/activity');
 
 // Format workforce technician for front-end compatibility
 function formatTechnician(u) {
+  if (!u) return null;
   const prof = u.technician_profile || {};
+  const avail = u.availability_status || (u.status === 'ACTIVE' ? (prof.active_wo_count > 0 ? 'Busy' : 'Available') : 'Off Shift');
   return {
     id: u.id,
     name: u.name,
     email: u.email,
     role: u.role,
-    bay_assignment: u.bay_assignment,
+    badge_id: u.badge_id || 'TECH-00',
+    badge: u.badge_id || 'TECH-00',
+    bay_assignment: u.bay_assignment || 'Bay 01',
+    bay: u.bay_assignment || 'Bay 01',
     status: u.status,
-    availability: u.status === 'ACTIVE' ? (prof.active_wo_count > 0 ? 'Busy' : 'Available') : 'Unavailable',
-    specialization: prof.specialization || 'General',
-    skill: prof.specialization || 'General',
-    certifications: 'ISO-9001 Safety / Master Tech',
-    certification: 'ISO-9001 Safety / Master Tech',
+    shift_pattern: u.shift_pattern || 'Day Shift',
+    shift: u.shift_pattern || 'Day Shift',
+    assigned_machine: u.assigned_machine || '',
+    availability_status: avail,
+    availability: avail,
+    specialization: prof.specialization || 'General Machinery',
+    skill: prof.specialization || 'General Machinery',
+    certifications: prof.certifications || 'ISO-9001 Safety / Master Tech',
+    certification: prof.certifications || 'ISO-9001 Safety / Master Tech',
     max_concurrent_wos: prof.max_concurrent_wos || 3,
     active_wo_count: prof.active_wo_count || 0,
     activeWorkload: prof.active_wo_count || 0,
@@ -43,7 +54,7 @@ router.get('/', authenticateToken, async (req, res) => {
         where: { id: req.user.id },
         include: { technician_profile: true }
       });
-      return res.json([formatTechnician(self)]);
+      return res.json(self ? [formatTechnician(self)] : []);
     }
 
     // Admin: full list of technicians
@@ -64,8 +75,242 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// PATCH /api/workforce/:id/availability
-// Admin can update any technician's status; Technician can update own availability; Operator 403 Forbidden
+// GET /api/workforce/:id
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let tech = await prisma.user.findUnique({
+      where: { id },
+      include: { technician_profile: true }
+    });
+
+    if (!tech) {
+      tech = await prisma.user.findFirst({
+        where: {
+          OR: [{ email: id }, { name: id }, { badge_id: id }]
+        },
+        include: { technician_profile: true }
+      });
+    }
+
+    if (!tech) {
+      return res.status(404).json({ error: `Technician ${id} not found.` });
+    }
+
+    return res.json(formatTechnician(tech));
+  } catch (err) {
+    console.error('Error retrieving technician:', err);
+    return res.status(500).json({ error: 'Failed to retrieve technician', details: err.message });
+  }
+});
+
+// POST /api/workforce (Admin only: onboard new technician directly from workforce UI)
+router.post('/', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      badge_id,
+      specialization,
+      bay_assignment,
+      shift_pattern,
+      availability_status,
+      certifications,
+      max_concurrent_wos,
+      assigned_machine
+    } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Name and email are required for technician onboarding.' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: `User with email '${email}' already exists.` });
+    }
+
+    const hashedPassword = await bcrypt.hash(password || 'tech123', 10);
+    const techBadge = badge_id || `TECH-0${Math.floor(10 + Math.random() * 90)}`;
+
+    const newTechnician = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name,
+          email,
+          password_hash: hashedPassword,
+          role: 'TECHNICIAN',
+          badge_id: techBadge,
+          bay_assignment: bay_assignment || 'Bay 01',
+          shift_pattern: shift_pattern || 'Day Shift',
+          assigned_machine: assigned_machine || null,
+          availability_status: availability_status || 'Available',
+          status: 'ACTIVE'
+        }
+      });
+
+      const profile = await tx.technicianProfile.create({
+        data: {
+          user_id: user.id,
+          specialization: specialization || 'General Machinery',
+          certifications: certifications || 'ISO-9001 Safety / Master Tech',
+          max_concurrent_wos: max_concurrent_wos ? parseInt(max_concurrent_wos, 10) : 3,
+          active_wo_count: 0
+        }
+      });
+
+      return {
+        ...user,
+        technician_profile: profile
+      };
+    });
+
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: 'ADMIN',
+      action: 'ONBOARDED_TECHNICIAN',
+      target: `${newTechnician.name} (${newTechnician.badge_id} - ${newTechnician.technician_profile.specialization})`,
+      category: 'SYSTEM',
+      badge_class: 'badge-operational'
+    });
+
+    return res.status(201).json(formatTechnician(newTechnician));
+  } catch (err) {
+    console.error('Error onboarding technician:', err);
+    return res.status(500).json({ error: 'Failed to onboard technician', details: err.message });
+  }
+});
+
+// PATCH /api/workforce/:id (Admin and self Technician)
+// Updates technician specialization, bay, shift, certifications, workload limit
+router.patch('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user.role;
+
+    if (userRole === 'OPERATOR') {
+      return res.status(403).json({ error: 'Forbidden: Operators cannot modify workforce records.' });
+    }
+
+    let targetUser = await prisma.user.findUnique({
+      where: { id },
+      include: { technician_profile: true }
+    });
+
+    if (!targetUser) {
+      targetUser = await prisma.user.findFirst({
+        where: {
+          OR: [{ email: id }, { name: id }, { badge_id: id }]
+        },
+        include: { technician_profile: true }
+      });
+    }
+
+    if (!targetUser) {
+      return res.status(404).json({ error: `Technician '${id}' not found.` });
+    }
+
+    if (userRole === 'TECHNICIAN' && req.user.id !== targetUser.id) {
+      return res.status(403).json({ error: 'Forbidden: Technicians may only update their own profile.' });
+    }
+
+    const {
+      name,
+      email,
+      bay_assignment,
+      bay,
+      shift_pattern,
+      shift,
+      assigned_machine,
+      availability_status,
+      availability,
+      status,
+      specialization,
+      skill,
+      certifications,
+      certification,
+      max_concurrent_wos
+    } = req.body;
+
+    const userData = {};
+    if (name) userData.name = name;
+    if (email && userRole === 'ADMIN') userData.email = email;
+    if (bay_assignment || bay) userData.bay_assignment = bay_assignment || bay;
+    if (shift_pattern || shift) userData.shift_pattern = shift_pattern || shift;
+    if (assigned_machine !== undefined) userData.assigned_machine = assigned_machine;
+
+    const availVal = availability_status || availability;
+    if (availVal) {
+      userData.availability_status = availVal;
+      if (availVal.toUpperCase() === 'OFF SHIFT' || availVal.toUpperCase() === 'OFF_SHIFT') {
+        userData.status = 'OFF_SHIFT';
+      } else {
+        userData.status = 'ACTIVE';
+      }
+    }
+
+    if (status) userData.status = status;
+
+    const profileData = {};
+    if (specialization || skill) profileData.specialization = specialization || skill;
+    if (certifications || certification) profileData.certifications = certifications || certification;
+    if (max_concurrent_wos !== undefined) profileData.max_concurrent_wos = parseInt(max_concurrent_wos, 10);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      let u = targetUser;
+      if (Object.keys(userData).length > 0) {
+        u = await tx.user.update({
+          where: { id: targetUser.id },
+          data: userData
+        });
+      }
+
+      let p = targetUser.technician_profile;
+      if (Object.keys(profileData).length > 0) {
+        if (p) {
+          p = await tx.technicianProfile.update({
+            where: { user_id: targetUser.id },
+            data: profileData
+          });
+        } else {
+          p = await tx.technicianProfile.create({
+            data: {
+              user_id: targetUser.id,
+              specialization: profileData.specialization || 'General Machinery',
+              certifications: profileData.certifications || 'ISO-9001 Safety / Master Tech',
+              max_concurrent_wos: profileData.max_concurrent_wos || 3
+            }
+          });
+        }
+      }
+
+      return {
+        ...u,
+        technician_profile: p
+      };
+    });
+
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: req.user?.role || 'ADMIN',
+      action: 'UPDATED_TECHNICIAN_PROFILE',
+      target: `${updated.name} (${updated.badge_id || updated.id})`,
+      category: 'SYSTEM',
+      badge_class: 'badge-scheduled'
+    });
+
+    return res.json({
+      success: true,
+      message: `Technician ${updated.name} updated successfully.`,
+      technician: formatTechnician(updated)
+    });
+  } catch (err) {
+    console.error('Error updating technician:', err);
+    return res.status(500).json({ error: 'Failed to update technician', details: err.message });
+  }
+});
+
+// PATCH /api/workforce/:id/availability (Convenience alias for shift status toggle)
 router.patch('/:id/availability', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -79,15 +324,12 @@ router.patch('/:id/availability', authenticateToken, async (req, res) => {
     let targetUser = await prisma.user.findUnique({
       where: { id },
       include: { technician_profile: true }
-    }).catch(() => null);
+    });
 
     if (!targetUser) {
       targetUser = await prisma.user.findFirst({
         where: {
-          OR: [
-            { email: id },
-            { name: id }
-          ]
+          OR: [{ email: id }, { name: id }]
         },
         include: { technician_profile: true }
       });
@@ -103,31 +345,98 @@ router.patch('/:id/availability', authenticateToken, async (req, res) => {
 
     let targetStatus = 'ACTIVE';
     const val = (status || availability || '').toUpperCase();
+    let availStatus = 'Available';
+
     if (val === 'OFF_SHIFT' || val === 'OFF SHIFT' || val === 'UNAVAILABLE' || val === 'ON LEAVE') {
       targetStatus = 'OFF_SHIFT';
-    } else if (val === 'ACTIVE' || val === 'AVAILABLE' || val === 'BUSY' || val === 'ON BREAK' || val === 'ON_BREAK') {
+      availStatus = 'Off Shift';
+    } else if (val === 'ON BREAK' || val === 'ON_BREAK') {
       targetStatus = 'ACTIVE';
+      availStatus = 'On Break';
+    } else if (val === 'BUSY') {
+      targetStatus = 'ACTIVE';
+      availStatus = 'Busy';
+    } else {
+      targetStatus = 'ACTIVE';
+      availStatus = 'Available';
     }
 
     const updated = await prisma.user.update({
       where: { id: targetUser.id },
-      data: { status: targetStatus },
+      data: {
+        status: targetStatus,
+        availability_status: availStatus
+      },
       include: { technician_profile: true }
     });
 
-    const formatted = formatTechnician(updated);
-    if (val === 'ON BREAK' || val === 'ON_BREAK') {
-      formatted.availability = 'On Break';
-    }
+    await logActivity({
+      actor: req.user?.name || targetUser.name,
+      role: req.user?.role || 'TECHNICIAN',
+      action: 'SHIFT_STATUS_CHANGE',
+      target: `${updated.name} -> ${availStatus}`,
+      category: 'SYSTEM',
+      badge_class: availStatus === 'Available' ? 'badge-operational' : 'badge-maintenance'
+    });
 
     return res.json({
       success: true,
-      message: `Technician ${updated.name} availability updated to ${targetStatus}.`,
-      technician: formatted
+      message: `Technician ${updated.name} availability updated to ${availStatus}.`,
+      technician: formatTechnician(updated)
     });
   } catch (err) {
     console.error('Error updating availability:', err);
     return res.status(500).json({ error: 'Failed to update availability', details: err.message });
+  }
+});
+
+// DELETE /api/workforce/:id (Admin only)
+router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      return res.status(404).json({ error: `User with ID ${id} not found.` });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Unassign open work orders
+      await tx.workOrder.updateMany({
+        where: { assigned_to: id, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+        data: { assigned_to: null, status: 'OPEN' }
+      });
+
+      // Unassign maintenance schedules
+      await tx.maintenanceSchedule.updateMany({
+        where: { assigned_tech_id: id },
+        data: { assigned_tech_id: null }
+      });
+
+      // Delete technician profile if exists
+      await tx.technicianProfile.deleteMany({
+        where: { user_id: id }
+      });
+
+      // Delete user
+      await tx.user.delete({
+        where: { id }
+      });
+    });
+
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: 'ADMIN',
+      action: 'OFFBOARDED_PERSONNEL',
+      target: `${targetUser.name} (${targetUser.badge_id || targetUser.email})`,
+      category: 'SYSTEM',
+      badge_class: 'badge-faulty'
+    });
+
+    return res.json({ success: true, message: `Personnel ${targetUser.name} (${id}) offboarded successfully.` });
+  } catch (err) {
+    console.error('Error offboarding technician:', err);
+    return res.status(500).json({ error: 'Failed to offboard technician', details: err.message });
   }
 });
 

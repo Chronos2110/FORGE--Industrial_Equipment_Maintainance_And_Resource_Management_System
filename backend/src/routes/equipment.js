@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { logActivity } = require('../utils/activity');
 
 // GET /api/equipment (Supports ?status= and ?bay= query filters)
 // Accessible by: ADMIN, TECHNICIAN, OPERATOR
@@ -97,11 +98,20 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), async (req, res) => 
         id,
         name,
         category: category || type || 'General Machinery',
-        bay_location: bay_location || location || 'Production Floor',
+        bay_location: bay_location || location || 'Bay 01',
         status: status || 'OPERATIONAL',
-        health_score: health_score ? parseInt(health_score) : 100,
+        health_score: health_score !== undefined ? parseInt(health_score, 10) : 100,
         last_serviced_at: last_serviced_at ? new Date(last_serviced_at) : new Date()
       }
+    });
+
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: 'ADMIN',
+      action: 'REGISTERED_EQUIPMENT',
+      target: `${newEq.id} - ${newEq.name} (${newEq.bay_location})`,
+      category: 'SYSTEM',
+      badge_class: 'badge-operational'
     });
 
     return res.status(201).json({
@@ -122,12 +132,17 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), as
     const { id } = req.params;
     const { name, category, type, bay_location, location, status, health_score, last_serviced_at, lastMaintenanceDate } = req.body;
 
+    const existing = await prisma.equipment.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: `Equipment ${id} not found.` });
+    }
+
     const data = {};
     if (name) data.name = name;
     if (category || type) data.category = category || type;
     if (bay_location || location) data.bay_location = bay_location || location;
     if (status) data.status = status;
-    if (health_score !== undefined) data.health_score = parseInt(health_score);
+    if (health_score !== undefined) data.health_score = parseInt(health_score, 10);
     if (last_serviced_at || lastMaintenanceDate) {
       data.last_serviced_at = new Date(last_serviced_at || lastMaintenanceDate);
     }
@@ -135,6 +150,16 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), as
     const updated = await prisma.equipment.update({
       where: { id },
       data
+    });
+
+    const statusChanged = status && status !== existing.status;
+    await logActivity({
+      actor: req.user?.name || 'Plant Personnel',
+      role: req.user?.role || 'TECHNICIAN',
+      action: statusChanged ? `STATUS_CHANGE_${status}` : 'UPDATED_EQUIPMENT',
+      target: `${updated.id} - ${updated.name} (${updated.status})`,
+      category: 'MAINTENANCE',
+      badge_class: updated.status === 'OPERATIONAL' ? 'badge-operational' : (updated.status === 'MAINTENANCE' ? 'badge-maintenance' : 'badge-faulty')
     });
 
     return res.json({
@@ -153,7 +178,31 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), as
 router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.equipment.delete({ where: { id } });
+    const existing = await prisma.equipment.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: `Equipment ${id} not found.` });
+    }
+
+    // Cascade delete linked entities in transaction
+    await prisma.$transaction(async (tx) => {
+      await tx.workOrderPart.deleteMany({
+        where: { work_order: { equipment_id: id } }
+      });
+      await tx.faultReport.deleteMany({ where: { equipment_id: id } });
+      await tx.workOrder.deleteMany({ where: { equipment_id: id } });
+      await tx.maintenanceSchedule.deleteMany({ where: { equipment_id: id } });
+      await tx.equipment.delete({ where: { id } });
+    });
+
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: 'ADMIN',
+      action: 'DECOMMISSIONED_EQUIPMENT',
+      target: `${id} - ${existing.name}`,
+      category: 'SYSTEM',
+      badge_class: 'badge-faulty'
+    });
+
     return res.json({ success: true, message: `Equipment ${id} deleted successfully.` });
   } catch (err) {
     console.error('Error deleting equipment:', err);

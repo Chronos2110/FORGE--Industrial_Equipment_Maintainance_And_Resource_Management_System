@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { logActivity } = require('../utils/activity');
 
 // Format Fault Report for front-end consumption
 function formatFault(f) {
+  if (!f) return null;
   return {
     id: f.id,
     equipmentId: f.equipment_id,
@@ -39,6 +41,28 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error fetching faults:', err);
     return res.status(500).json({ error: 'Failed to retrieve faults', details: err.message });
+  }
+});
+
+// GET /api/faults/:id
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const fault = await prisma.faultReport.findUnique({
+      where: { id: req.params.id },
+      include: {
+        equipment: true,
+        reporter: { select: { id: true, name: true, role: true } },
+        work_order: true
+      }
+    });
+
+    if (!fault) {
+      return res.status(404).json({ error: `Fault report ${req.params.id} not found.` });
+    }
+
+    return res.json(formatFault(fault));
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to retrieve fault report', details: err.message });
   }
 });
 
@@ -99,6 +123,15 @@ router.post('/', authenticateToken, async (req, res) => {
       }
 
       return fault;
+    });
+
+    await logActivity({
+      actor: req.user?.name || 'Operator',
+      role: req.user?.role || 'OPERATOR',
+      action: 'REPORTED_FAULT',
+      target: `${result.id} - ${result.equipment?.name || resolvedEquipmentId} [${faultSeverity}]`,
+      category: 'FAULTS',
+      badge_class: 'badge-faulty'
     });
 
     return res.status(201).json(formatFault(result));
@@ -168,6 +201,15 @@ router.post('/:id/escalate', authenticateToken, requireRole(['ADMIN', 'TECHNICIA
       };
     });
 
+    await logActivity({
+      actor: req.user?.name || 'Dispatcher',
+      role: req.user?.role || 'TECHNICIAN',
+      action: 'ESCALATED_FAULT_TO_WO',
+      target: `${id} -> ${result.workOrder.id} (${fault.equipment.name})`,
+      category: 'FAULTS',
+      badge_class: 'badge-maintenance'
+    });
+
     return res.json({
       success: true,
       message: `Fault ${id} successfully escalated to Work Order ${result.workOrder.id}.`,
@@ -177,6 +219,32 @@ router.post('/:id/escalate', authenticateToken, requireRole(['ADMIN', 'TECHNICIA
   } catch (err) {
     console.error('Error escalating fault:', err);
     return res.status(500).json({ error: 'Failed to escalate fault to work order', details: err.message });
+  }
+});
+
+// DELETE /api/faults/:id (Admin only)
+router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.faultReport.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: `Fault report ${id} not found.` });
+    }
+
+    await prisma.faultReport.delete({ where: { id } });
+
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: 'ADMIN',
+      action: 'DISMISSED_FAULT_REPORT',
+      target: id,
+      category: 'FAULTS',
+      badge_class: 'badge-operational'
+    });
+
+    return res.json({ success: true, message: `Fault report ${id} deleted.` });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to delete fault report', details: err.message });
   }
 });
 

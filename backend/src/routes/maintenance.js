@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { logActivity } = require('../utils/activity');
 
 // Format maintenance schedule for front-end compatibility
 function formatMaintenance(m) {
+  if (!m) return null;
   return {
     id: m.id,
     task_name: m.task_name,
@@ -41,6 +43,30 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error fetching maintenance:', err);
     return res.status(500).json({ error: 'Failed to retrieve maintenance schedules', details: err.message });
+  }
+});
+
+// GET /api/maintenance/:id
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const schedule = await prisma.maintenanceSchedule.findUnique({
+      where: { id: req.params.id },
+      include: {
+        equipment: true,
+        assigned_tech: {
+          select: { id: true, name: true, email: true }
+        }
+      }
+    });
+
+    if (!schedule) {
+      return res.status(404).json({ error: `Maintenance schedule ${req.params.id} not found.` });
+    }
+
+    return res.json(formatMaintenance(schedule));
+  } catch (err) {
+    console.error('Error fetching maintenance schedule:', err);
+    return res.status(500).json({ error: 'Failed to retrieve maintenance schedule', details: err.message });
   }
 });
 
@@ -96,6 +122,15 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), async (req, res) => 
       }
     });
 
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: req.user?.role || 'ADMIN',
+      action: 'SCHEDULED_PM',
+      target: `${created.id} - ${created.task_name} (${created.equipment?.name || resolvedEquipmentId})`,
+      category: 'MAINTENANCE',
+      badge_class: 'badge-scheduled'
+    });
+
     return res.status(201).json(formatMaintenance(created));
   } catch (err) {
     console.error('Error creating maintenance schedule:', err);
@@ -104,6 +139,7 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), async (req, res) => 
 });
 
 // PATCH /api/maintenance/:id (Admin and Technician)
+// When marked COMPLETED, automatically reschedules next_due_date by +frequency_days (default 30 days)
 router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), async (req, res) => {
   try {
     const { id } = req.params;
@@ -120,17 +156,28 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), as
 
     const data = {};
     if (task_name) data.task_name = task_name;
-    if (frequency_days) data.frequency_days = parseInt(frequency_days);
+    const freq = frequency_days ? parseInt(frequency_days) : current.frequency_days;
+    if (frequency_days) data.frequency_days = freq;
 
     const compStatus = (compliance_status || status || '').toUpperCase();
+    let wasCompleted = false;
+
     if (compStatus) {
       if (compStatus === 'COMPLETED') {
         data.compliance_status = 'COMPLETED';
+        wasCompleted = true;
+
         // Auto-update equipment last serviced date
         await prisma.equipment.update({
           where: { id: current.equipment_id },
           data: { last_serviced_at: new Date() }
         });
+
+        // Auto-reschedule next_due_date by +frequency_days if not explicitly specified
+        if (!next_due_date && !scheduledDate) {
+          const daysToAdd = freq || 30;
+          data.next_due_date = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+        }
       } else if (compStatus === 'OVERDUE') {
         data.compliance_status = 'OVERDUE';
       } else {
@@ -142,8 +189,8 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), as
       data.next_due_date = new Date(next_due_date || scheduledDate);
     }
 
-    if (assigned_tech_id) {
-      data.assigned_tech_id = assigned_tech_id;
+    if (assigned_tech_id !== undefined) {
+      data.assigned_tech_id = assigned_tech_id || null;
     }
 
     const updated = await prisma.maintenanceSchedule.update({
@@ -151,6 +198,26 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), as
       data,
       include: { equipment: true, assigned_tech: true }
     });
+
+    if (wasCompleted) {
+      await logActivity({
+        actor: req.user?.name || req.user?.email || 'Plant Technician',
+        role: req.user?.role || 'TECHNICIAN',
+        action: 'COMPLETED_PM',
+        target: `${updated.id} - ${updated.task_name} (${updated.equipment?.name || current.equipment_id})`,
+        category: 'MAINTENANCE',
+        badge_class: 'badge-operational'
+      });
+    } else {
+      await logActivity({
+        actor: req.user?.name || req.user?.email || 'Plant Operator',
+        role: req.user?.role || 'TECHNICIAN',
+        action: 'UPDATED_PM',
+        target: `${updated.id} - ${updated.task_name}`,
+        category: 'MAINTENANCE',
+        badge_class: 'badge-scheduled'
+      });
+    }
 
     return res.json(formatMaintenance(updated));
   } catch (err) {
@@ -163,7 +230,22 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), as
 router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
     const { id } = req.params;
+    const current = await prisma.maintenanceSchedule.findUnique({ where: { id } });
+    if (!current) {
+      return res.status(404).json({ error: `Maintenance task ${id} not found.` });
+    }
+
     await prisma.maintenanceSchedule.delete({ where: { id } });
+
+    await logActivity({
+      actor: req.user?.name || 'Administrator',
+      role: req.user?.role || 'ADMIN',
+      action: 'DELETED_PM',
+      target: `${id} - ${current.task_name}`,
+      category: 'MAINTENANCE',
+      badge_class: 'badge-maintenance'
+    });
+
     return res.json({ success: true, message: `Maintenance task ${id} deleted.` });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to delete maintenance task', details: err.message });

@@ -7,17 +7,21 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// 1. users: id (UUID), name, email (Unique), password_hash, role (ADMIN, TECHNICIAN, OPERATOR), bay_assignment, status (ACTIVE, OFF_SHIFT)
+// 1. users: id (UUID), name, email (Unique), password_hash, role (ADMIN, TECHNICIAN, OPERATOR), badge_id, bay_assignment, shift_pattern, assigned_machine, availability_status, status (ACTIVE, OFF_SHIFT)
 model User {
-  id             String   @id @default(uuid())
-  name           String
-  email          String   @unique
-  password_hash  String
-  role           String   // ADMIN, TECHNICIAN, OPERATOR
-  bay_assignment String?
-  status         String   @default("ACTIVE") // ACTIVE, OFF_SHIFT
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  name                String
+  email               String   @unique
+  password_hash       String
+  role                String   // ADMIN, TECHNICIAN, OPERATOR
+  badge_id            String?
+  bay_assignment      String?
+  shift_pattern       String   @default("Day Shift")
+  assigned_machine    String?
+  availability_status String   @default("Available")
+  status              String   @default("ACTIVE") // ACTIVE, OFF_SHIFT
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   technician_profile    TechnicianProfile?
   assigned_work_orders  WorkOrder[]           @relation("AssignedTech")
@@ -28,12 +32,13 @@ model User {
   @@map("users")
 }
 
-// 2. technician_profiles: id (UUID), user_id references users(id) (One-to-One), specialization, max_concurrent_wos (Int), active_wo_count (Int)
+// 2. technician_profiles: id (UUID), user_id references users(id) (One-to-One), specialization, certifications, max_concurrent_wos (Int), active_wo_count (Int)
 model TechnicianProfile {
   id                 String   @id @default(uuid())
   user_id            String   @unique
   user               User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   specialization     String   // MECHANICAL, ELECTRICAL, PLC_AUTOMATION, HYDRAULICS, etc.
+  certifications     String   @default("ISO-9001 Safety / Master Tech")
   max_concurrent_wos Int      @default(3)
   active_wo_count    Int      @default(0)
 
@@ -155,4 +160,20 @@ model FaultReport {
   created_at   DateTime   @default(now())
 
   @@map("fault_reports")
+}
+
+// 9. activity_logs: id (UUID), timestamp, actor, role, action, target, category, badge_class
+model ActivityLog {
+  id          String   @id @default(uuid())
+  timestamp   DateTime @default(now())
+  actor       String
+  role        String
+  action      String
+  target      String
+  category    String   @default("SYSTEM") // FAULTS, WORK_ORDERS, INVENTORY, MAINTENANCE, SYSTEM
+  badge_class String   @default("badge-operational")
+
+  @@index([timestamp])
+  @@index([category])
+  @@map("activity_logs")
 }

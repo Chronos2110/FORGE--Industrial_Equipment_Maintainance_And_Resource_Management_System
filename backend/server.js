@@ -13,6 +13,7 @@ const maintenanceRoutes = require('./src/routes/maintenance');
 const workforceRoutes = require('./src/routes/workforce');
 const inventoryRoutes = require('./src/routes/inventory');
 const analyticsRoutes = require('./src/routes/analytics');
+const activityRoutes = require('./src/routes/activity');
 const shellRoutes = require('./src/routes/shell');
 
 const prisma = require('./src/db');
@@ -45,6 +46,7 @@ app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/workforce', workforceRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/activity', activityRoutes);
 app.use('/api', shellRoutes);
 
 // Health check endpoint
