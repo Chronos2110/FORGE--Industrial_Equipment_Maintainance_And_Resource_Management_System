@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
     initJobTravelerModal();
     initUniversalDossierTriggers();
     initPersonnelProfileModal();
+    initBackendConnection();
 });
 
 // ==========================================================================
@@ -1133,6 +1134,22 @@ function executeDemoReset() {
     migrateLegacyKeys();
     initDefaultData();
     migrateLegacyData();
+
+    if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.isOnline()) {
+        ForgeApiClient.request("POST", "/api/dev/reset").then(function () {
+            ForgeApiClient.hydrateAll().then(function () {
+                logActivity("System", "Demo environment and database restored to baseline", "badge-scheduled");
+                showAlert("Demo database and local data restored to factory baseline.", "success");
+                setTimeout(function () { window.location.reload(); }, 600);
+            });
+        }).catch(function () {
+            logActivity("System", "Demo environment restored to baseline", "badge-scheduled");
+            showAlert("Demo data successfully restored to factory baseline.", "success");
+            setTimeout(function () { window.location.reload(); }, 600);
+        });
+        return;
+    }
+
     logActivity("System", "Demo environment restored to baseline", "badge-scheduled");
     showAlert("Demo data successfully restored to factory baseline.", "success");
 
@@ -1370,6 +1387,16 @@ function initTopbarShell() {
         searchTrigger.addEventListener("click", function () {
             openCommandPalette();
         });
+    }
+
+    // D0. Live Hybrid Connection Indicator (Milestone 7: Prisma DB vs Local Cache)
+    if (topbarRight && !document.getElementById("forgeConnectionIndicator")) {
+        var indicator = document.createElement("div");
+        indicator.id = "forgeConnectionIndicator";
+        indicator.className = "forge-connection-indicator offline";
+        indicator.setAttribute("title", "Industrial Data Link Status");
+        indicator.innerHTML = '<span class="forge-conn-pulse" aria-hidden="true"></span><span>LOCAL CACHE</span>';
+        topbarRight.insertBefore(indicator, topbarRight.firstChild);
     }
 
     // D. Refine topbar accessibility & add Reset Demo Data action
@@ -2280,17 +2307,368 @@ function initAccessibilityHardening() {
 }
 
 // ==========================================================================
-// MILESTONE 5: ENTERPRISE DATA ADAPTER & REAL-TIME TELEMETRY SYNC
+// MILESTONE 7: FULL-STACK HYBRID REST API CLIENT & CONNECTION MONITOR
 // ==========================================================================
+
+var ForgeApiClient = (function () {
+    var _isOnline = false;
+    var _mode = "LOCAL"; // "PRISMA" or "LOCAL"
+
+    function getBaseUrl() {
+        if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+            return window.location.origin;
+        }
+        return "http://localhost:5000";
+    }
+
+    function getToken() {
+        return sessionStorage.getItem("forge_token") || localStorage.getItem("forge_token") || null;
+    }
+
+    function setToken(token) {
+        if (token) {
+            sessionStorage.setItem("forge_token", token);
+            localStorage.setItem("forge_token", token);
+        } else {
+            sessionStorage.removeItem("forge_token");
+            localStorage.removeItem("forge_token");
+        }
+    }
+
+    function getHeaders() {
+        var headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        };
+        var token = getToken();
+        if (token) {
+            headers["Authorization"] = "Bearer " + token;
+        }
+        return headers;
+    }
+
+    async function request(method, path, body) {
+        try {
+            var opts = {
+                method: method,
+                headers: getHeaders(),
+                credentials: "include"
+            };
+            if (body && (method === "POST" || method === "PATCH" || method === "PUT")) {
+                opts.body = JSON.stringify(body);
+            }
+            var res = await fetch(getBaseUrl() + path, opts);
+            if (res.status === 401) {
+                console.warn("[ForgeApiClient] 401 Unauthorized for " + path);
+                return { status: 401, ok: false, error: "Unauthorized" };
+            }
+            var contentType = res.headers.get("content-type") || "";
+            var data = contentType.indexOf("application/json") !== -1 ? await res.json() : await res.text();
+            return { status: res.status, ok: res.ok, data: data };
+        } catch (err) {
+            return { status: 0, ok: false, error: err.message };
+        }
+    }
+
+    async function checkHealth() {
+        try {
+            var res = await fetch(getBaseUrl() + "/api/health", { method: "GET" });
+            if (res.ok) {
+                var json = await res.json();
+                if (json && json.status === "ONLINE") {
+                    _isOnline = true;
+                    _mode = "PRISMA";
+                    if (typeof ForgeDataService !== "undefined") ForgeDataService.mode = "PRISMA";
+                    updateConnectionIndicator(true);
+                    return true;
+                }
+            }
+        } catch (e) {}
+
+        _isOnline = false;
+        _mode = "LOCAL";
+        if (typeof ForgeDataService !== "undefined") ForgeDataService.mode = "LOCAL";
+        updateConnectionIndicator(false);
+        return false;
+    }
+
+    // Hydrate local cache from Prisma SQLite database
+    async function hydrateAll() {
+        if (!_isOnline) return false;
+        try {
+            var results = await Promise.all([
+                request("GET", "/api/equipment"),
+                request("GET", "/api/work-orders"),
+                request("GET", "/api/maintenance"),
+                request("GET", "/api/inventory"),
+                request("GET", "/api/faults")
+            ]);
+
+            var eqRes = results[0];
+            var woRes = results[1];
+            var pmRes = results[2];
+            var invRes = results[3];
+            var fltRes = results[4];
+
+            if (eqRes.ok && Array.isArray(eqRes.data)) {
+                var mappedEq = eqRes.data.map(function (eq) {
+                    var s = (eq.status || "").toUpperCase();
+                    var statusLabel = (s === "MAINTENANCE" || s === "WARNING") ? "Under Maintenance" : (s === "DOWN" ? "Faulty" : "Operational");
+                    return {
+                        id: eq.id,
+                        name: eq.name,
+                        type: eq.category || eq.type || "Industrial Asset",
+                        category: eq.category || eq.type || "Industrial Asset",
+                        location: eq.bay_location || eq.location || "Bay 01",
+                        bay_location: eq.bay_location || eq.location || "Bay 01",
+                        status: statusLabel,
+                        health: eq.health_score !== undefined ? eq.health_score : 100,
+                        health_score: eq.health_score !== undefined ? eq.health_score : 100,
+                        lastMaintenance: eq.last_serviced_at ? String(eq.last_serviced_at).split("T")[0] : "",
+                        lastMaintenanceDate: eq.last_serviced_at ? String(eq.last_serviced_at).split("T")[0] : "",
+                        assignedTechnician: "Rajesh Kumar",
+                        operatingHours: 1200
+                    };
+                });
+                safeSetJSON("forge_equipment", mappedEq);
+                syncLegacyKey("equipment", mappedEq);
+            }
+
+            if (woRes.ok && Array.isArray(woRes.data)) {
+                var mappedWo = woRes.data.map(function (wo) {
+                    var s = (wo.status || "").toUpperCase().replace(/\s+/g, "_");
+                    var statusLabel = (s === "ASSIGNED") ? "Assigned" : ((s === "IN_PROGRESS") ? "In Progress" : ((s === "COMPLETED") ? "Completed" : "Pending"));
+                    var p = (wo.priority || "").toUpperCase();
+                    var prioLabel = (p === "CRITICAL" || p === "HIGH") ? "High" : ((p === "LOW") ? "Low" : "Medium");
+                    var partItem = wo.parts_required && wo.parts_required.length > 0 ? wo.parts_required[0] : null;
+
+                    return {
+                        id: wo.id,
+                        equipment: (wo.equipment && wo.equipment.name) ? wo.equipment.name : (wo.equipment || wo.equipmentId || "EQ001"),
+                        equipmentId: wo.equipment_id || wo.equipmentId || "EQ001",
+                        problem: wo.description || wo.title || wo.problem || "",
+                        description: wo.description || wo.title || wo.problem || "",
+                        priority: prioLabel,
+                        status: statusLabel,
+                        technician: (wo.technician && wo.technician.name) ? wo.technician.name : (wo.technician || "Unassigned"),
+                        technicianId: wo.assigned_to || wo.technicianId || "",
+                        date: wo.created_at ? String(wo.created_at).split("T")[0] : (wo.date || ""),
+                        scheduledDate: wo.created_at ? String(wo.created_at).split("T")[0] : (wo.scheduledDate || ""),
+                        requiredPart: (partItem && partItem.part) ? partItem.part.name : (wo.requiredPart || "Hydraulic Filter HF-90"),
+                        requiredPartId: partItem ? partItem.part_id : (wo.requiredPartId || "PRT-101"),
+                        requiredQuantity: partItem ? partItem.quantity_required : (wo.requiredQuantity || 1),
+                        notes: ""
+                    };
+                });
+                safeSetJSON("forge_workorders", mappedWo);
+                syncLegacyKey("workorders", mappedWo);
+            }
+
+            if (pmRes.ok && Array.isArray(pmRes.data)) {
+                var mappedPm = pmRes.data.map(function (m) {
+                    var s = (m.compliance_status || m.status || "").toUpperCase();
+                    var statusLabel = (s === "COMPLETED") ? "Completed" : ((s === "OVERDUE") ? "Overdue" : "Scheduled");
+                    return {
+                        id: m.id,
+                        equipment: (m.equipment && m.equipment.name) ? m.equipment.name : (m.equipment || m.equipmentId || "EQ001"),
+                        equipmentId: m.equipment_id || m.equipmentId || "EQ001",
+                        type: m.task_name || m.type || "Routine PM",
+                        task_name: m.task_name || m.type || "Routine PM",
+                        scheduledDate: m.next_due_date ? String(m.next_due_date).split("T")[0] : (m.scheduledDate || ""),
+                        frequency_days: m.frequency_days || 30,
+                        technician: (m.assigned_tech && m.assigned_tech.name) ? m.assigned_tech.name : (m.technician || "Unassigned"),
+                        technicianId: m.assigned_tech_id || m.technicianId || "",
+                        status: statusLabel,
+                        compliance_status: s
+                    };
+                });
+                safeSetJSON("forge_maintenance", mappedPm);
+                syncLegacyKey("maintenance", mappedPm);
+            }
+
+            if (invRes.ok && Array.isArray(invRes.data)) {
+                var mappedInv = invRes.data.map(function (p) {
+                    return {
+                        id: p.id,
+                        partName: p.name || p.partName || "Spare Part",
+                        name: p.name || p.partName || "Spare Part",
+                        category: p.category || "General",
+                        quantity: p.quantity_on_hand !== undefined ? p.quantity_on_hand : (p.quantity || 0),
+                        quantity_on_hand: p.quantity_on_hand !== undefined ? p.quantity_on_hand : (p.quantity || 0),
+                        minimumStock: p.min_threshold !== undefined ? p.min_threshold : (p.minimumStock || 5),
+                        minStock: p.min_threshold !== undefined ? p.min_threshold : (p.minStock || 5),
+                        min_threshold: p.min_threshold !== undefined ? p.min_threshold : (p.minStock || 5),
+                        unit_cost: p.unit_cost !== undefined ? p.unit_cost : 50.0,
+                        storage_bin: p.storage_bin || "Bin A-01",
+                        supplier: p.supplier || "Industrial OEM Supply"
+                    };
+                });
+                safeSetJSON("forge_inventory", mappedInv);
+                syncLegacyKey("inventory", mappedInv);
+            }
+
+            var currentRole = (sessionStorage.getItem("forge_role") || "").toLowerCase();
+            if (currentRole !== "operator") {
+                var wfRes = await request("GET", "/api/workforce");
+                if (wfRes.ok && Array.isArray(wfRes.data)) {
+                    var mappedWf = wfRes.data.map(function (t) {
+                        var prof = t.technician_profile || {};
+                        var avail = "Available";
+                        if (t.status === "OFF_SHIFT") avail = "Unavailable";
+                        else if (t.availability === "On Break") avail = "On Break";
+                        else avail = "Available";
+
+                        return {
+                            id: t.id,
+                            name: t.name,
+                            email: t.email || "",
+                            role: "Technician",
+                            bay: t.bay_assignment || "Bay 01",
+                            specialization: prof.specialization || t.specialization || "Mechanical",
+                            skill: prof.specialization || t.specialization || "Mechanical",
+                            certifications: "ISO-9001 Safety / Master Tech",
+                            certification: "ISO-9001 Safety / Master Tech",
+                            availability: avail,
+                            activeWorkload: prof.active_wo_count || t.activeWorkload || 0,
+                            workload: (prof.active_wo_count || t.activeWorkload || 0) + " Active Orders"
+                        };
+                    });
+                    safeSetJSON("forge_technicians", mappedWf);
+                    syncLegacyKey("technicians", mappedWf);
+                }
+            }
+
+            if (fltRes.ok && Array.isArray(fltRes.data)) {
+                var mappedFlt = fltRes.data.map(function (f) {
+                    return {
+                        id: f.id,
+                        equipmentId: f.equipment_id || f.equipmentId || "",
+                        equipment: (f.equipment && f.equipment.name) ? f.equipment.name : (f.equipmentName || f.equipment || ""),
+                        equipmentName: (f.equipment && f.equipment.name) ? f.equipment.name : (f.equipmentName || f.equipment || ""),
+                        reportedBy: (f.reporter && f.reporter.name) ? f.reporter.name : (f.reportedBy || "Operator"),
+                        priority: (f.severity === "CRITICAL" || f.severity === "HIGH") ? "High" : ((f.severity === "LOW") ? "Low" : "Medium"),
+                        severity: f.severity || "MEDIUM",
+                        description: f.description || "",
+                        status: f.status === "CONVERTED_TO_WO" ? "Converted to WO" : (f.status === "REPORTED" ? "Open" : (f.status || "Open")),
+                        workOrderId: f.linked_wo_id || f.workOrderId || "",
+                        createdAt: f.created_at || f.createdAt || new Date().toISOString()
+                    };
+                });
+                safeSetJSON("forge_faults", mappedFlt);
+            }
+
+            updateDockAlertsCount();
+            return true;
+        } catch (err) {
+            console.warn("[ForgeApiClient] Hydration error:", err);
+            return false;
+        }
+    }
+
+    return {
+        checkHealth: checkHealth,
+        isOnline: function () { return _isOnline; },
+        getMode: function () { return _mode; },
+        getToken: getToken,
+        setToken: setToken,
+        request: request,
+        hydrateAll: hydrateAll,
+
+        login: async function (username, password, role) {
+            var res = await request("POST", "/api/auth/login", {
+                username: username,
+                password: password,
+                role: role
+            });
+            if (res.ok && res.data && res.data.token) {
+                setToken(res.data.token);
+                return { success: true, token: res.data.token, user: res.data.user };
+            }
+            return { success: false, error: (res.data && res.data.error) || "Authentication failed." };
+        },
+
+        register: async function (payload) {
+            var res = await request("POST", "/api/auth/register", payload);
+            if (res.ok && res.data && res.data.token) {
+                setToken(res.data.token);
+                return { success: true, token: res.data.token, user: res.data.user };
+            }
+            return { success: false, error: (res.data && res.data.error) || "Registration failed." };
+        },
+
+        updateTechnicianAvailability: async function (techId, status, availability) {
+            var res = await request("PATCH", "/api/workforce/" + encodeURIComponent(techId) + "/availability", {
+                status: status,
+                availability: availability
+            });
+            return res.ok ? res.data : null;
+        }
+    };
+})();
+
+// Expose alias for any callers
+var FORGE_API = ForgeApiClient;
+
+function updateConnectionIndicator(online) {
+    var indicator = document.getElementById("forgeConnectionIndicator");
+    if (!indicator) {
+        var topbarRight = document.querySelector(".topbar-right");
+        if (topbarRight) {
+            indicator = document.createElement("div");
+            indicator.id = "forgeConnectionIndicator";
+            indicator.className = "forge-connection-indicator";
+            var themeToggle = document.getElementById("forgeThemeToggle");
+            if (themeToggle) {
+                topbarRight.insertBefore(indicator, themeToggle);
+            } else {
+                topbarRight.insertBefore(indicator, topbarRight.firstChild);
+            }
+        }
+    }
+
+    if (indicator) {
+        if (online) {
+            indicator.className = "forge-connection-indicator online";
+            indicator.setAttribute("title", "Active connection to Node.js / Prisma SQLite database");
+            indicator.innerHTML = '<span class="forge-conn-pulse" aria-hidden="true"></span><span>DB CONNECTED (PRISMA)</span>';
+        } else {
+            indicator.className = "forge-connection-indicator offline";
+            indicator.setAttribute("title", "Operating in standalone local cache mode");
+            indicator.innerHTML = '<span class="forge-conn-pulse" aria-hidden="true"></span><span>LOCAL CACHE</span>';
+        }
+    }
+
+    var dockStatus = document.getElementById("dockConnectionStatus");
+    if (dockStatus) {
+        dockStatus.textContent = online ? "PRISMA LIVE" : "LOCAL CACHE";
+        dockStatus.className = online ? "badge-operational" : "badge-waiting";
+    }
+}
+
+function initBackendConnection() {
+    ForgeApiClient.checkHealth().then(function (online) {
+        if (online) {
+            ForgeApiClient.hydrateAll().then(function () {
+                var path = window.location.pathname.toLowerCase();
+                if (typeof renderDashboardView === "function") renderDashboardView();
+                else if (typeof renderEquipmentTable === "function") renderEquipmentTable();
+                else if (typeof renderWorkOrders === "function") renderWorkOrders();
+                else if (typeof renderMaintenanceTable === "function") renderMaintenanceTable();
+                else if (typeof renderInventoryTable === "function") renderInventoryTable();
+                else if (typeof renderWorkforceTable === "function") renderWorkforceTable();
+            });
+        }
+    });
+}
 
 /**
  * ForgeDataService: Centralized CRUD adapter for industrial entities.
- * Default mode: "LOCAL" (localStorage with 3NF relational integrity).
- * REST-ready hook points for future fetch() API calls.
+ * Hybrid mode: automatically synchronizes with Express/Prisma API when reachable,
+ * with instantaneous 3NF localStorage fallback when offline.
  */
 var ForgeDataService = {
     mode: "LOCAL",
-    apiBaseUrl: "/api/v1",
+    apiBaseUrl: "/api",
 
     getEntityKey: function (entity) {
         var map = {
@@ -2308,9 +2686,6 @@ var ForgeDataService = {
     },
 
     list: function (entity, query) {
-        if (this.mode === "API") {
-            // Hook point: return fetch(this.apiBaseUrl + "/" + entity).then(r => r.json());
-        }
         var key = this.getEntityKey(entity);
         var data = safeGetJSON(key, []);
         if (query && typeof query === "object") {
@@ -2325,9 +2700,6 @@ var ForgeDataService = {
     },
 
     get: function (entity, id) {
-        if (this.mode === "API") {
-            // Hook point: return fetch(this.apiBaseUrl + "/" + entity + "/" + id).then(r => r.json());
-        }
         var items = this.list(entity);
         var needle = String(id).toLowerCase().trim();
         for (var i = 0; i < items.length; i++) {
@@ -2343,9 +2715,6 @@ var ForgeDataService = {
     },
 
     save: function (entity, item, isNew) {
-        if (this.mode === "API") {
-            // Hook point: return fetch(...);
-        }
         var key = this.getEntityKey(entity);
         var items = this.list(entity);
         var action = isNew ? "CREATE" : "UPDATE";
@@ -2372,13 +2741,48 @@ var ForgeDataService = {
         syncLegacyKey(entity, items);
         ForgeSync.broadcast(entity, action, { id: item.id });
         updateDockAlertsCount();
+
+        // Background API synchronization when online
+        if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.isOnline()) {
+            try {
+                if (entity === "workorders") {
+                    if (isNew) {
+                        ForgeApiClient.request("POST", "/api/work-orders", item);
+                    } else if (item.status) {
+                        ForgeApiClient.request("PATCH", "/api/work-orders/" + encodeURIComponent(item.id) + "/status", { status: item.status });
+                    }
+                } else if (entity === "equipment") {
+                    if (isNew) {
+                        ForgeApiClient.request("POST", "/api/equipment", item);
+                    } else {
+                        ForgeApiClient.request("PATCH", "/api/equipment/" + encodeURIComponent(item.id), item);
+                    }
+                } else if (entity === "maintenance") {
+                    if (isNew) {
+                        ForgeApiClient.request("POST", "/api/maintenance", item);
+                    } else {
+                        ForgeApiClient.request("PATCH", "/api/maintenance/" + encodeURIComponent(item.id), item);
+                    }
+                } else if (entity === "inventory") {
+                    if (isNew) {
+                        ForgeApiClient.request("POST", "/api/inventory", item);
+                    } else {
+                        ForgeApiClient.request("PATCH", "/api/inventory/" + encodeURIComponent(item.id) + "/restock", item);
+                    }
+                } else if (entity === "faults") {
+                    if (isNew) {
+                        ForgeApiClient.request("POST", "/api/faults", item);
+                    }
+                }
+            } catch (apiErr) {
+                console.warn("[ForgeDataService] Background API sync error:", apiErr);
+            }
+        }
+
         return item;
     },
 
     remove: function (entity, id) {
-        if (this.mode === "API") {
-            // Hook point: return fetch(...);
-        }
         var key = this.getEntityKey(entity);
         var items = this.list(entity);
         var filtered = items.filter(function (it) { return it.id !== id; });
@@ -2386,6 +2790,21 @@ var ForgeDataService = {
         syncLegacyKey(entity, filtered);
         ForgeSync.broadcast(entity, "DELETE", { id: id });
         updateDockAlertsCount();
+
+        if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.isOnline()) {
+            try {
+                if (entity === "equipment") {
+                    ForgeApiClient.request("DELETE", "/api/equipment/" + encodeURIComponent(id));
+                } else if (entity === "workorders") {
+                    ForgeApiClient.request("DELETE", "/api/work-orders/" + encodeURIComponent(id));
+                } else if (entity === "inventory") {
+                    ForgeApiClient.request("DELETE", "/api/inventory/" + encodeURIComponent(id));
+                }
+            } catch (delErr) {
+                console.warn("[ForgeDataService] Background API delete error:", delErr);
+            }
+        }
+
         return true;
     },
 
@@ -2394,7 +2813,7 @@ var ForgeDataService = {
     },
 
     // ----------------------------------------------------------------------
-    // User Identity & Shift Management (Milestone 6)
+    // User Identity & Shift Management (Milestone 6 & 7)
     // ----------------------------------------------------------------------
     getUsers: function () {
         var users = safeGetJSON("forge_users", []);
@@ -2485,7 +2904,48 @@ var ForgeDataService = {
         return false;
     },
 
-    authenticate: function (identifier, password, role) {
+    authenticate: async function (identifier, password, role) {
+        // 1. Live Backend Login if API is reachable
+        if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.isOnline()) {
+            var apiResult = await ForgeApiClient.login(identifier, password, role);
+            if (apiResult && apiResult.success) {
+                var apiUser = apiResult.user;
+                var normalizedRole = (apiUser.role === "ADMIN" ? "Administrator" : (apiUser.role === "TECHNICIAN" ? "Technician" : "Operator"));
+                var userRecord = {
+                    id: apiUser.id,
+                    name: apiUser.name,
+                    username: identifier,
+                    email: apiUser.email,
+                    badgeId: apiUser.role === "ADMIN" ? "ADM-001" : (apiUser.role === "TECHNICIAN" ? "TECH-01" : "OP-101"),
+                    role: normalizedRole,
+                    bay: apiUser.bay_assignment || "Bay 01",
+                    shift: "Day Shift",
+                    specialization: (apiUser.technician_profile && apiUser.technician_profile.specialization) || (normalizedRole === "Technician" ? "Mechanical" : "General Operations"),
+                    status: apiUser.status === "ACTIVE" ? "Available" : "Off Shift"
+                };
+
+                // Match with local forge_users record if it exists to preserve custom badge IDs
+                var localUsers = this.getUsers();
+                var matchedLocal = localUsers.find(function (u) {
+                    return (u.email && u.email.toLowerCase() === (apiUser.email || "").toLowerCase()) ||
+                           (u.username && u.username.toLowerCase() === identifier.toLowerCase());
+                });
+                if (matchedLocal) {
+                    userRecord.badgeId = matchedLocal.badgeId || userRecord.badgeId;
+                    userRecord.bay = matchedLocal.bay || userRecord.bay;
+                    userRecord.shift = matchedLocal.shift || userRecord.shift;
+                }
+
+                this.setCurrentUser(userRecord);
+                this.logActivity("Auth Terminal", "Personnel authenticated via Prisma (" + userRecord.badgeId + " // " + userRecord.name + ")", "badge-operational");
+                await ForgeApiClient.hydrateAll();
+                return { success: true, user: userRecord };
+            } else if (apiResult && apiResult.error) {
+                return { success: false, message: apiResult.error };
+            }
+        }
+
+        // 2. Local fallback against forge_users
         var users = this.getUsers();
         var idLower = (identifier || "").trim().toLowerCase();
 
@@ -2513,7 +2973,7 @@ var ForgeDataService = {
         return { success: true, user: user };
     },
 
-    registerUser: function (userData) {
+    registerUser: async function (userData) {
         var users = this.getUsers();
         var emailLower = (userData.email || "").trim().toLowerCase();
         var badgeUpper = (userData.badgeId || "").trim().toUpperCase();
@@ -2533,6 +2993,25 @@ var ForgeDataService = {
             }
         }
 
+        // 1. Live Backend Registration if API is reachable
+        if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.isOnline()) {
+            var apiPayload = {
+                name: userData.name.trim(),
+                email: emailLower,
+                username: userData.username || (emailLower.split("@")[0]),
+                password: userData.password,
+                confirmPassword: userData.password,
+                role: userData.role,
+                bay_assignment: userData.bay || "Bay 01",
+                specialization: userData.specialization || (userData.role === "Technician" ? "Mechanical" : undefined)
+            };
+            var apiResult = await ForgeApiClient.register(apiPayload);
+            if (!apiResult.success) {
+                return { success: false, message: apiResult.error || "Backend registration failed." };
+            }
+        }
+
+        // 2. Also save to local forge_users & forge_technicians
         var newUser = {
             id: "USR-" + Date.now(),
             name: userData.name.trim(),
@@ -2590,6 +3069,10 @@ var ForgeDataService = {
             ForgeSync.broadcast("users", "REGISTER", { id: newUser.id, badgeId: newUser.badgeId, role: newUser.role });
         }
 
+        if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.isOnline()) {
+            await ForgeApiClient.hydrateAll();
+        }
+
         return { success: true, user: newUser };
     },
 
@@ -2623,6 +3106,11 @@ var ForgeDataService = {
             syncLegacyKey("technicians", techs);
             if (typeof ForgeSync !== "undefined" && ForgeSync.broadcast) {
                 ForgeSync.broadcast("technicians", "UPDATE", { id: currentUser.badgeId, availability: techAvail });
+            }
+
+            // Sync with backend API
+            if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.isOnline()) {
+                ForgeApiClient.updateTechnicianAvailability(currentUser.badgeId || currentUser.id, newStatus === "Available" ? "ACTIVE" : (newStatus === "On Break" ? "ACTIVE" : "OFF_SHIFT"), techAvail);
             }
         }
 

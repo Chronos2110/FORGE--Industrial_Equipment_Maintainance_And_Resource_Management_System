@@ -4883,3 +4883,48 @@ button:disabled {
     color: #fff;
 }
 
+/* ==========================================================================
+   FORGE Milestone 7: Live Backend Hybrid Connection Indicator
+   ========================================================================== */
+.forge-connection-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-secondary, rgba(0, 0, 0, 0.03));
+    user-select: none;
+    transition: all var(--transition-normal);
+}
+.forge-connection-indicator.online {
+    border-color: rgba(16, 185, 129, 0.35);
+    background: rgba(16, 185, 129, 0.08);
+    color: #10b981;
+}
+.forge-connection-indicator.offline {
+    border-color: rgba(245, 158, 11, 0.35);
+    background: rgba(245, 158, 11, 0.08);
+    color: #f59e0b;
+}
+.forge-conn-pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.forge-connection-indicator.online .forge-conn-pulse {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+    animation: pulse-emerald 2s infinite;
+}
+.forge-connection-indicator.offline .forge-conn-pulse {
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+}
+
+

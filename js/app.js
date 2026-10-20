@@ -20,13 +20,14 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    loginForm.addEventListener("submit", function (event) {
+    loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
 
         var username = document.getElementById("username").value.trim();
         var password = document.getElementById("password").value.trim();
         var role = document.getElementById("role").value;
         var message = document.getElementById("loginMessage");
+        var submitBtn = document.getElementById("loginSubmit") || loginForm.querySelector("button[type='submit']");
 
         if (!username || !password || !role) {
             if (message) {
@@ -36,19 +37,26 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // Authenticate against ForgeDataService
+        if (message) {
+            message.textContent = "Authenticating credentials with FORGE Security Server…";
+            message.style.color = "var(--accent-brand, #d97706)";
+        }
+        if (submitBtn) submitBtn.disabled = true;
+
+        // Authenticate against ForgeDataService (Hybrid: Prisma backend with local fallback)
         if (typeof ForgeDataService !== "undefined" && ForgeDataService.authenticate) {
-            var auth = ForgeDataService.authenticate(username, password, role);
-            if (!auth.success) {
+            var auth = await ForgeDataService.authenticate(username, password, role);
+            if (!auth || !auth.success) {
                 if (message) {
-                    message.textContent = "✕ " + auth.message;
+                    message.textContent = "✕ " + ((auth && auth.message) || "Authentication failed. Please verify credentials.");
                     message.style.color = "var(--danger, #e74c3c)";
                 }
+                if (submitBtn) submitBtn.disabled = false;
                 return;
             }
 
             if (message) {
-                message.textContent = "✓ Access Granted (" + auth.user.badgeId + " // " + auth.user.name + "). Entering FORGE…";
+                message.textContent = "✓ Access Granted (" + (auth.user.badgeId || "USR") + " // " + auth.user.name + "). Entering FORGE…";
                 message.style.color = "var(--success, #4D8B57)";
             }
 

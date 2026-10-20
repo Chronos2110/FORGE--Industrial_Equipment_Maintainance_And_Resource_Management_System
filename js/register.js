@@ -304,7 +304,7 @@ document.addEventListener("DOMContentLoaded", function () {
     suggestBadgeId("Technician");
 
     // 6. Form Submission & Auto-Provisioning
-    registerForm.addEventListener("submit", function (e) {
+    registerForm.addEventListener("submit", async function (e) {
         e.preventDefault();
 
         var fullName = document.getElementById("regFullName").value.trim();
@@ -363,18 +363,22 @@ document.addEventListener("DOMContentLoaded", function () {
             registrationPayload.shift = opShiftSelect ? opShiftSelect.value : "Day Shift (06:00 - 14:00)";
         }
 
-        // Call ForgeDataService to register user and auto-provision workforce
-        if (typeof ForgeDataService !== "undefined" && ForgeDataService.registerUser) {
-            var result = ForgeDataService.registerUser(registrationPayload);
-            if (!result.success) {
-                showFormError(result.message);
-                return;
-            }
+        var submitBtn = document.getElementById("btnRegisterSubmit");
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = "PROVISIONING WORKFORCE ACCOUNT…";
+        }
 
-            var submitBtn = document.getElementById("btnRegisterSubmit");
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = "PROVISIONING WORKFORCE ACCOUNT…";
+        // Call ForgeDataService to register user and auto-provision workforce (Hybrid: Prisma + local)
+        if (typeof ForgeDataService !== "undefined" && ForgeDataService.registerUser) {
+            var result = await ForgeDataService.registerUser(registrationPayload);
+            if (!result || !result.success) {
+                showFormError((result && result.message) || "Registration failed. Please check form fields.");
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "INITIALIZE & ENROLL PERSONNEL →";
+                }
+                return;
             }
 
             showFormSuccess("✓ Personnel account registered & provisioned (" + result.user.badgeId + " // " + result.user.name + "). Entering FORGE…");
