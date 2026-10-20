@@ -90,7 +90,7 @@ var FORGE_API = (function () {
         if (equipment && Array.isArray(equipment)) {
             var mappedEq = equipment.map(function (eq) {
                 var s = (eq.status || "").toUpperCase();
-                var statusLabel = (s === "MAINTENANCE" || s === "WARNING") ? "Under Maintenance" : (s === "DOWN" ? "Faulty" : "Operational");
+                var statusLabel = (s === "MAINTENANCE" || s === "WARNING") ? "Maintenance" : (s === "DOWN" ? "Faulty" : "Operational");
                 return {
                     id: eq.id,
                     name: eq.name,
@@ -114,7 +114,11 @@ var FORGE_API = (function () {
         if (workorders && Array.isArray(workorders)) {
             var mappedWo = workorders.map(function (wo) {
                 var s = (wo.status || "").toUpperCase().replace(/\s+/g, "_");
-                var statusLabel = (s === "ASSIGNED") ? "Assigned" : ((s === "IN_PROGRESS") ? "In Progress" : ((s === "COMPLETED") ? "Completed" : "Pending"));
+                var statusLabel = (s === "WAITING_FOR_PARTS") ? "Waiting for Parts" :
+                    ((s === "OPEN" || s === "SCHEDULED") ? "Scheduled" :
+                    ((s === "ASSIGNED") ? "Assigned" :
+                    ((s === "IN_PROGRESS") ? "In Progress" :
+                    ((s === "COMPLETED") ? "Completed" : "Pending"))));
                 var p = (wo.priority || "").toUpperCase();
                 var prioLabel = (p === "CRITICAL" || p === "HIGH") ? "High" : ((p === "LOW") ? "Low" : "Medium");
                 var partItem = wo.parts_required && wo.parts_required.length > 0 ? wo.parts_required[0] : null;

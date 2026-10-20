@@ -1,5 +1,6 @@
-require('dotenv').config();
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -18,6 +19,7 @@ const prisma = require('./src/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const FRONTEND_DIR = path.join(__dirname, '../frontend');
 
 // Allow the registration/login pages even when opened from Live Server or file://
 app.use(cors({
@@ -30,8 +32,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Serve static frontend files directly from the repository root
-app.use(express.static(path.join(__dirname)));
+// Serve static frontend files directly from the frontend directory
+app.use(express.static(FRONTEND_DIR));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -60,10 +62,10 @@ app.all('/api/*', (req, res) => {
 });
 
 // Root and friendly routes
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
-app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'register.html')));
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'pages/dashboard.html')));
+app.get('/', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'login.html')));
+app.get('/register', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'register.html')));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'pages/dashboard.html')));
 
 async function startServer() {
   try {

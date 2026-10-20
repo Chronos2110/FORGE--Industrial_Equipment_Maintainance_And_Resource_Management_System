@@ -2,18 +2,20 @@
   "name": "forge-industrial-maintenance-system",
   "version": "1.0.0",
   "description": "FORGE Industrial Equipment Maintenance and Resource Management System",
-  "main": "server.js",
+  "main": "backend/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
-    "seed": "node prisma/seed.js"
+    "seed": "node backend/prisma/seed.js",
+    "test": "node backend/test/backend_test.js"
   },
   "prisma": {
-    "seed": "node prisma/seed.js"
+    "schema": "backend/prisma/schema.prisma",
+    "seed": "node backend/prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

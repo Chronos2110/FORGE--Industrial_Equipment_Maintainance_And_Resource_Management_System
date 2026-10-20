@@ -298,7 +298,7 @@ function filterAndRenderTable() {
 
         // Action buttons
         var role = (typeof getActiveRole === "function") ? getActiveRole() : "Administrator";
-        let jobSheetBtn = "<button type='button' class='btn-action-view' onclick='openJobTravelerModal(\"" + escapeHTML(o.id) + "\")' title='Open Shop-Floor Job Sheet / LOTO Traveler' style='background:var(--surface-elevated);border:1px solid var(--border-color);color:var(--text-primary);padding:3px 7px;font-size:0.72rem;font-weight:600;'>🖨 Job Sheet</button>";
+        let jobSheetBtn = "<button type='button' class='btn-action-view' onclick='openJobTravelerModal(\"" + escapeHTML(o.id) + "\")' title='Open Shop-Floor Job Sheet / LOTO Traveler' style='background:var(--surface-elevated);border:1px solid var(--border-color);color:var(--text-primary);padding:3px 7px;font-size:0.72rem;font-weight:600;'>" + (typeof SVG_ICONS !== "undefined" && SVG_ICONS.printer ? "<span style='vertical-align:middle;margin-right:3px;'>" + SVG_ICONS.printer + "</span>" : "") + "Job Sheet</button>";
         let actionsHtml = "";
 
         if (role === "Operator") {
@@ -784,7 +784,7 @@ function renderKanbanBoard() {
             editBtnHtml = '<button type="button" class="btn-kanban-action" onclick="editOrder(\'' + escapeHTML(o.id) + '\')">Edit</button>';
         }
 
-        let jobSheetBtnHtml = '<button type="button" class="btn-kanban-action" onclick="openJobTravelerModal(\'' + escapeHTML(o.id) + '\')" title="Open Job Sheet / LOTO Traveler">🖨 Job Sheet</button>';
+        let jobSheetBtnHtml = '<button type="button" class="btn-kanban-action" onclick="openJobTravelerModal(\'' + escapeHTML(o.id) + '\')" title="Open Job Sheet / LOTO Traveler">' + (typeof SVG_ICONS !== "undefined" && SVG_ICONS.printer ? "<span style='vertical-align:middle;margin-right:3px;'>" + SVG_ICONS.printer + "</span>" : "") + 'Job Sheet</button>';
 
         let card = document.createElement("div");
         card.className = "kanban-card " + (isReadOnly ? "read-only-card" : "");

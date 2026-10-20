@@ -32,6 +32,10 @@
     /* Surfaces */
     --canvas-bg:           var(--bg-canvas);
     --card-bg:             var(--surface-card);
+    --bg-body:             var(--bg-canvas);
+    --bg-card:             var(--surface-card);
+    --card-header-bg:      #EAECEE;
+    --bg-surface-hover:    #F0EFEB;
     --card-bg-elevated:    #F0EFEB;
     --card-hover-bg:       #F0EFEB;
     --card-hover-border:   #C5C9CC;
@@ -149,6 +153,10 @@
 
     --canvas-bg:           var(--bg-canvas);
     --card-bg:             var(--surface-card);
+    --bg-body:             var(--bg-canvas);
+    --bg-card:             var(--surface-card);
+    --card-header-bg:      #0D1117;
+    --bg-surface-hover:    #1C2128;
     --card-bg-elevated:    #1C2128;
     --card-hover-bg:       #1C2128;
     --card-hover-border:   #30363D;

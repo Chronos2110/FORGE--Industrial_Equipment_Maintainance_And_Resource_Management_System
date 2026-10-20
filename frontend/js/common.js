@@ -83,7 +83,11 @@ var SVG_ICONS = {
     sidebar: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><path d="m14 9-3 3 3 3"/></svg>',
     plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
     reset: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
-    check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>'
+    check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>',
+    printer: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+    help: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    eye: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+    eyeOff: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
 };
 
 // ==========================================================================
@@ -171,6 +175,11 @@ function initCommon() {
             if (typeof ForgeDataService !== "undefined" && ForgeDataService.logout) {
                 ForgeDataService.logout();
             } else {
+                if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.setToken) {
+                    ForgeApiClient.setToken(null);
+                }
+                sessionStorage.removeItem("forge_token");
+                localStorage.removeItem("forge_token");
                 sessionStorage.removeItem("forge_session");
                 localStorage.removeItem("forge_session");
                 sessionStorage.removeItem("forge_role");
@@ -1994,13 +2003,13 @@ function getCommandPaletteData() {
     // 1. Navigation items (role-filtered)
     var allowedNav = ROLE_NAV_ACCESS[role] || ROLE_NAV_ACCESS["Operator"];
     var allNav = [
-        { id: "nav-dash",  category: "Navigation", icon: "⊞", title: "Operations Dashboard", meta: "Module // Overview", href: "dashboard.html", key: "dashboard" },
-        { id: "nav-eq",    category: "Navigation", icon: "⚙", title: "Equipment Registry", meta: "Module // Operations", href: "equipment.html", key: "equipment" },
-        { id: "nav-maint", category: "Navigation", icon: "🛠", title: "Maintenance Schedules", meta: "Module // Operations", href: "maintenance.html", key: "maintenance" },
-        { id: "nav-wo",    category: "Navigation", icon: "📋", title: "Work Orders Dispatch", meta: "Module // Operations", href: "workorders.html", key: "workorders" },
-        { id: "nav-wf",    category: "Navigation", icon: "👥", title: "Workforce & Roster", meta: "Module // Resources", href: "workforce.html", key: "workforce" },
-        { id: "nav-inv",   category: "Navigation", icon: "📦", title: "Spares Inventory", meta: "Module // Resources", href: "inventory.html", key: "inventory" },
-        { id: "nav-an",    category: "Navigation", icon: "📈", title: "System Analytics", meta: "Module // Insights", href: "analytics.html", key: "analytics" }
+        { id: "nav-dash",  category: "Navigation", icon: SVG_ICONS.dashboard, title: "Operations Dashboard", meta: "Module // Overview", href: "dashboard.html", key: "dashboard" },
+        { id: "nav-eq",    category: "Navigation", icon: SVG_ICONS.equipment, title: "Equipment Registry", meta: "Module // Operations", href: "equipment.html", key: "equipment" },
+        { id: "nav-maint", category: "Navigation", icon: SVG_ICONS.maintenance, title: "Maintenance Schedules", meta: "Module // Operations", href: "maintenance.html", key: "maintenance" },
+        { id: "nav-wo",    category: "Navigation", icon: SVG_ICONS.workorders, title: "Work Orders Dispatch", meta: "Module // Operations", href: "workorders.html", key: "workorders" },
+        { id: "nav-wf",    category: "Navigation", icon: SVG_ICONS.workforce, title: "Workforce & Roster", meta: "Module // Resources", href: "workforce.html", key: "workforce" },
+        { id: "nav-inv",   category: "Navigation", icon: SVG_ICONS.inventory, title: "Spares Inventory", meta: "Module // Resources", href: "inventory.html", key: "inventory" },
+        { id: "nav-an",    category: "Navigation", icon: SVG_ICONS.analytics, title: "System Analytics", meta: "Module // Insights", href: "analytics.html", key: "analytics" }
     ];
 
     allNav.forEach(function (n) {
@@ -2022,7 +2031,7 @@ function getCommandPaletteData() {
         var eq = eqList[e];
         recordItems.push({
             category: "Operational Records",
-            icon: "⚙",
+            icon: SVG_ICONS.equipment,
             title: "[" + eq.id + "] " + eq.name,
             meta: (eq.status || "Unknown").toUpperCase() + " • " + (eq.location || "BAY 04"),
             action: (function (targetEq) {
@@ -2037,7 +2046,7 @@ function getCommandPaletteData() {
         var wo = woList[w];
         recordItems.push({
             category: "Operational Records",
-            icon: "📋",
+            icon: SVG_ICONS.workorders,
             title: "[" + wo.id + "] " + (wo.title || wo.description || wo.problem || "Work Order"),
             meta: (wo.priority || "Normal").toUpperCase() + " • " + (wo.status || "Pending"),
             action: (function (targetWo) {
@@ -2052,7 +2061,7 @@ function getCommandPaletteData() {
         var prt = invList[p];
         recordItems.push({
             category: "Operational Records",
-            icon: "📦",
+            icon: SVG_ICONS.inventory,
             title: "[" + prt.id + "] " + (prt.partName || prt.name || "Spare Part"),
             meta: "QTY: " + prt.quantity + " • MIN: " + (prt.minimumStock || prt.minStock || 0),
             action: (function (targetPart) {
@@ -2065,7 +2074,7 @@ function getCommandPaletteData() {
     var currentTheme = localStorage.getItem("forge_theme") || "light";
     actionItems.push({
         category: "System Actions",
-        icon: currentTheme === "dark" ? "☀" : "🌙",
+        icon: currentTheme === "dark" ? SVG_ICONS.sun : SVG_ICONS.moon,
         title: "Toggle Theme (" + (currentTheme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode") + ")",
         meta: "SYSTEM // THEME",
         action: function () {
@@ -2077,7 +2086,7 @@ function getCommandPaletteData() {
     // Reset Demo Data System Action
     actionItems.push({
         category: "System Actions",
-        icon: "↺",
+        icon: SVG_ICONS.reset,
         title: "Reset Demo Data (Restore Factory Baseline)",
         meta: "SYSTEM // BASELINE RESET",
         action: function () {
@@ -2089,7 +2098,7 @@ function getCommandPaletteData() {
     // ISO-55000 Audit Log Action
     actionItems.push({
         category: "System Actions",
-        icon: "📋",
+        icon: SVG_ICONS.workorders,
         title: "View Shift Handover & ISO-55000 Audit Log",
         meta: "SYSTEM // AUDIT TRAIL",
         action: function () {
@@ -2101,7 +2110,7 @@ function getCommandPaletteData() {
     // Keyboard Shortcuts Cheat-Sheet Action
     actionItems.push({
         category: "System Actions",
-        icon: "?",
+        icon: SVG_ICONS.help,
         title: "Keyboard Shortcuts Reference Guide (?)",
         meta: "SYSTEM // ERGONOMICS",
         action: function () {
@@ -2113,7 +2122,7 @@ function getCommandPaletteData() {
     // Equipment 360 Dossier Action
     actionItems.push({
         category: "System Actions",
-        icon: "⚙",
+        icon: SVG_ICONS.equipment,
         title: "Inspect Equipment 360° Technical Dossier",
         meta: "ENGINEERING // RELATIONAL",
         action: function () {
@@ -2128,7 +2137,7 @@ function getCommandPaletteData() {
     // Personnel Profile & Shift Status Action
     actionItems.push({
         category: "System Actions",
-        icon: "🪪",
+        icon: SVG_ICONS.workforce,
         title: "My Personnel Profile & Shift Status",
         meta: "WORKFORCE // PROFILE & SHIFT",
         action: function () {
@@ -2143,7 +2152,7 @@ function getCommandPaletteData() {
         if (r !== role) {
             actionItems.push({
                 category: "System Actions",
-                icon: "👤",
+                icon: SVG_ICONS.workforce,
                 title: "Switch Role: " + r,
                 meta: "SYSTEM // RBAC",
                 action: function () {
@@ -2160,7 +2169,7 @@ function getCommandPaletteData() {
     if (role === "Administrator") {
         actionItems.push({
             category: "System Actions",
-            icon: "+",
+            icon: SVG_ICONS.plus,
             title: "Create New Work Order",
             meta: "ACTION // DISPATCH",
             action: function () {
@@ -2431,7 +2440,7 @@ var ForgeApiClient = (function () {
             if (eqRes.ok && Array.isArray(eqRes.data)) {
                 var mappedEq = eqRes.data.map(function (eq) {
                     var s = (eq.status || "").toUpperCase();
-                    var statusLabel = (s === "MAINTENANCE" || s === "WARNING") ? "Under Maintenance" : (s === "DOWN" ? "Faulty" : "Operational");
+                    var statusLabel = (s === "MAINTENANCE" || s === "WARNING") ? "Maintenance" : (s === "DOWN" ? "Faulty" : "Operational");
                     return {
                         id: eq.id,
                         name: eq.name,
@@ -2455,7 +2464,11 @@ var ForgeApiClient = (function () {
             if (woRes.ok && Array.isArray(woRes.data)) {
                 var mappedWo = woRes.data.map(function (wo) {
                     var s = (wo.status || "").toUpperCase().replace(/\s+/g, "_");
-                    var statusLabel = (s === "ASSIGNED") ? "Assigned" : ((s === "IN_PROGRESS") ? "In Progress" : ((s === "COMPLETED") ? "Completed" : "Pending"));
+                    var statusLabel = (s === "WAITING_FOR_PARTS") ? "Waiting for Parts" :
+                        ((s === "OPEN" || s === "SCHEDULED") ? "Scheduled" :
+                        ((s === "ASSIGNED") ? "Assigned" :
+                        ((s === "IN_PROGRESS") ? "In Progress" :
+                        ((s === "COMPLETED") ? "Completed" : "Pending"))));
                     var p = (wo.priority || "").toUpperCase();
                     var prioLabel = (p === "CRITICAL" || p === "HIGH") ? "High" : ((p === "LOW") ? "Low" : "Medium");
                     var partItem = wo.parts_required && wo.parts_required.length > 0 ? wo.parts_required[0] : null;
@@ -3185,6 +3198,11 @@ var ForgeDataService = {
         if (currentUser) {
             this.logActivity("Auth Terminal", "Personnel logged out (" + currentUser.badgeId + " // " + currentUser.name + ")", "badge-scheduled");
         }
+        if (typeof ForgeApiClient !== "undefined" && ForgeApiClient.setToken) {
+            ForgeApiClient.setToken(null);
+        }
+        sessionStorage.removeItem("forge_token");
+        localStorage.removeItem("forge_token");
         sessionStorage.removeItem("forge_session");
         localStorage.removeItem("forge_session");
         sessionStorage.removeItem("forge_role");
@@ -3548,7 +3566,7 @@ function openAssetDossier(eqIdOrName) {
     if (eq.status === "Faulty") {
         healthScore = 32;
         healthClass = "text-danger";
-    } else if (eq.status === "Maintenance") {
+    } else if (eq.status === "Maintenance" || eq.status === "Under Maintenance") {
         healthScore = 64;
         healthClass = "text-warning";
     } else if (linkedOrders.some(function (o) { return o.status !== "Completed" && o.status !== "Cancelled"; })) {
@@ -3557,7 +3575,7 @@ function openAssetDossier(eqIdOrName) {
     }
 
     var statusBadgeClass = "badge-operational";
-    if (eq.status === "Maintenance") statusBadgeClass = "badge-maintenance";
+    if (eq.status === "Maintenance" || eq.status === "Under Maintenance") statusBadgeClass = "badge-maintenance";
     else if (eq.status === "Faulty") statusBadgeClass = "badge-faulty";
 
     title.innerHTML = '<span class="font-mono text-gold">[' + escapeHTML(eq.id) + ']</span> ' + escapeHTML(eq.name);
@@ -3565,9 +3583,9 @@ function openAssetDossier(eqIdOrName) {
     var role = getActiveRole();
     var actionButtonsHtml = "";
     if (role === "Operator") {
-        actionButtonsHtml = '<button type="button" class="btn btn-sm btn-danger font-mono w-100" onclick="closeAssetDossier(); openQuickFaultModal(\'' + escapeHTML(eq.name) + '\');">⚠️ Report Machine Incident</button>';
+        actionButtonsHtml = '<button type="button" class="btn btn-sm btn-danger font-mono w-100" onclick="closeAssetDossier(); openQuickFaultModal(\'' + escapeHTML(eq.name) + '\');"><span style="vertical-align:middle;margin-right:4px;">' + SVG_ICONS.faults + '</span>Report Machine Incident</button>';
     } else if (role === "Technician") {
-        actionButtonsHtml = '<a href="workorders.html?search=' + encodeURIComponent(eq.id) + '" class="btn btn-sm btn-primary font-mono w-100">📋 View Work Orders in Dispatch</a>';
+        actionButtonsHtml = '<a href="workorders.html?search=' + encodeURIComponent(eq.id) + '" class="btn btn-sm btn-primary font-mono w-100"><span style="vertical-align:middle;margin-right:4px;">' + SVG_ICONS.workorders + '</span>View Work Orders in Dispatch</a>';
     } else {
         actionButtonsHtml =
             '<div class="d-flex gap-2">' +
@@ -3595,7 +3613,7 @@ function openAssetDossier(eqIdOrName) {
                         '<div class="text-muted small mt-1 font-mono">Tech: ' + escapeHTML(wo.technician || "Unassigned") + ' • Date: ' + escapeHTML(wo.date || wo.scheduledDate) + '</div>' +
                     '</div>' +
                     '<div class="d-flex flex-column gap-1">' +
-                        '<button type="button" class="btn btn-sm btn-outline-secondary font-mono" style="font-size:0.68rem; padding:2px 6px;" onclick="openJobTravelerModal(\'' + escapeHTML(wo.id) + '\')">🖨 Job Sheet</button>' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary font-mono" style="font-size:0.68rem; padding:2px 6px;" onclick="openJobTravelerModal(\'' + escapeHTML(wo.id) + '\')"><span style="vertical-align:middle;margin-right:3px;">' + SVG_ICONS.printer + '</span>Job Sheet</button>' +
                         '<a href="workorders.html?id=' + encodeURIComponent(wo.id) + '" class="btn btn-sm btn-secondary font-mono text-center" style="font-size:0.68rem; padding:2px 6px;">Open</a>' +
                     '</div>' +
                 '</div>';
@@ -3864,7 +3882,7 @@ function openJobTravelerModal(woId) {
                             '<tr>' +
                                 '<td><strong>' + escapeHTML(wo.requiredPart) + '</strong></td>' +
                                 '<td class="text-center">' + (wo.requiredQuantity || 1) + ' pcs</td>' +
-                                '<td class="text-center ' + (availableStock >= (wo.requiredQuantity || 1) ? 'text-success' : 'text-danger') + '">' + availableStock + ' pcs ' + (availableStock >= (wo.requiredQuantity || 1) ? '✓ Available' : '⚠️ Low/Hold') + '</td>' +
+                                '<td class="text-center ' + (availableStock >= (wo.requiredQuantity || 1) ? 'text-success' : 'text-danger') + '">' + availableStock + ' pcs ' + (availableStock >= (wo.requiredQuantity || 1) ? 'Available' : 'Low/Hold') + '</td>' +
                                 '<td class="text-center"><input type="checkbox" ' + (availableStock >= (wo.requiredQuantity || 1) ? 'checked' : '') + '></td>' +
                             '</tr>' +
                         '</tbody>' +
@@ -3874,7 +3892,7 @@ function openJobTravelerModal(woId) {
 
             // Industrial LOTO Safety Verification Checklist
             '<div class="loto-box">' +
-                '<div class="loto-header">⚠️ MANDATORY LOCKOUT / TAGOUT (LOTO) & SAFETY VERIFICATION</div>' +
+                '<div class="loto-header"><span style="display:inline-flex;vertical-align:middle;margin-right:6px;">' + SVG_ICONS.faults + '</span> MANDATORY LOCKOUT / TAGOUT (LOTO) & SAFETY VERIFICATION</div>' +
                 '<div class="loto-item"><input type="checkbox" id="loto_elec" checked> <label for="loto_elec"><strong>1. Electrical Isolation:</strong> Main circuit breaker opened, locked out with hasp, and tag applied.</label></div>' +
                 '<div class="loto-item"><input type="checkbox" id="loto_hyd" checked> <label for="loto_hyd"><strong>2. Kinetic/Fluid Energy Release:</strong> Hydraulic/pneumatic pressure bled to zero; mechanical stops engaged.</label></div>' +
                 '<div class="loto-item"><input type="checkbox" id="loto_zero" checked> <label for="loto_zero"><strong>3. Zero-Energy Test:</strong> Attempted restart at operator panel confirmed complete de-energization.</label></div>' +
@@ -4541,7 +4559,7 @@ var ForgeFloorSchematic = (function () {
 
         equipment.forEach(function (eq) {
             var isFault = (eq.status === "Faulty");
-            var isMaint = (eq.status === "Maintenance");
+            var isMaint = (eq.status === "Maintenance" || eq.status === "Under Maintenance");
             var isNominal = (eq.status === "Operational");
 
             if (activeFilter === "Faulty" && !isFault) return;
@@ -4556,7 +4574,7 @@ var ForgeFloorSchematic = (function () {
         // Compute overall counts for filter badges
         var totalCount = equipment.length;
         var faultCount = equipment.filter(function (e) { return e.status === "Faulty"; }).length;
-        var maintCount = equipment.filter(function (e) { return e.status === "Maintenance"; }).length;
+        var maintCount = equipment.filter(function (e) { return e.status === "Maintenance" || e.status === "Under Maintenance"; }).length;
         var nominalCount = equipment.filter(function (e) { return e.status === "Operational"; }).length;
 
         var headerHtml =
@@ -4587,7 +4605,7 @@ var ForgeFloorSchematic = (function () {
             } else {
                 machines.forEach(function (eq) {
                     var isOp = (eq.status === "Operational");
-                    var isMaint = (eq.status === "Maintenance");
+                    var isMaint = (eq.status === "Maintenance" || eq.status === "Under Maintenance");
                     var isFault = (eq.status === "Faulty");
 
                     var ledClass = isOp ? "led-operational" : (isMaint ? "led-maintenance" : "led-faulty");
@@ -4603,9 +4621,9 @@ var ForgeFloorSchematic = (function () {
 
                     var alertHtml = '';
                     if (attachedWO) {
-                        alertHtml = '<div class="node-active-wo" title="Work order ' + escapeHTML(attachedWO.id) + ' is in state ' + escapeHTML(attachedWO.status) + '">📋 ' + escapeHTML(attachedWO.id) + ' [' + escapeHTML(attachedWO.status) + ']</div>';
+                        alertHtml = '<div class="node-active-wo" title="Work order ' + escapeHTML(attachedWO.id) + ' is in state ' + escapeHTML(attachedWO.status) + '"><span style="display:inline-flex;vertical-align:middle;margin-right:3px;">' + SVG_ICONS.workorders + '</span>' + escapeHTML(attachedWO.id) + ' [' + escapeHTML(attachedWO.status) + ']</div>';
                     } else if (isFault) {
-                        alertHtml = '<div class="node-active-alert" title="Machine requires immediate overhaul">⚡ FAULT REPORTED</div>';
+                        alertHtml = '<div class="node-active-alert" title="Machine requires immediate overhaul"><span style="display:inline-flex;vertical-align:middle;margin-right:3px;">' + SVG_ICONS.faults + '</span>FAULT REPORTED</div>';
                     }
 
                     machinesListHtml +=
