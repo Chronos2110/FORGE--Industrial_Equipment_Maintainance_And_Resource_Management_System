@@ -105,7 +105,7 @@
                 </div>
 
                 <div class="mt-4 pt-2 text-muted small" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;">
-                    [PRISMA SQLITE ACID LEDGER] &bull; [ZERO EXTERNAL SAAS OVERHEAD] &bull; [LOCAL-FIRST CONCURRENCY]
+                    [MONGODB MONGOOSE LEDGER] &bull; [ZERO EXTERNAL SAAS OVERHEAD] &bull; [LOCAL-FIRST CONCURRENCY]
                 </div>
             </div>
 
@@ -276,10 +276,10 @@
                     <div class="pipeline-step-num">STAGE 04 // INVENTORY</div>
                     <div class="pipeline-step-title">Atomic Part Deduction</div>
                     <div class="pipeline-step-desc">
-                        Bill of materials deducted within an ACID SQLite transaction, preventing race conditions or ghost stock.
+                        Bill of materials deducted within atomic Mongoose operations, preventing race conditions or ghost stock.
                     </div>
                     <div class="pipeline-step-meta">
-                        <span>PRISMA ORM</span>
+                        <span>MONGOOSE</span>
                         <span>TRANSACTIONAL</span>
                     </div>
                 </div>
@@ -586,9 +586,9 @@
 
                 <div class="spec-tile has-crosshairs">
                     <div class="spec-num">SPEC 02 // RELIABILITY</div>
-                    <div class="spec-title">ACID Data Integrity</div>
+                    <div class="spec-title">NoSQL Data Integrity</div>
                     <p class="spec-desc">
-                        Backed by Prisma ORM and WAL-mode SQLite storage. Guarantees zero ghost records or concurrent inventory discrepancies.
+                        Backed by Mongoose ODM and MongoDB document storage. Guarantees zero ghost records or concurrent inventory discrepancies.
                     </p>
                 </div>
 

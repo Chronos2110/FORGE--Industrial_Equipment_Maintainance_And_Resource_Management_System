@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
-const prisma = require('../db');
+const { User } = require('../models');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'forge-super-secret-jwt-key-2026-industrial-spec';
+const JWT_SECRET = process.env.JWT_SECRET || 'forge_industrial_jwt_secret_2026';
 
 // Normalize role names: 'Administrator' -> 'ADMIN', etc.
 function normalizeRole(role) {
@@ -32,19 +32,16 @@ async function authenticateToken(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    
+
     // Fetch live user status from database to enforce active status
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      include: { technician_profile: true }
-    });
+    const user = await User.findById(decoded.id).populate('technician_profile');
 
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized: User not found' });
     }
 
     req.user = {
-      id: user.id,
+      id: user.id || user._id,
       name: user.name,
       email: user.email,
       role: normalizeRole(user.role),
@@ -79,13 +76,10 @@ async function optionalAuth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      include: { technician_profile: true }
-    });
+    const user = await User.findById(decoded.id).populate('technician_profile');
     if (user) {
       req.user = {
-        id: user.id,
+        id: user.id || user._id,
         name: user.name,
         email: user.email,
         role: normalizeRole(user.role),

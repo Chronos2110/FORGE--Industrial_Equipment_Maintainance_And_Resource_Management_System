@@ -2,29 +2,32 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const prisma = require('../db');
+const crypto = require('crypto');
+const { User, TechnicianProfile } = require('../models');
 const { JWT_SECRET, authenticateToken, normalizeRole } = require('../middleware/auth');
 const { logActivity } = require('../utils/activity');
 
 function formatUserResponse(u) {
   if (!u) return null;
+  const obj = u.toObject ? u.toObject({ virtuals: true }) : u;
   return {
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    role: u.role,
-    badgeId: u.badge_id || '',
-    badge_id: u.badge_id || '',
-    bay_assignment: u.bay_assignment || 'Production Floor',
-    bay: u.bay_assignment || 'Production Floor',
-    shift_pattern: u.shift_pattern || 'Day Shift',
-    shiftPattern: u.shift_pattern || 'Day Shift',
-    assigned_machine: u.assigned_machine || '',
-    assignedMachine: u.assigned_machine || '',
-    availability_status: u.availability_status || 'Available',
-    availabilityStatus: u.availability_status || 'Available',
-    status: u.status,
-    technician_profile: u.technician_profile
+    id: obj.id || obj._id,
+    _id: obj._id,
+    name: obj.name,
+    email: obj.email,
+    role: obj.role,
+    badgeId: obj.badge_id || '',
+    badge_id: obj.badge_id || '',
+    bay_assignment: obj.bay_assignment || 'Production Floor',
+    bay: obj.bay_assignment || 'Production Floor',
+    shift_pattern: obj.shift_pattern || 'Day Shift',
+    shiftPattern: obj.shift_pattern || 'Day Shift',
+    assigned_machine: obj.assigned_machine || '',
+    assignedMachine: obj.assigned_machine || '',
+    availability_status: obj.availability_status || 'Available',
+    availabilityStatus: obj.availability_status || 'Available',
+    status: obj.status,
+    technician_profile: obj.technician_profile
   };
 }
 
@@ -65,13 +68,11 @@ router.post('/register', async (req, res) => {
     const storedEmail = rawEmail.includes('@') ? rawEmail : `${rawEmail}@forge.industrial`;
 
     // Check uniqueness
-    const existing = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: storedEmail },
-          { email: rawEmail }
-        ]
-      }
+    const existing = await User.findOne({
+      $or: [
+        { email: storedEmail },
+        { email: rawEmail }
+      ]
     });
     if (existing) {
       return res.status(409).json({ error: `An account with username '${rawEmail}' already exists. Please log in instead.` });
@@ -83,44 +84,45 @@ router.post('/register', async (req, res) => {
     const resolvedMachine = assigned_machine || assignedMachine || null;
     const resolvedAvail = availability_status || availabilityStatus || 'Available';
     const resolvedBay = bay_assignment || bay || 'Production Floor';
+    const newUserId = crypto.randomUUID();
 
-    const newUser = await prisma.user.create({
-      data: {
-        name: displayName,
-        email: storedEmail,
-        password_hash: passwordHash,
-        role: normalizedRole,
-        badge_id: resolvedBadge,
-        bay_assignment: resolvedBay,
-        shift_pattern: resolvedShift,
-        assigned_machine: resolvedMachine,
-        availability_status: resolvedAvail,
-        status: 'ACTIVE',
-        ...(normalizedRole === 'TECHNICIAN' ? {
-          technician_profile: {
-            create: {
-              specialization: specialization || 'MECHANICAL',
-              certifications: certifications || 'ISO-9001 Safety / Master Tech',
-              max_concurrent_wos: 3,
-              active_wo_count: 0
-            }
-          }
-        } : {})
-      },
-      include: { technician_profile: true }
+    const newUser = await User.create({
+      _id: newUserId,
+      name: displayName,
+      email: storedEmail,
+      password_hash: passwordHash,
+      role: normalizedRole,
+      badge_id: resolvedBadge,
+      bay_assignment: resolvedBay,
+      shift_pattern: resolvedShift,
+      assigned_machine: resolvedMachine,
+      availability_status: resolvedAvail,
+      status: 'ACTIVE'
     });
 
+    if (normalizedRole === 'TECHNICIAN') {
+      await TechnicianProfile.create({
+        user_id: newUser._id,
+        specialization: specialization || 'MECHANICAL',
+        certifications: certifications || 'ISO-9001 Safety / Master Tech',
+        max_concurrent_wos: 3,
+        active_wo_count: 0
+      });
+    }
+
+    const populatedUser = await User.findById(newUser._id).populate('technician_profile');
+
     await logActivity({
-      actor: newUser.name,
-      role: newUser.role,
-      action: `Personnel registered & provisioned (${newUser.badge_id || 'ID'})`,
-      target: newUser.badge_id || newUser.name,
+      actor: populatedUser.name,
+      role: populatedUser.role,
+      action: `Personnel registered & provisioned (${populatedUser.badge_id || 'ID'})`,
+      target: populatedUser.badge_id || populatedUser.name,
       category: 'SYSTEM',
       badge_class: 'badge-scheduled'
     });
 
     const token = jwt.sign(
-      { id: newUser.id, email: newUser.email, role: normalizedRole, name: newUser.name },
+      { id: populatedUser._id, email: populatedUser.email, role: normalizedRole, name: populatedUser.name },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -134,9 +136,9 @@ router.post('/register', async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: `Account created successfully. Welcome to FORGE, ${newUser.name}!`,
+      message: `Account created successfully. Welcome to FORGE, ${populatedUser.name}!`,
       token,
-      user: formatUserResponse(newUser)
+      user: formatUserResponse(populatedUser)
     });
   } catch (err) {
     console.error('Registration error:', err);
@@ -163,16 +165,14 @@ router.post('/login', async (req, res) => {
       { email: idLower.includes('@') ? idLower : `${idLower}@forge.io` },
       { badge_id: idUpper },
       { badge_id: identifier },
-      { name: { contains: identifier } }
+      { name: new RegExp(`^${identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      { name: new RegExp(identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
     ];
 
     if (idLower === 'op_floor') queryOr.push({ email: 'operator@forge.io' });
     if (idLower === 'tech_rajesh') queryOr.push({ email: 'rajesh@forge.io' });
 
-    const user = await prisma.user.findFirst({
-      where: { OR: queryOr },
-      include: { technician_profile: true }
-    });
+    const user = await User.findOne({ $or: queryOr }).populate('technician_profile');
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials. User not found.' });
@@ -194,7 +194,7 @@ router.post('/login', async (req, res) => {
     }
 
     const tokenPayload = {
-      id: user.id,
+      id: user._id,
       email: user.email,
       role: normalizeRole(user.role),
       name: user.name
@@ -232,10 +232,7 @@ router.post('/login', async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const fullUser = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      include: { technician_profile: true }
-    });
+    const fullUser = await User.findById(req.user.id).populate('technician_profile');
 
     if (!fullUser) {
       return res.status(404).json({ error: 'User record not found.' });
@@ -251,7 +248,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 });
 
 // PATCH /api/auth/profile
-// Allows logged-in personnel to update their operational profile attributes in SQLite
+// Allows logged-in personnel to update their operational profile attributes in MongoDB
 router.patch('/profile', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -278,31 +275,28 @@ router.patch('/profile', authenticateToken, async (req, res) => {
       }
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: userData,
-      include: { technician_profile: true }
-    });
+    const updatedUser = await User.findByIdAndUpdate(userId, { $set: userData }, { returnDocument: 'after' });
 
     if (updatedUser.role === 'TECHNICIAN' && (specialization || certifications)) {
-      await prisma.technicianProfile.upsert({
-        where: { user_id: userId },
-        create: {
-          user_id: userId,
-          specialization: specialization || 'MECHANICAL',
-          certifications: certifications || 'ISO-9001 Safety / Master Tech'
+      await TechnicianProfile.findOneAndUpdate(
+        { user_id: userId },
+        {
+          $set: {
+            ...(specialization ? { specialization } : {}),
+            ...(certifications ? { certifications } : {})
+          },
+          $setOnInsert: {
+            specialization: specialization || 'MECHANICAL',
+            certifications: certifications || 'ISO-9001 Safety / Master Tech',
+            max_concurrent_wos: 3,
+            active_wo_count: 0
+          }
         },
-        update: {
-          ...(specialization ? { specialization } : {}),
-          ...(certifications ? { certifications } : {})
-        }
-      });
+        { upsert: true, new: true }
+      );
     }
 
-    const finalUser = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { technician_profile: true }
-    });
+    const finalUser = await User.findById(userId).populate('technician_profile');
 
     await logActivity({
       actor: finalUser.name,

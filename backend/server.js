@@ -5,6 +5,9 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 
+const { connectDB } = require('./src/db');
+const { User } = require('./src/models');
+
 const authRoutes = require('./src/routes/auth');
 const equipmentRoutes = require('./src/routes/equipment');
 const workOrdersRoutes = require('./src/routes/workOrders');
@@ -16,11 +19,20 @@ const analyticsRoutes = require('./src/routes/analytics');
 const activityRoutes = require('./src/routes/activity');
 const shellRoutes = require('./src/routes/shell');
 
-const prisma = require('./src/db');
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 const FRONTEND_DIR = path.join(__dirname, '../frontend');
+
+// Ensure database connection middleware
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database connection error in request:', err);
+    res.status(500).json({ error: 'Database service unavailable', details: err.message });
+  }
+});
 
 // Allow the registration/login pages even when opened from Live Server or file://
 app.use(cors({
@@ -54,6 +66,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ONLINE',
     system: 'FORGE - Industrial Maintenance & Resource Management System',
+    database: 'MongoDB',
     timestamp: new Date().toISOString()
   });
 });
@@ -71,20 +84,22 @@ app.get('/dashboard', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'pages/
 
 async function startServer() {
   try {
-    await prisma.$connect();
-    const userCount = await prisma.user.count();
-    console.log(`  Database connected. Users in SQLite: ${userCount}`);
+    await connectDB();
+    let userCount = await User.countDocuments();
     if (userCount === 0) {
-      console.log(`  Warning: users table is empty. Run: npm run seed`);
+      console.log('  Initial database empty. Auto-seeding 6-bay plant dataset...');
+      const { seedDatabase } = require('./src/seed');
+      await seedDatabase();
+      userCount = await User.countDocuments();
     }
+    console.log(`  Database connected. Users in MongoDB: ${userCount}`);
   } catch (err) {
     console.error('  Database connection failed:', err.message);
-    console.error('  Run: npx prisma generate && npx prisma db push && npm run seed');
   }
 
   app.listen(PORT, () => {
     console.log(`=======================================================`);
-    console.log(`  FORGE Backend Server running on port ${PORT}`);
+    console.log(`  FORGE Backend Server running on port ${PORT} [MongoDB]`);
     console.log(`  Open register: http://localhost:${PORT}/register.html`);
     console.log(`  Open login:    http://localhost:${PORT}/login.html`);
     console.log(`  API Status:    http://localhost:${PORT}/api/health`);

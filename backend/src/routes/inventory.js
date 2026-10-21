@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db');
+const { InventoryPart, WorkOrder } = require('../models');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { logActivity } = require('../utils/activity');
 
@@ -8,7 +8,7 @@ const { logActivity } = require('../utils/activity');
 function formatPart(p) {
   if (!p) return null;
   return {
-    id: p.id,
+    id: p.id || p._id,
     partName: p.name,
     name: p.name,
     category: p.category,
@@ -19,7 +19,7 @@ function formatPart(p) {
     min_threshold: p.min_threshold,
     unit_cost: p.unit_cost,
     storage_bin: p.storage_bin,
-    supplier: 'Industrial OEM Supply'
+    supplier: p.supplier || 'Industrial OEM Supply'
   };
 }
 
@@ -27,10 +27,7 @@ function formatPart(p) {
 // Accessible by: ADMIN, TECHNICIAN, OPERATOR
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const parts = await prisma.inventoryPart.findMany({
-      orderBy: { id: 'asc' }
-    });
-
+    const parts = await InventoryPart.find().sort({ _id: 1 });
     return res.json(parts.map(formatPart));
   } catch (err) {
     console.error('Error fetching inventory:', err);
@@ -41,9 +38,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/inventory/:id
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const part = await prisma.inventoryPart.findUnique({
-      where: { id: req.params.id }
-    });
+    const part = await InventoryPart.findById(req.params.id);
 
     if (!part) {
       return res.status(404).json({ error: `Inventory item ${req.params.id} not found.` });
@@ -58,7 +53,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // POST /api/inventory (Admin only)
 router.post('/', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
-    const { id, name, partName, category, quantity, quantity_on_hand, minStock, min_threshold, minimumStock, unit_cost, storage_bin } = req.body;
+    const { id, name, partName, category, quantity, quantity_on_hand, minStock, min_threshold, minimumStock, unit_cost, storage_bin, supplier } = req.body;
 
     const partId = id || `PRT-${Math.floor(100 + Math.random() * 900)}`;
     const pName = name || partName;
@@ -74,23 +69,22 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), async (req, res) => 
       return res.status(400).json({ error: 'Quantity on hand cannot be negative.' });
     }
 
-    const created = await prisma.inventoryPart.create({
-      data: {
-        id: partId,
-        name: pName,
-        category: category || 'General Spare',
-        quantity_on_hand: qty,
-        min_threshold: min,
-        unit_cost: unit_cost ? parseFloat(unit_cost) : 50.0,
-        storage_bin: storage_bin || 'Bin General'
-      }
+    const created = await InventoryPart.create({
+      _id: partId,
+      name: pName,
+      category: category || 'General Spare',
+      quantity_on_hand: qty,
+      min_threshold: min,
+      unit_cost: unit_cost ? parseFloat(unit_cost) : 50.0,
+      storage_bin: storage_bin || 'Bin General',
+      supplier: supplier || 'Industrial OEM Supply'
     });
 
     await logActivity({
       actor: req.user?.name || 'Administrator',
       role: 'ADMIN',
       action: 'CREATED_INVENTORY_PART',
-      target: `${created.id} - ${created.name} (${created.quantity_on_hand} in stock)`,
+      target: `${created.id || created._id} - ${created.name} (${created.quantity_on_hand} in stock)`,
       category: 'INVENTORY',
       badge_class: 'badge-operational'
     });
@@ -115,10 +109,11 @@ async function updatePartRecord(req, res, id) {
     minimumStock,
     minStock,
     unit_cost,
-    storage_bin
+    storage_bin,
+    supplier
   } = req.body;
 
-  const existing = await prisma.inventoryPart.findUnique({ where: { id } });
+  const existing = await InventoryPart.findById(id);
   if (!existing) {
     return res.status(404).json({ error: `Part ${id} not found in inventory.` });
   }
@@ -126,6 +121,7 @@ async function updatePartRecord(req, res, id) {
   const data = {};
   if (name || partName) data.name = name || partName;
   if (category) data.category = category;
+  if (supplier) data.supplier = supplier;
 
   let isRestockAction = false;
   if (add_quantity !== undefined) {
@@ -133,7 +129,7 @@ async function updatePartRecord(req, res, id) {
     if (existing.quantity_on_hand + added < 0) {
       return res.status(400).json({ error: 'Stock reduction exceeds quantity on hand. Cannot be negative.' });
     }
-    data.quantity_on_hand = { increment: added };
+    data.quantity_on_hand = existing.quantity_on_hand + added;
     isRestockAction = true;
   } else if (quantity !== undefined || quantity_on_hand !== undefined) {
     const newQty = parseInt(quantity !== undefined ? quantity : quantity_on_hand, 10);
@@ -156,17 +152,14 @@ async function updatePartRecord(req, res, id) {
     data.storage_bin = storage_bin;
   }
 
-  const updated = await prisma.inventoryPart.update({
-    where: { id },
-    data
-  });
+  const updated = await InventoryPart.findByIdAndUpdate(id, data, { returnDocument: 'after' });
 
   const actionName = isRestockAction ? 'RESTOCKED_PART' : 'UPDATED_PART_RECORD';
   await logActivity({
     actor: req.user?.name || 'Administrator',
     role: req.user?.role || 'ADMIN',
     action: actionName,
-    target: `${updated.id} - ${updated.name} (Qty: ${updated.quantity_on_hand}, Min: ${updated.min_threshold})`,
+    target: `${updated.id || updated._id} - ${updated.name} (Qty: ${updated.quantity_on_hand}, Min: ${updated.min_threshold})`,
     category: 'INVENTORY',
     badge_class: updated.quantity_on_hand <= updated.min_threshold ? 'badge-faulty' : 'badge-operational'
   });
@@ -202,14 +195,14 @@ router.patch('/:id/restock', authenticateToken, requireRole(['ADMIN']), async (r
 router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
     const { id } = req.params;
-    const existing = await prisma.inventoryPart.findUnique({ where: { id } });
+    const existing = await InventoryPart.findById(id);
     if (!existing) {
       return res.status(404).json({ error: `Part ${id} not found.` });
     }
 
-    // Clean up any work_order_parts references
-    await prisma.workOrderPart.deleteMany({ where: { part_id: id } });
-    await prisma.inventoryPart.delete({ where: { id } });
+    // Clean up any work_orders embedded references
+    await WorkOrder.updateMany({}, { $pull: { parts_required: { part_id: id } } });
+    await InventoryPart.findByIdAndDelete(id);
 
     await logActivity({
       actor: req.user?.name || 'Administrator',

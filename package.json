@@ -6,27 +6,19 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node backend/server.js",
-    "postinstall": "prisma generate",
-    "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
-    "prisma:studio": "prisma studio",
-    "seed": "node backend/prisma/seed.js",
+    "seed": "node backend/src/seed.js",
     "test": "node backend/test/backend_test.js"
   },
-  "prisma": {
-    "schema": "backend/prisma/schema.prisma",
-    "seed": "node backend/prisma/seed.js"
-  },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.11.2"
   },
   "devDependencies": {
-    "prisma": "^5.22.0"
+    "mongodb-memory-server": "^11.3.0"
   }
 }

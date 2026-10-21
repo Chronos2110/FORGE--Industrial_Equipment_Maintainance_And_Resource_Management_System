@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db');
+const { WorkOrder, Equipment, User, TechnicianProfile, InventoryPart, FaultReport } = require('../models');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { logActivity } = require('../utils/activity');
 
@@ -31,10 +31,16 @@ function isSpecializationMatch(specialization, equipmentCategory) {
 // Format Work Order response for front-end compatibility
 function formatWorkOrder(wo) {
   if (!wo) return null;
-  const requiredPartItem = wo.parts_required && wo.parts_required.length > 0 ? wo.parts_required[0] : null;
+  const parts = wo.parts_required || [];
+  const requiredPartItem = parts.length > 0 ? parts[0] : null;
+
+  const eqName = wo.equipment ? (wo.equipment.name || wo.equipment) : wo.equipment_id;
+  const techName = wo.technician ? (wo.technician.name || wo.technician) : (wo.assigned_to || 'Unassigned');
+  const creatorName = wo.creator ? (wo.creator.name || wo.creator) : wo.created_by;
+  const partName = requiredPartItem ? (requiredPartItem.part ? requiredPartItem.part.name : (requiredPartItem.name || requiredPartItem.part_id)) : '';
 
   return {
-    id: wo.id,
+    id: wo.id || wo._id,
     title: wo.title,
     problem: wo.description,
     description: wo.description,
@@ -42,20 +48,20 @@ function formatWorkOrder(wo) {
     status: wo.status,
     created_at: wo.created_at,
     completed_at: wo.completed_at,
-    date: wo.created_at ? wo.created_at.toISOString().split('T')[0] : '',
-    scheduledDate: wo.created_at ? wo.created_at.toISOString().split('T')[0] : '',
+    date: wo.created_at ? new Date(wo.created_at).toISOString().split('T')[0] : '',
+    scheduledDate: wo.created_at ? new Date(wo.created_at).toISOString().split('T')[0] : '',
     equipmentId: wo.equipment_id,
-    equipment: wo.equipment ? wo.equipment.name : wo.equipment_id,
+    equipment: eqName,
     equipmentObj: wo.equipment,
     technicianId: wo.assigned_to,
-    technician: wo.technician ? wo.technician.name : (wo.assigned_to || 'Unassigned'),
+    technician: techName,
     technicianObj: wo.technician,
-    createdBy: wo.creator ? wo.creator.name : wo.created_by,
+    createdBy: creatorName,
     requiredPartId: requiredPartItem ? requiredPartItem.part_id : '',
-    requiredPart: requiredPartItem && requiredPartItem.part ? requiredPartItem.part.name : '',
+    requiredPart: partName,
     requiredQuantity: requiredPartItem ? requiredPartItem.quantity_required : 0,
     quantityDeducted: requiredPartItem ? requiredPartItem.quantity_deducted : false,
-    parts_required: wo.parts_required || []
+    parts_required: parts
   };
 }
 
@@ -64,36 +70,29 @@ function formatWorkOrder(wo) {
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { status, priority, assigned_to } = req.query;
-    const where = {};
+    const filter = {};
 
     if (status && status !== 'All') {
-      where.status = { equals: status };
+      filter.status = status;
     }
 
     if (priority && priority !== 'All') {
-      where.priority = { equals: priority };
+      filter.priority = priority;
     }
 
     if (assigned_to && assigned_to !== 'All') {
-      where.assigned_to = { equals: assigned_to };
+      filter.assigned_to = assigned_to;
     }
 
-    const workOrders = await prisma.workOrder.findMany({
-      where,
-      orderBy: { created_at: 'desc' },
-      include: {
-        equipment: true,
-        technician: {
-          select: { id: true, name: true, email: true, status: true, technician_profile: true }
-        },
-        creator: {
-          select: { id: true, name: true }
-        },
-        parts_required: {
-          include: { part: true }
-        }
-      }
-    });
+    const workOrders = await WorkOrder.find(filter)
+      .sort({ created_at: -1 })
+      .populate('equipment')
+      .populate({
+        path: 'technician',
+        populate: { path: 'technician_profile' }
+      })
+      .populate('creator', 'id name email')
+      .populate('parts_required.part');
 
     return res.json(workOrders.map(formatWorkOrder));
   } catch (err) {
@@ -105,19 +104,14 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/work-orders/:id
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const wo = await prisma.workOrder.findUnique({
-      where: { id: req.params.id },
-      include: {
-        equipment: true,
-        technician: {
-          include: { technician_profile: true }
-        },
-        creator: true,
-        parts_required: {
-          include: { part: true }
-        }
-      }
-    });
+    const wo = await WorkOrder.findById(req.params.id)
+      .populate('equipment')
+      .populate({
+        path: 'technician',
+        populate: { path: 'technician_profile' }
+      })
+      .populate('creator')
+      .populate('parts_required.part');
 
     if (!wo) {
       return res.status(404).json({ error: `Work Order ${req.params.id} not found.` });
@@ -157,12 +151,10 @@ router.post('/', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), async 
     // Resolve equipment_id if name was passed
     let resolvedEquipmentId = equipment_id;
     if (!resolvedEquipmentId && equipment) {
-      const eq = await prisma.equipment.findFirst({
-        where: {
-          OR: [{ id: equipment }, { name: equipment }]
-        }
+      const eq = await Equipment.findOne({
+        $or: [{ _id: equipment }, { name: equipment }]
       });
-      if (eq) resolvedEquipmentId = eq.id;
+      if (eq) resolvedEquipmentId = eq._id || eq.id;
     }
 
     if (!resolvedEquipmentId) {
@@ -172,86 +164,72 @@ router.post('/', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), async 
     // Resolve assigned_to technician if name was passed
     let resolvedTechId = assigned_to;
     if (!resolvedTechId && technician) {
-      const techUser = await prisma.user.findFirst({
-        where: {
-          OR: [{ id: technician }, { name: technician }, { email: technician }]
-        }
+      const techUser = await User.findOne({
+        $or: [{ _id: technician }, { name: technician }, { email: technician }]
       });
-      if (techUser) resolvedTechId = techUser.id;
+      if (techUser) resolvedTechId = techUser._id || techUser.id;
     }
 
     // Resolve part_id if part name was passed
     let resolvedPartId = requiredPartId;
     if (!resolvedPartId && requiredPart) {
-      const p = await prisma.inventoryPart.findFirst({
-        where: {
-          OR: [{ id: requiredPart }, { name: requiredPart }]
-        }
+      const p = await InventoryPart.findOne({
+        $or: [{ _id: requiredPart }, { name: requiredPart }]
       });
-      if (p) resolvedPartId = p.id;
+      if (p) resolvedPartId = p._id || p.id;
     }
 
-    const createdWo = await prisma.$transaction(async (tx) => {
-      const wo = await tx.workOrder.create({
-        data: {
-          id: woId,
-          title: woTitle,
-          description: woDesc,
-          priority: woPriority,
-          status: resolvedTechId && woStatus === 'OPEN' ? 'ASSIGNED' : woStatus,
-          equipment_id: resolvedEquipmentId,
-          assigned_to: resolvedTechId || null,
-          created_by: req.user.id
-        }
+    const partsList = [];
+    if (resolvedPartId && requiredQuantity > 0) {
+      partsList.push({
+        part_id: resolvedPartId,
+        quantity_required: parseInt(requiredQuantity, 10),
+        quantity_deducted: false
       });
+    }
 
-      if (resolvedPartId && requiredQuantity > 0) {
-        await tx.workOrderPart.create({
-          data: {
-            work_order_id: wo.id,
-            part_id: resolvedPartId,
-            quantity_required: parseInt(requiredQuantity, 10),
-            quantity_deducted: false
-          }
-        });
-      }
+    const finalStatus = resolvedTechId && woStatus === 'OPEN' ? 'ASSIGNED' : woStatus;
 
-      // If assigned to a technician, increment active_wo_count
-      if (resolvedTechId) {
-        await tx.technicianProfile.updateMany({
-          where: { user_id: resolvedTechId },
-          data: { active_wo_count: { increment: 1 } }
-        });
-      }
-
-      // If status is ASSIGNED or IN_PROGRESS, set equipment status to MAINTENANCE
-      if (wo.status === 'ASSIGNED' || wo.status === 'IN_PROGRESS') {
-        await tx.equipment.update({
-          where: { id: resolvedEquipmentId },
-          data: { status: 'MAINTENANCE' }
-        });
-      }
-
-      return wo;
+    const createdWo = await WorkOrder.create({
+      _id: woId,
+      title: woTitle,
+      description: woDesc,
+      priority: woPriority,
+      status: finalStatus,
+      equipment_id: resolvedEquipmentId,
+      assigned_to: resolvedTechId || null,
+      created_by: req.user.id,
+      parts_required: partsList
     });
+
+    // If assigned to a technician, increment active_wo_count
+    if (resolvedTechId) {
+      await TechnicianProfile.updateMany(
+        { user_id: resolvedTechId },
+        { $inc: { active_wo_count: 1 } }
+      );
+    }
+
+    // If status is ASSIGNED or IN_PROGRESS, set equipment status to MAINTENANCE
+    if (finalStatus === 'ASSIGNED' || finalStatus === 'IN_PROGRESS') {
+      await Equipment.findByIdAndUpdate(resolvedEquipmentId, {
+        status: 'MAINTENANCE'
+      });
+    }
 
     await logActivity({
       actor: req.user?.name || 'Supervisor',
       role: req.user?.role || 'ADMIN',
       action: 'CREATED_WORK_ORDER',
-      target: `${createdWo.id} - ${createdWo.title}`,
+      target: `${createdWo.id || createdWo._id} - ${createdWo.title}`,
       category: 'WORK_ORDERS',
       badge_class: 'badge-scheduled'
     });
 
-    const fullWo = await prisma.workOrder.findUnique({
-      where: { id: createdWo.id },
-      include: {
-        equipment: true,
-        technician: true,
-        parts_required: { include: { part: true } }
-      }
-    });
+    const fullWo = await WorkOrder.findById(createdWo._id)
+      .populate('equipment')
+      .populate('technician')
+      .populate('parts_required.part');
 
     return res.status(201).json(formatWorkOrder(fullWo));
   } catch (err) {
@@ -266,28 +244,17 @@ router.post('/:id/auto-assign', authenticateToken, requireRole(['ADMIN', 'TECHNI
   try {
     const { id } = req.params;
 
-    const workOrder = await prisma.workOrder.findUnique({
-      where: { id },
-      include: { equipment: true }
-    });
+    const workOrder = await WorkOrder.findById(id).populate('equipment');
 
     if (!workOrder) {
       return res.status(404).json({ error: `Work Order ${id} not found.` });
     }
 
     // 1. Query users joined with technician_profiles where status = 'ACTIVE' and active_wo_count < max_concurrent_wos
-    const candidates = await prisma.user.findMany({
-      where: {
-        role: 'TECHNICIAN',
-        status: 'ACTIVE',
-        technician_profile: {
-          isNot: null
-        }
-      },
-      include: {
-        technician_profile: true
-      }
-    });
+    const candidates = await User.find({
+      role: 'TECHNICIAN',
+      status: 'ACTIVE'
+    }).populate('technician_profile');
 
     const availableCandidates = candidates.filter(u => {
       const prof = u.technician_profile;
@@ -304,64 +271,61 @@ router.post('/:id/auto-assign', authenticateToken, requireRole(['ADMIN', 'TECHNI
     const eqCategory = workOrder.equipment ? workOrder.equipment.category : '';
 
     availableCandidates.sort((a, b) => {
-      const aMatches = isSpecializationMatch(a.technician_profile.specialization, eqCategory);
-      const bMatches = isSpecializationMatch(b.technician_profile.specialization, eqCategory);
+      const aMatches = isSpecializationMatch(a.technician_profile?.specialization, eqCategory);
+      const bMatches = isSpecializationMatch(b.technician_profile?.specialization, eqCategory);
 
       if (aMatches && !bMatches) return -1;
       if (!aMatches && bMatches) return 1;
 
       // Tiebreaker: sort by lowest active_wo_count
-      return a.technician_profile.active_wo_count - b.technician_profile.active_wo_count;
+      const aCount = a.technician_profile ? a.technician_profile.active_wo_count : 0;
+      const bCount = b.technician_profile ? b.technician_profile.active_wo_count : 0;
+      return aCount - bCount;
     });
 
     const topCandidate = availableCandidates[0];
+    const topCandidateId = topCandidate._id || topCandidate.id;
     const previousTechId = workOrder.assigned_to;
 
-    // 3. Assign top candidate, update work order status to ASSIGNED, increment active_wo_count, return payload
-    const updatedWo = await prisma.$transaction(async (tx) => {
-      // Decrement previous technician's active count if previously assigned and not completed
-      if (previousTechId && previousTechId !== topCandidate.id && workOrder.status !== 'COMPLETED') {
-        await tx.technicianProfile.updateMany({
-          where: { user_id: previousTechId, active_wo_count: { gt: 0 } },
-          data: { active_wo_count: { decrement: 1 } }
-        });
-      }
+    // 3. Decrement previous technician's active count if previously assigned and not completed
+    if (previousTechId && previousTechId !== topCandidateId && workOrder.status !== 'COMPLETED') {
+      await TechnicianProfile.updateMany(
+        { user_id: previousTechId, active_wo_count: { $gt: 0 } },
+        { $inc: { active_wo_count: -1 } }
+      );
+    }
 
-      // Increment new topCandidate's active count
-      await tx.technicianProfile.update({
-        where: { user_id: topCandidate.id },
-        data: { active_wo_count: { increment: 1 } }
-      });
+    // Increment new topCandidate's active count
+    await TechnicianProfile.findOneAndUpdate(
+      { user_id: topCandidateId },
+      { $inc: { active_wo_count: 1 } }
+    );
 
-      // Update work order
-      const updated = await tx.workOrder.update({
-        where: { id },
-        data: {
-          assigned_to: topCandidate.id,
-          status: 'ASSIGNED'
-        },
-        include: {
-          equipment: true,
-          technician: { include: { technician_profile: true } },
-          parts_required: { include: { part: true } }
-        }
-      });
-
-      return updated;
-    });
+    // Update work order
+    const updatedWo = await WorkOrder.findByIdAndUpdate(
+      id,
+      {
+        assigned_to: topCandidateId,
+        status: 'ASSIGNED'
+      },
+      { returnDocument: 'after' }
+    )
+      .populate('equipment')
+      .populate({ path: 'technician', populate: { path: 'technician_profile' } })
+      .populate('parts_required.part');
 
     await logActivity({
       actor: req.user?.name || 'Dispatcher',
       role: req.user?.role || 'ADMIN',
       action: 'AUTO_ASSIGNED_TECHNICIAN',
-      target: `${workOrder.id} -> ${topCandidate.name} (${topCandidate.technician_profile.specialization})`,
+      target: `${workOrder.id || workOrder._id} -> ${topCandidate.name} (${topCandidate.technician_profile?.specialization})`,
       category: 'WORK_ORDERS',
       badge_class: 'badge-scheduled'
     });
 
     return res.json({
       success: true,
-      message: `Assigned to ${topCandidate.name} [${topCandidate.technician_profile.specialization}] based on category match and workload balance.`,
+      message: `Assigned to ${topCandidate.name} [${topCandidate.technician_profile?.specialization}] based on category match and workload balance.`,
       workOrder: formatWorkOrder(updatedWo)
     });
   } catch (err) {
@@ -375,7 +339,7 @@ router.post('/:id/auto-assign', authenticateToken, requireRole(['ADMIN', 'TECHNI
 router.patch('/:id/status', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, waitingReason } = req.body;
+    const { status } = req.body;
 
     if (!status) {
       return res.status(400).json({ error: 'Target status is required.' });
@@ -383,123 +347,88 @@ router.patch('/:id/status', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN
 
     const normalizedStatus = status.toUpperCase().replace(/\s+/g, '_');
 
-    // Case 1: Transactional Work Order Completion and Inventory Sync
+    // Case 1: Work Order Completion and Inventory Sync
     if (normalizedStatus === 'COMPLETED') {
-      const result = await prisma.$transaction(async (tx) => {
-        // Step 1: Verify work order state
-        const wo = await tx.workOrder.findUnique({
-          where: { id },
-          include: {
-            parts_required: {
-              include: { part: true }
-            },
-            equipment: true
-          }
+      // Step 1: Verify work order state
+      const wo = await WorkOrder.findById(id).populate('equipment');
+
+      if (!wo) {
+        return res.status(404).json({ error: `Work order ${id} not found.` });
+      }
+
+      const currentStatus = (wo.status || '').toUpperCase().replace(/\s+/g, '_');
+      if (currentStatus !== 'IN_PROGRESS' && currentStatus !== 'ASSIGNED' && currentStatus !== 'WAITING_FOR_PARTS') {
+        return res.status(400).json({
+          error: `Cannot complete Work Order ${id}: Current state is '${wo.status}'. Only IN_PROGRESS or ASSIGNED orders can be completed.`
         });
+      }
 
-        if (!wo) {
-          throw { status: 404, message: `Work order ${id} not found.` };
-        }
+      // Step 2: Query work_order_parts for all spare parts linked to the work order where quantity_deducted is false
+      const parts = wo.parts_required || [];
+      const unDeductedParts = parts.filter(p => !p.quantity_deducted);
 
-        const currentStatus = wo.status.toUpperCase().replace(/\s+/g, '_');
-        if (currentStatus !== 'IN_PROGRESS' && currentStatus !== 'ASSIGNED' && currentStatus !== 'WAITING_FOR_PARTS') {
-          throw {
-            status: 400,
-            message: `Cannot complete Work Order ${id}: Current state is '${wo.status}'. Only IN_PROGRESS or ASSIGNED orders can be completed.`
-          };
-        }
+      // Step 3: Verify inventory_parts.quantity_on_hand is sufficient for each required part
+      for (const item of unDeductedParts) {
+        const invPart = await InventoryPart.findById(item.part_id);
 
-        // Step 2: Query work_order_parts for all spare parts linked to the work order where quantity_deducted is false
-        const unDeductedParts = wo.parts_required.filter(p => !p.quantity_deducted);
-
-        // Step 3: Verify inventory_parts.quantity_on_hand is sufficient for each required part
-        for (const item of unDeductedParts) {
-          const invPart = await tx.inventoryPart.findUnique({
-            where: { id: item.part_id }
-          });
-
-          if (!invPart) {
-            throw {
-              status: 400,
-              message: `Spare part SKU '${item.part_id}' not found in inventory.`
-            };
-          }
-
-          if (invPart.quantity_on_hand < item.quantity_required) {
-            throw {
-              status: 400,
-              message: `Insufficient stock for SKU '${invPart.id}' (${invPart.name}): Required ${item.quantity_required}, available ${invPart.quantity_on_hand}. Transaction aborted.`
-            };
-          }
-        }
-
-        // Step 4: Deduct quantity_required from inventory_parts.quantity_on_hand and mark quantity_deducted = true
-        for (const item of unDeductedParts) {
-          await tx.inventoryPart.update({
-            where: { id: item.part_id },
-            data: {
-              quantity_on_hand: {
-                decrement: item.quantity_required
-              }
-            }
-          });
-
-          await tx.workOrderPart.update({
-            where: { id: item.id },
-            data: { quantity_deducted: true }
+        if (!invPart) {
+          return res.status(400).json({
+            error: `Spare part SKU '${item.part_id}' not found in inventory.`
           });
         }
 
-        // Step 5: Decrement assigned technician's active_wo_count by 1
-        if (wo.assigned_to) {
-          await tx.technicianProfile.updateMany({
-            where: { user_id: wo.assigned_to, active_wo_count: { gt: 0 } },
-            data: { active_wo_count: { decrement: 1 } }
+        if (invPart.quantity_on_hand < item.quantity_required) {
+          return res.status(400).json({
+            error: `Insufficient stock for SKU '${invPart.id || invPart._id}' (${invPart.name}): Required ${item.quantity_required}, available ${invPart.quantity_on_hand}. Transaction aborted.`
           });
         }
+      }
 
-        // Step 6: Set work_orders.status = "COMPLETED", record completed_at = NOW(),
-        // and restore linked equipment status to OPERATIONAL if no other open work orders exist for that machine
-        const completedWo = await tx.workOrder.update({
-          where: { id },
-          data: {
-            status: 'COMPLETED',
-            completed_at: new Date()
-          },
-          include: {
-            equipment: true,
-            technician: true,
-            parts_required: { include: { part: true } }
-          }
+      // Step 4: Deduct quantity_required from inventory_parts.quantity_on_hand and mark quantity_deducted = true
+      for (const item of unDeductedParts) {
+        await InventoryPart.findByIdAndUpdate(item.part_id, {
+          $inc: { quantity_on_hand: -item.quantity_required }
         });
+        item.quantity_deducted = true;
+      }
 
-        // Check if other open work orders exist for that equipment
-        const otherOpenWos = await tx.workOrder.count({
-          where: {
-            equipment_id: wo.equipment_id,
-            id: { not: id },
-            status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] }
-          }
-        });
+      // Step 5: Decrement assigned technician's active_wo_count by 1
+      if (wo.assigned_to) {
+        await TechnicianProfile.updateMany(
+          { user_id: wo.assigned_to, active_wo_count: { $gt: 0 } },
+          { $inc: { active_wo_count: -1 } }
+        );
+      }
 
-        if (otherOpenWos === 0) {
-          await tx.equipment.update({
-            where: { id: wo.equipment_id },
-            data: {
-              status: 'OPERATIONAL',
-              last_serviced_at: new Date()
-            }
-          });
-        }
+      // Step 6: Set status = "COMPLETED", record completed_at = NOW()
+      wo.status = 'COMPLETED';
+      wo.completed_at = new Date();
+      await wo.save();
 
-        return completedWo;
+      // Check if other open work orders exist for that equipment
+      const otherOpenWos = await WorkOrder.countDocuments({
+        equipment_id: wo.equipment_id,
+        _id: { $ne: id },
+        status: { $in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] }
       });
+
+      if (otherOpenWos === 0) {
+        await Equipment.findByIdAndUpdate(wo.equipment_id, {
+          status: 'OPERATIONAL',
+          last_serviced_at: new Date()
+        });
+      }
+
+      const completedWo = await WorkOrder.findById(id)
+        .populate('equipment')
+        .populate('technician')
+        .populate('parts_required.part');
 
       await logActivity({
         actor: req.user?.name || 'Technician',
         role: req.user?.role || 'TECHNICIAN',
         action: 'COMPLETED_WORK_ORDER',
-        target: `${id} - ${result.title} (Parts consumed, equipment operational)`,
+        target: `${id} - ${completedWo.title} (Parts consumed, equipment operational)`,
         category: 'WORK_ORDERS',
         badge_class: 'badge-operational'
       });
@@ -507,45 +436,39 @@ router.patch('/:id/status', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN
       return res.json({
         success: true,
         message: `Work Order ${id} completed successfully. Inventory deducted and equipment status restored.`,
-        workOrder: formatWorkOrder(result)
+        workOrder: formatWorkOrder(completedWo)
       });
     }
 
     // Case 2: Other state transitions (IN_PROGRESS, ASSIGNED, WAITING_FOR_PARTS, CANCELLED)
-    const updated = await prisma.$transaction(async (tx) => {
-      const existing = await tx.workOrder.findUnique({ where: { id } });
-      if (!existing) {
-        throw { status: 404, message: `Work order ${id} not found.` };
-      }
+    const existing = await WorkOrder.findById(id);
+    if (!existing) {
+      return res.status(404).json({ error: `Work order ${id} not found.` });
+    }
 
-      // If transitioning from WAITING_FOR_PARTS or OPEN to IN_PROGRESS, ensure equipment is MAINTENANCE
-      if (normalizedStatus === 'IN_PROGRESS' || normalizedStatus === 'ASSIGNED') {
-        await tx.equipment.update({
-          where: { id: existing.equipment_id },
-          data: { status: 'MAINTENANCE' }
-        });
-      }
-
-      // If cancelled and was assigned, decrement technician count
-      if (normalizedStatus === 'CANCELLED' && existing.assigned_to && existing.status !== 'COMPLETED' && existing.status !== 'CANCELLED') {
-        await tx.technicianProfile.updateMany({
-          where: { user_id: existing.assigned_to, active_wo_count: { gt: 0 } },
-          data: { active_wo_count: { decrement: 1 } }
-        });
-      }
-
-      return await tx.workOrder.update({
-        where: { id },
-        data: {
-          status: status
-        },
-        include: {
-          equipment: true,
-          technician: true,
-          parts_required: { include: { part: true } }
-        }
+    // If transitioning from WAITING_FOR_PARTS or OPEN to IN_PROGRESS, ensure equipment is MAINTENANCE
+    if (normalizedStatus === 'IN_PROGRESS' || normalizedStatus === 'ASSIGNED') {
+      await Equipment.findByIdAndUpdate(existing.equipment_id, {
+        status: 'MAINTENANCE'
       });
-    });
+    }
+
+    // If cancelled and was assigned, decrement technician count
+    if (normalizedStatus === 'CANCELLED' && existing.assigned_to && existing.status !== 'COMPLETED' && existing.status !== 'CANCELLED') {
+      await TechnicianProfile.updateMany(
+        { user_id: existing.assigned_to, active_wo_count: { $gt: 0 } },
+        { $inc: { active_wo_count: -1 } }
+      );
+    }
+
+    const updated = await WorkOrder.findByIdAndUpdate(
+      id,
+      { status: status },
+      { returnDocument: 'after' }
+    )
+      .populate('equipment')
+      .populate('technician')
+      .populate('parts_required.part');
 
     await logActivity({
       actor: req.user?.name || 'Operator',
@@ -563,9 +486,6 @@ router.patch('/:id/status', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN
     });
   } catch (err) {
     console.error('Status update error:', err);
-    if (err.status) {
-      return res.status(err.status).json({ error: err.message });
-    }
     return res.status(500).json({ error: 'Failed to update work order status', details: err.message });
   }
 });
@@ -574,21 +494,20 @@ router.patch('/:id/status', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN
 router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
     const { id } = req.params;
-    const wo = await prisma.workOrder.findUnique({ where: { id } });
+    const wo = await WorkOrder.findById(id);
     if (!wo) {
       return res.status(404).json({ error: `Work Order ${id} not found.` });
     }
 
     if (wo.assigned_to && wo.status !== 'COMPLETED' && wo.status !== 'CANCELLED') {
-      await prisma.technicianProfile.updateMany({
-        where: { user_id: wo.assigned_to, active_wo_count: { gt: 0 } },
-        data: { active_wo_count: { decrement: 1 } }
-      });
+      await TechnicianProfile.updateMany(
+        { user_id: wo.assigned_to, active_wo_count: { $gt: 0 } },
+        { $inc: { active_wo_count: -1 } }
+      );
     }
 
-    await prisma.workOrderPart.deleteMany({ where: { work_order_id: id } });
-    await prisma.faultReport.updateMany({ where: { linked_wo_id: id }, data: { linked_wo_id: null } });
-    await prisma.workOrder.delete({ where: { id } });
+    await FaultReport.updateMany({ linked_wo_id: id }, { linked_wo_id: null });
+    await WorkOrder.findByIdAndDelete(id);
 
     await logActivity({
       actor: req.user?.name || 'Administrator',

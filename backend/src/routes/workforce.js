@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const prisma = require('../db');
+const { User, TechnicianProfile, WorkOrder, MaintenanceSchedule } = require('../models');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { logActivity } = require('../utils/activity');
 
@@ -11,7 +11,7 @@ function formatTechnician(u) {
   const prof = u.technician_profile || {};
   const avail = u.availability_status || (u.status === 'ACTIVE' ? (prof.active_wo_count > 0 ? 'Busy' : 'Available') : 'Off Shift');
   return {
-    id: u.id,
+    id: u.id || u._id,
     name: u.name,
     email: u.email,
     role: u.role,
@@ -50,23 +50,14 @@ router.get('/', authenticateToken, async (req, res) => {
 
     if (role === 'TECHNICIAN') {
       // Technician reads only own record
-      const self = await prisma.user.findUnique({
-        where: { id: req.user.id },
-        include: { technician_profile: true }
-      });
+      const self = await User.findById(req.user.id).populate('technician_profile');
       return res.json(self ? [formatTechnician(self)] : []);
     }
 
     // Admin: full list of technicians
-    const technicians = await prisma.user.findMany({
-      where: {
-        role: 'TECHNICIAN'
-      },
-      include: {
-        technician_profile: true
-      },
-      orderBy: { name: 'asc' }
-    });
+    const technicians = await User.find({ role: 'TECHNICIAN' })
+      .sort({ name: 1 })
+      .populate('technician_profile');
 
     return res.json(technicians.map(formatTechnician));
   } catch (err) {
@@ -79,18 +70,12 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    let tech = await prisma.user.findUnique({
-      where: { id },
-      include: { technician_profile: true }
-    });
+    let tech = await User.findById(id).populate('technician_profile');
 
     if (!tech) {
-      tech = await prisma.user.findFirst({
-        where: {
-          OR: [{ email: id }, { name: id }, { badge_id: id }]
-        },
-        include: { technician_profile: true }
-      });
+      tech = await User.findOne({
+        $or: [{ email: id }, { name: id }, { badge_id: id }]
+      }).populate('technician_profile');
     }
 
     if (!tech) {
@@ -108,6 +93,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
     const {
+      id,
       name,
       email,
       password,
@@ -125,56 +111,50 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), async (req, res) => 
       return res.status(400).json({ error: 'Name and email are required for technician onboarding.' });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: `User with email '${email}' already exists.` });
     }
 
     const hashedPassword = await bcrypt.hash(password || 'tech123', 10);
     const techBadge = badge_id || `TECH-0${Math.floor(10 + Math.random() * 90)}`;
+    const userId = id || `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    const newTechnician = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          name,
-          email,
-          password_hash: hashedPassword,
-          role: 'TECHNICIAN',
-          badge_id: techBadge,
-          bay_assignment: bay_assignment || 'Bay 01',
-          shift_pattern: shift_pattern || 'Day Shift',
-          assigned_machine: assigned_machine || null,
-          availability_status: availability_status || 'Available',
-          status: 'ACTIVE'
-        }
-      });
-
-      const profile = await tx.technicianProfile.create({
-        data: {
-          user_id: user.id,
-          specialization: specialization || 'General Machinery',
-          certifications: certifications || 'ISO-9001 Safety / Master Tech',
-          max_concurrent_wos: max_concurrent_wos ? parseInt(max_concurrent_wos, 10) : 3,
-          active_wo_count: 0
-        }
-      });
-
-      return {
-        ...user,
-        technician_profile: profile
-      };
+    const user = await User.create({
+      _id: userId,
+      name,
+      email,
+      password_hash: hashedPassword,
+      role: 'TECHNICIAN',
+      badge_id: techBadge,
+      bay_assignment: bay_assignment || 'Bay 01',
+      shift_pattern: shift_pattern || 'Day Shift',
+      assigned_machine: assigned_machine || null,
+      availability_status: availability_status || 'Available',
+      status: 'ACTIVE'
     });
+
+    const profile = await TechnicianProfile.create({
+      _id: `TP-${userId}`,
+      user_id: user._id,
+      specialization: specialization || 'General Machinery',
+      certifications: certifications || 'ISO-9001 Safety / Master Tech',
+      max_concurrent_wos: max_concurrent_wos ? parseInt(max_concurrent_wos, 10) : 3,
+      active_wo_count: 0
+    });
+
+    const populated = await User.findById(user._id).populate('technician_profile');
 
     await logActivity({
       actor: req.user?.name || 'Administrator',
       role: 'ADMIN',
       action: 'ONBOARDED_TECHNICIAN',
-      target: `${newTechnician.name} (${newTechnician.badge_id} - ${newTechnician.technician_profile.specialization})`,
+      target: `${populated.name} (${populated.badge_id} - ${profile.specialization})`,
       category: 'SYSTEM',
       badge_class: 'badge-operational'
     });
 
-    return res.status(201).json(formatTechnician(newTechnician));
+    return res.status(201).json(formatTechnician(populated));
   } catch (err) {
     console.error('Error onboarding technician:', err);
     return res.status(500).json({ error: 'Failed to onboard technician', details: err.message });
@@ -192,25 +172,20 @@ router.patch('/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Operators cannot modify workforce records.' });
     }
 
-    let targetUser = await prisma.user.findUnique({
-      where: { id },
-      include: { technician_profile: true }
-    });
+    let targetUser = await User.findById(id).populate('technician_profile');
 
     if (!targetUser) {
-      targetUser = await prisma.user.findFirst({
-        where: {
-          OR: [{ email: id }, { name: id }, { badge_id: id }]
-        },
-        include: { technician_profile: true }
-      });
+      targetUser = await User.findOne({
+        $or: [{ email: id }, { name: id }, { badge_id: id }]
+      }).populate('technician_profile');
     }
 
     if (!targetUser) {
       return res.status(404).json({ error: `Technician '${id}' not found.` });
     }
 
-    if (userRole === 'TECHNICIAN' && req.user.id !== targetUser.id) {
+    const targetUserId = targetUser._id || targetUser.id;
+    if (userRole === 'TECHNICIAN' && req.user.id !== targetUserId) {
       return res.status(403).json({ error: 'Forbidden: Technicians may only update their own profile.' });
     }
 
@@ -256,39 +231,27 @@ router.patch('/:id', authenticateToken, async (req, res) => {
     if (certifications || certification) profileData.certifications = certifications || certification;
     if (max_concurrent_wos !== undefined) profileData.max_concurrent_wos = parseInt(max_concurrent_wos, 10);
 
-    const updated = await prisma.$transaction(async (tx) => {
-      let u = targetUser;
-      if (Object.keys(userData).length > 0) {
-        u = await tx.user.update({
-          where: { id: targetUser.id },
-          data: userData
+    if (Object.keys(userData).length > 0) {
+      await User.findByIdAndUpdate(targetUserId, userData);
+    }
+
+    if (Object.keys(profileData).length > 0) {
+      const existingProfile = await TechnicianProfile.findOne({ user_id: targetUserId });
+      if (existingProfile) {
+        await TechnicianProfile.findOneAndUpdate({ user_id: targetUserId }, profileData);
+      } else {
+        await TechnicianProfile.create({
+          _id: `TP-${targetUserId}`,
+          user_id: targetUserId,
+          specialization: profileData.specialization || 'General Machinery',
+          certifications: profileData.certifications || 'ISO-9001 Safety / Master Tech',
+          max_concurrent_wos: profileData.max_concurrent_wos || 3,
+          active_wo_count: 0
         });
       }
+    }
 
-      let p = targetUser.technician_profile;
-      if (Object.keys(profileData).length > 0) {
-        if (p) {
-          p = await tx.technicianProfile.update({
-            where: { user_id: targetUser.id },
-            data: profileData
-          });
-        } else {
-          p = await tx.technicianProfile.create({
-            data: {
-              user_id: targetUser.id,
-              specialization: profileData.specialization || 'General Machinery',
-              certifications: profileData.certifications || 'ISO-9001 Safety / Master Tech',
-              max_concurrent_wos: profileData.max_concurrent_wos || 3
-            }
-          });
-        }
-      }
-
-      return {
-        ...u,
-        technician_profile: p
-      };
-    });
+    const updated = await User.findById(targetUserId).populate('technician_profile');
 
     await logActivity({
       actor: req.user?.name || 'Administrator',
@@ -321,25 +284,20 @@ router.patch('/:id/availability', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Operators cannot alter workforce availability.' });
     }
 
-    let targetUser = await prisma.user.findUnique({
-      where: { id },
-      include: { technician_profile: true }
-    });
+    let targetUser = await User.findById(id).populate('technician_profile');
 
     if (!targetUser) {
-      targetUser = await prisma.user.findFirst({
-        where: {
-          OR: [{ email: id }, { name: id }]
-        },
-        include: { technician_profile: true }
-      });
+      targetUser = await User.findOne({
+        $or: [{ email: id }, { name: id }]
+      }).populate('technician_profile');
     }
 
     if (!targetUser) {
       return res.status(404).json({ error: `Technician with identifier '${id}' not found.` });
     }
 
-    if (userRole === 'TECHNICIAN' && req.user.id !== targetUser.id) {
+    const targetUserId = targetUser._id || targetUser.id;
+    if (userRole === 'TECHNICIAN' && req.user.id !== targetUserId) {
       return res.status(403).json({ error: 'Forbidden: Technicians may only update their own availability.' });
     }
 
@@ -361,14 +319,11 @@ router.patch('/:id/availability', authenticateToken, async (req, res) => {
       availStatus = 'Available';
     }
 
-    const updated = await prisma.user.update({
-      where: { id: targetUser.id },
-      data: {
-        status: targetStatus,
-        availability_status: availStatus
-      },
-      include: { technician_profile: true }
-    });
+    const updated = await User.findByIdAndUpdate(
+      targetUserId,
+      { status: targetStatus, availability_status: availStatus },
+      { returnDocument: 'after' }
+    ).populate('technician_profile');
 
     await logActivity({
       actor: req.user?.name || targetUser.name,
@@ -395,34 +350,36 @@ router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res
   try {
     const { id } = req.params;
 
-    const targetUser = await prisma.user.findUnique({ where: { id } });
+    let targetUser = await User.findById(id);
+    if (!targetUser) {
+      targetUser = await User.findOne({
+        $or: [{ email: id }, { badge_id: id }]
+      });
+    }
+
     if (!targetUser) {
       return res.status(404).json({ error: `User with ID ${id} not found.` });
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Unassign open work orders
-      await tx.workOrder.updateMany({
-        where: { assigned_to: id, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
-        data: { assigned_to: null, status: 'OPEN' }
-      });
+    const targetUserId = targetUser._id || targetUser.id;
 
-      // Unassign maintenance schedules
-      await tx.maintenanceSchedule.updateMany({
-        where: { assigned_tech_id: id },
-        data: { assigned_tech_id: null }
-      });
+    // Unassign open work orders
+    await WorkOrder.updateMany(
+      { assigned_to: targetUserId, status: { $nin: ['COMPLETED', 'CANCELLED'] } },
+      { assigned_to: null, status: 'OPEN' }
+    );
 
-      // Delete technician profile if exists
-      await tx.technicianProfile.deleteMany({
-        where: { user_id: id }
-      });
+    // Unassign maintenance schedules
+    await MaintenanceSchedule.updateMany(
+      { assigned_tech_id: targetUserId },
+      { assigned_tech_id: null }
+    );
 
-      // Delete user
-      await tx.user.delete({
-        where: { id }
-      });
-    });
+    // Delete technician profile if exists
+    await TechnicianProfile.deleteMany({ user_id: targetUserId });
+
+    // Delete user
+    await User.findByIdAndDelete(targetUserId);
 
     await logActivity({
       actor: req.user?.name || 'Administrator',

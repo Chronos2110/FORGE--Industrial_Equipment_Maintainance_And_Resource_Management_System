@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db');
+const { ActivityLog } = require('../models');
 const { authenticateToken } = require('../middleware/auth');
 const { logActivity, formatActivity } = require('../utils/activity');
 
@@ -10,17 +10,15 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const { category, limit } = req.query;
     const take = limit ? Math.min(200, parseInt(limit, 10)) : 100;
-    const where = {};
+    const filter = {};
 
     if (category && category !== 'All' && category !== 'ALL') {
-      where.category = category.toUpperCase();
+      filter.category = category.toUpperCase();
     }
 
-    const logs = await prisma.activityLog.findMany({
-      where,
-      orderBy: { timestamp: 'desc' },
-      take
-    });
+    const logs = await ActivityLog.find(filter)
+      .sort({ timestamp: -1 })
+      .limit(take);
 
     return res.json(logs.map(formatActivity));
   } catch (err) {

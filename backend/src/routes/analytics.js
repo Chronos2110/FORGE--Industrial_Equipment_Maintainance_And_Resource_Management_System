@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db');
+const { WorkOrder, Equipment, FaultReport, InventoryPart, ActivityLog } = require('../models');
 const { authenticateToken } = require('../middleware/auth');
 const { formatActivity } = require('../utils/activity');
 
@@ -18,19 +18,15 @@ router.get('/summary', authenticateToken, async (req, res) => {
 
     // 1. If TECHNICIAN, compute personal metrics
     if (role === 'TECHNICIAN') {
-      const myCompleted = await prisma.workOrder.findMany({
-        where: {
-          assigned_to: req.user.id,
-          status: 'COMPLETED',
-          completed_at: { not: null }
-        }
+      const myCompleted = await WorkOrder.find({
+        assigned_to: req.user.id,
+        status: 'COMPLETED',
+        completed_at: { $ne: null }
       });
 
-      const myActive = await prisma.workOrder.count({
-        where: {
-          assigned_to: req.user.id,
-          status: { in: ['ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] }
-        }
+      const myActive = await WorkOrder.countDocuments({
+        assigned_to: req.user.id,
+        status: { $in: ['ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] }
       });
 
       let totalRepairHours = 0;
@@ -43,16 +39,14 @@ router.get('/summary', authenticateToken, async (req, res) => {
 
       const personalMttr = myCompleted.length > 0 ? (totalRepairHours / myCompleted.length).toFixed(1) : '3.5';
 
-      const recentPersonalActivity = await prisma.activityLog.findMany({
-        where: {
-          OR: [
-            { actor: req.user.name },
-            { actor: req.user.email }
-          ]
-        },
-        take: 10,
-        orderBy: { timestamp: 'desc' }
-      });
+      const recentPersonalActivity = await ActivityLog.find({
+        $or: [
+          { actor: req.user.name },
+          { actor: req.user.email }
+        ]
+      })
+        .sort({ timestamp: -1 })
+        .limit(10);
 
       return res.json({
         scope: 'PERSONAL',
@@ -66,7 +60,7 @@ router.get('/summary', authenticateToken, async (req, res) => {
     }
 
     // 2. Administrator: Full Plant Analytics
-    const equipment = await prisma.equipment.findMany({});
+    const equipment = await Equipment.find({});
     const totalEq = equipment.length;
     const operationalEq = equipment.filter(e => e.status === 'OPERATIONAL').length;
     const maintenanceEq = equipment.filter(e => e.status === 'MAINTENANCE').length;
@@ -75,11 +69,9 @@ router.get('/summary', authenticateToken, async (req, res) => {
     const availabilityPct = totalEq > 0 ? Math.round((operationalEq / totalEq) * 100) : 100;
 
     // Completed Work Orders for MTTR calculation
-    const completedOrders = await prisma.workOrder.findMany({
-      where: {
-        status: 'COMPLETED',
-        completed_at: { not: null }
-      }
+    const completedOrders = await WorkOrder.find({
+      status: 'COMPLETED',
+      completed_at: { $ne: null }
     });
 
     let totalRepairTimeHours = 0;
@@ -92,33 +84,32 @@ router.get('/summary', authenticateToken, async (req, res) => {
 
     // MTBF (Mean Time Between Failures)
     // Operating time divided by total breakdown count
-    const totalFaults = await prisma.faultReport.count({});
+    const totalFaults = await FaultReport.countDocuments({});
     const baseOperatingHours = totalEq * 720; // 30 days * 24 hours per machine
     const breakdownCount = Math.max(1, totalFaults);
     const mtbfHours = Math.round(baseOperatingHours / breakdownCount);
 
     // Open Orders
-    const openOrdersCount = await prisma.workOrder.count({
-      where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] } }
+    const openOrdersCount = await WorkOrder.countDocuments({
+      status: { $in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] }
     });
 
     // Low stock inventory count
-    const allParts = await prisma.inventoryPart.findMany({});
+    const allParts = await InventoryPart.find({});
     const lowStockCount = allParts.filter(p => p.quantity_on_hand <= p.min_threshold).length;
 
     // Trend: work orders completed over time
     const completionTrends = completedOrders.map(wo => ({
-      id: wo.id,
+      id: wo.id || wo._id,
       title: wo.title,
-      completedDate: wo.completed_at ? wo.completed_at.toISOString().split('T')[0] : '',
+      completedDate: wo.completed_at ? new Date(wo.completed_at).toISOString().split('T')[0] : '',
       durationHours: wo.completed_at ? ((new Date(wo.completed_at) - new Date(wo.created_at)) / (1000 * 3600)).toFixed(1) : '0'
     }));
 
     // Recent ISO-55000 audit logs
-    const recentLogs = await prisma.activityLog.findMany({
-      take: 20,
-      orderBy: { timestamp: 'desc' }
-    });
+    const recentLogs = await ActivityLog.find()
+      .sort({ timestamp: -1 })
+      .limit(20);
 
     return res.json({
       scope: 'PLANT_WIDE',

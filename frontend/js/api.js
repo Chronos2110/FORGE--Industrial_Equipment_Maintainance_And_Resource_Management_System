@@ -1,7 +1,7 @@
 // ==========================================================================
-// FORGE Milestone 7 - Full-Stack Hybrid API Bridge (js/api.js)
-// Transparently connects frontend pages to the Node.js Express & Prisma
-// SQLite backend while maintaining resilient offline localStorage caching.
+// FORGE Milestone 11 - Full-Stack Hybrid API Bridge (js/api.js)
+// Transparently connects frontend pages to the Node.js Express & MongoDB
+// (Mongoose) backend while maintaining resilient offline localStorage caching.
 // ==========================================================================
 
 var FORGE_API = (function () {

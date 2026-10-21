@@ -1,7 +1,7 @@
-const prisma = require('../db');
+const { ActivityLog } = require('../models');
 
 /**
- * Persist an activity log entry to the SQLite database.
+ * Persist an activity log entry to MongoDB.
  * @param {object} params
  * @param {string} params.actor - Name or identifier of person/system performing the action
  * @param {string} [params.role] - Operational role (ADMIN, TECHNICIAN, OPERATOR, SYSTEM)
@@ -10,21 +10,17 @@ const prisma = require('../db');
  * @param {string} [params.category] - Category: FAULTS, WORK_ORDERS, INVENTORY, MAINTENANCE, SYSTEM
  * @param {string} [params.badge_class] - CSS badge class: badge-operational, badge-scheduled, badge-faulty, badge-maintenance
  * @param {Date} [params.timestamp] - Optional custom timestamp
- * @param {object} [tx] - Optional Prisma transaction client
  */
-async function logActivity(params, tx) {
+async function logActivity(params) {
   try {
-    const client = tx || prisma;
-    const entry = await client.activityLog.create({
-      data: {
-        actor: params.actor || 'System Engine',
-        role: (params.role || 'SYSTEM').toUpperCase(),
-        action: params.action || 'System event',
-        target: params.target || 'General',
-        category: (params.category || 'SYSTEM').toUpperCase(),
-        badge_class: params.badge_class || 'badge-operational',
-        timestamp: params.timestamp ? new Date(params.timestamp) : new Date()
-      }
+    const entry = await ActivityLog.create({
+      actor: params.actor || 'System Engine',
+      role: (params.role || 'SYSTEM').toUpperCase(),
+      action: params.action || 'System event',
+      target: params.target || 'General',
+      category: (params.category || 'SYSTEM').toUpperCase(),
+      badge_class: params.badge_class || 'badge-operational',
+      timestamp: params.timestamp ? new Date(params.timestamp) : new Date()
     });
     return entry;
   } catch (err) {
@@ -38,9 +34,9 @@ async function logActivity(params, tx) {
  */
 function formatActivity(a) {
   if (!a) return null;
-  const isoTime = a.timestamp ? a.timestamp.toISOString() : new Date().toISOString();
+  const isoTime = a.timestamp ? (a.timestamp instanceof Date ? a.timestamp.toISOString() : new Date(a.timestamp).toISOString()) : new Date().toISOString();
   return {
-    id: a.id,
+    id: a.id || a._id,
     timestamp: isoTime,
     time: isoTime.replace('T', ' ').substring(0, 19),
     actor: a.actor,

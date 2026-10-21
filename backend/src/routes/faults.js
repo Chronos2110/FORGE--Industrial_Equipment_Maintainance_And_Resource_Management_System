@@ -1,18 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db');
+const { FaultReport, Equipment, WorkOrder, User } = require('../models');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { logActivity } = require('../utils/activity');
 
 // Format Fault Report for front-end consumption
 function formatFault(f) {
   if (!f) return null;
+  const eqName = f.equipment ? (f.equipment.name || f.equipment) : f.equipment_id;
+  const reporterName = f.reporter ? (f.reporter.name || f.reporter) : f.reported_by;
   return {
-    id: f.id,
+    id: f.id || f._id,
     equipmentId: f.equipment_id,
-    equipmentName: f.equipment ? f.equipment.name : f.equipment_id,
-    equipment: f.equipment ? f.equipment.name : f.equipment_id,
-    reportedBy: f.reporter ? f.reporter.name : f.reported_by,
+    equipmentName: eqName,
+    equipment: eqName,
+    reportedBy: reporterName,
     severity: f.severity,
     priority: f.severity === 'CRITICAL' ? 'High' : (f.severity === 'HIGH' ? 'High' : (f.severity === 'MEDIUM' ? 'Medium' : 'Low')),
     description: f.description,
@@ -28,14 +30,11 @@ function formatFault(f) {
 // Accessible by: ADMIN, TECHNICIAN, OPERATOR
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const faults = await prisma.faultReport.findMany({
-      orderBy: { created_at: 'desc' },
-      include: {
-        equipment: true,
-        reporter: { select: { id: true, name: true, role: true } },
-        work_order: true
-      }
-    });
+    const faults = await FaultReport.find()
+      .sort({ created_at: -1 })
+      .populate('equipment')
+      .populate('reporter', 'id name role')
+      .populate('work_order');
 
     return res.json(faults.map(formatFault));
   } catch (err) {
@@ -47,14 +46,10 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/faults/:id
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const fault = await prisma.faultReport.findUnique({
-      where: { id: req.params.id },
-      include: {
-        equipment: true,
-        reporter: { select: { id: true, name: true, role: true } },
-        work_order: true
-      }
-    });
+    const fault = await FaultReport.findById(req.params.id)
+      .populate('equipment')
+      .populate('reporter', 'id name role')
+      .populate('work_order');
 
     if (!fault) {
       return res.status(404).json({ error: `Fault report ${req.params.id} not found.` });
@@ -79,12 +74,10 @@ router.post('/', authenticateToken, async (req, res) => {
     // Resolve equipment_id
     let resolvedEquipmentId = equipment_id;
     if (!resolvedEquipmentId && equipmentName) {
-      const eq = await prisma.equipment.findFirst({
-        where: {
-          OR: [{ id: equipmentName }, { name: equipmentName }]
-        }
+      const eq = await Equipment.findOne({
+        $or: [{ _id: equipmentName }, { name: equipmentName }]
       });
-      if (eq) resolvedEquipmentId = eq.id;
+      if (eq) resolvedEquipmentId = eq._id || eq.id;
     }
 
     if (!resolvedEquipmentId) {
@@ -93,64 +86,55 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const faultId = id || `FLT-${Math.floor(100 + Math.random() * 900)}`;
 
-    const result = await prisma.$transaction(async (tx) => {
-      const fault = await tx.faultReport.create({
-        data: {
-          id: faultId,
-          equipment_id: resolvedEquipmentId,
-          reported_by: req.user.id,
-          severity: faultSeverity,
-          description: faultDesc,
-          status: 'REPORTED'
-        },
-        include: {
-          equipment: true,
-          reporter: true
-        }
-      });
-
-      // Automatically update equipment status based on fault severity
-      if (faultSeverity === 'CRITICAL') {
-        await tx.equipment.update({
-          where: { id: resolvedEquipmentId },
-          data: { status: 'DOWN', health_score: { decrement: 25 } }
-        });
-      } else if (faultSeverity === 'HIGH') {
-        await tx.equipment.update({
-          where: { id: resolvedEquipmentId },
-          data: { status: 'WARNING', health_score: { decrement: 15 } }
-        });
-      }
-
-      return fault;
+    const fault = await FaultReport.create({
+      _id: faultId,
+      equipment_id: resolvedEquipmentId,
+      reported_by: req.user.id,
+      severity: faultSeverity,
+      description: faultDesc,
+      status: 'REPORTED'
     });
+
+    // Automatically update equipment status based on fault severity
+    if (faultSeverity === 'CRITICAL') {
+      await Equipment.findByIdAndUpdate(resolvedEquipmentId, {
+        status: 'DOWN',
+        $inc: { health_score: -25 }
+      });
+    } else if (faultSeverity === 'HIGH') {
+      await Equipment.findByIdAndUpdate(resolvedEquipmentId, {
+        status: 'WARNING',
+        $inc: { health_score: -15 }
+      });
+    }
+
+    const populated = await FaultReport.findById(fault._id)
+      .populate('equipment')
+      .populate('reporter', 'id name role');
 
     await logActivity({
       actor: req.user?.name || 'Operator',
       role: req.user?.role || 'OPERATOR',
       action: 'REPORTED_FAULT',
-      target: `${result.id} - ${result.equipment?.name || resolvedEquipmentId} [${faultSeverity}]`,
+      target: `${populated.id || populated._id} - ${populated.equipment?.name || resolvedEquipmentId} [${faultSeverity}]`,
       category: 'FAULTS',
       badge_class: 'badge-faulty'
     });
 
-    return res.status(201).json(formatFault(result));
+    return res.status(201).json(formatFault(populated));
   } catch (err) {
     console.error('Error reporting fault:', err);
     return res.status(500).json({ error: 'Failed to record fault report', details: err.message });
   }
 });
 
-// POST /api/faults/:id/escalate (Creates a linked Work Order from the fault inside a single transaction)
+// POST /api/faults/:id/escalate (Creates a linked Work Order from the fault)
 // Accessible by: ADMIN and TECHNICIAN
 router.post('/:id/escalate', authenticateToken, requireRole(['ADMIN', 'TECHNICIAN']), async (req, res) => {
   try {
     const { id } = req.params;
 
-    const fault = await prisma.faultReport.findUnique({
-      where: { id },
-      include: { equipment: true }
-    });
+    const fault = await FaultReport.findById(id).populate('equipment');
 
     if (!fault) {
       return res.status(404).json({ error: `Fault report ${id} not found.` });
@@ -164,57 +148,51 @@ router.post('/:id/escalate', authenticateToken, requireRole(['ADMIN', 'TECHNICIA
 
     const newWoId = `WO-${Math.floor(100 + Math.random() * 900)}`;
     const woPriority = fault.severity === 'CRITICAL' ? 'CRITICAL' : (fault.severity === 'HIGH' ? 'HIGH' : 'MEDIUM');
+    const eqName = fault.equipment ? fault.equipment.name : fault.equipment_id;
 
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Create linked Work Order
-      const createdWo = await tx.workOrder.create({
-        data: {
-          id: newWoId,
-          title: `Fault Escalation: ${fault.equipment.name}`,
-          description: fault.description,
-          priority: woPriority,
-          status: 'OPEN',
-          equipment_id: fault.equipment_id,
-          created_by: req.user.id
-        }
-      });
+    // 1. Create linked Work Order
+    const createdWo = await WorkOrder.create({
+      _id: newWoId,
+      title: `Fault Escalation: ${eqName}`,
+      description: fault.description,
+      priority: woPriority,
+      status: 'OPEN',
+      equipment_id: fault.equipment_id,
+      created_by: req.user.id
+    });
 
-      // 2. Update fault report
-      const updatedFault = await tx.faultReport.update({
-        where: { id },
-        data: {
-          status: 'CONVERTED_TO_WO',
-          linked_wo_id: createdWo.id
-        },
-        include: { equipment: true, reporter: true, work_order: true }
-      });
+    // 2. Update fault report
+    const updatedFault = await FaultReport.findByIdAndUpdate(
+      id,
+      {
+        status: 'CONVERTED_TO_WO',
+        linked_wo_id: createdWo._id || createdWo.id
+      },
+      { returnDocument: 'after' }
+    )
+      .populate('equipment')
+      .populate('reporter', 'id name role')
+      .populate('work_order');
 
-      // 3. Update equipment status to MAINTENANCE
-      await tx.equipment.update({
-        where: { id: fault.equipment_id },
-        data: { status: 'MAINTENANCE' }
-      });
-
-      return {
-        workOrder: createdWo,
-        fault: updatedFault
-      };
+    // 3. Update equipment status to MAINTENANCE
+    await Equipment.findByIdAndUpdate(fault.equipment_id, {
+      status: 'MAINTENANCE'
     });
 
     await logActivity({
       actor: req.user?.name || 'Dispatcher',
       role: req.user?.role || 'TECHNICIAN',
       action: 'ESCALATED_FAULT_TO_WO',
-      target: `${id} -> ${result.workOrder.id} (${fault.equipment.name})`,
+      target: `${id} -> ${createdWo._id || createdWo.id} (${eqName})`,
       category: 'FAULTS',
       badge_class: 'badge-maintenance'
     });
 
     return res.json({
       success: true,
-      message: `Fault ${id} successfully escalated to Work Order ${result.workOrder.id}.`,
-      workOrder: result.workOrder,
-      fault: formatFault(result.fault)
+      message: `Fault ${id} successfully escalated to Work Order ${createdWo._id || createdWo.id}.`,
+      workOrder: createdWo,
+      fault: formatFault(updatedFault)
     });
   } catch (err) {
     console.error('Error escalating fault:', err);
@@ -226,12 +204,12 @@ router.post('/:id/escalate', authenticateToken, requireRole(['ADMIN', 'TECHNICIA
 router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
   try {
     const { id } = req.params;
-    const existing = await prisma.faultReport.findUnique({ where: { id } });
+    const existing = await FaultReport.findById(id);
     if (!existing) {
       return res.status(404).json({ error: `Fault report ${id} not found.` });
     }
 
-    await prisma.faultReport.delete({ where: { id } });
+    await FaultReport.findByIdAndDelete(id);
 
     await logActivity({
       actor: req.user?.name || 'Administrator',

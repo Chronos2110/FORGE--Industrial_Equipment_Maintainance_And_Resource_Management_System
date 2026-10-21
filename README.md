@@ -1,12 +1,12 @@
 # FORGE — Industrial Equipment Maintenance & Resource Management System (V5)
 
-An enterprise-grade, production-hardened Industrial Operations, Computerized Maintenance Management System (CMMS), and Resource Allocation Platform engineered with a cleanly segregated architecture (`frontend/` and `backend/`), powered by **Express.js**, **Prisma ORM**, and **SQLite**, with pure semantic **HTML5/Vanilla CSS/JavaScript** frontend hydration.
+An enterprise-grade, production-hardened Industrial Operations, Computerized Maintenance Management System (CMMS), and Resource Allocation Platform engineered with a cleanly segregated architecture (`frontend/` and `backend/`), powered by **Express.js**, **Mongoose ODM**, and **MongoDB**, with pure semantic **HTML5/Vanilla CSS/JavaScript** frontend hydration.
 
 ---
 
 ## 📌 Architectural Overview (V5 Segregated Architecture)
 
-FORGE is structured as a full-stack industrial web system featuring a decoupled frontend client and a transactional RESTful backend:
+FORGE is structured as a full-stack industrial web system featuring a decoupled frontend client and a document-based RESTful backend:
 
 1. **Frontend Client (`frontend/`)**:
    - Zero-dependency, pure HTML5/CSS3/JavaScript interface.
@@ -14,12 +14,13 @@ FORGE is structured as a full-stack industrial web system featuring a decoupled 
    - Dynamic SVG Industrial Floor Schematic with live plant bay overlays across all 6 production bays.
    - 4-Lane Preventive Maintenance Compliance Timeline (`Overdue / Critical`, `Due This Week`, `Upcoming Schedule`, `Completed / Verified`).
    - Drag-and-drop / stage-transitioning 4-stage Work Order Kanban Board (`Scheduled`, `Assigned`, `In Progress`, `Waiting for Parts`, `Completed`).
-   - Full-stack hydration engine (`ForgeApiClient.hydrateAll()` and `ForgeDataService`) that mirrors backend Prisma records directly into the UI.
+   - Full-stack hydration engine (`ForgeApiClient.hydrateAll()` and `ForgeDataService`) that mirrors backend MongoDB records directly into the UI.
 
 2. **Backend Engine (`backend/`)**:
    - Node.js & Express REST API running on port `5000` with JWT cookie/header authentication and Role-Based Access Control (RBAC).
-   - **Prisma ORM** interacting with an embedded, zero-config **SQLite** database (`backend/prisma/dev.db`).
-   - Transactional business logic guaranteeing stockout protection, atomic inventory decrements upon order completion, and auto-rescheduling for PM tasks.
+   - **Mongoose ODM** connecting to **MongoDB** via `MONGODB_URI` (`backend/src/models/index.js` and `backend/src/db.js`).
+   - Built-in zero-config resiliency: automatically falls back to an in-process `mongodb-memory-server` if a local or remote MongoDB instance is not currently active, guaranteeing `npm test`, `npm run seed`, and `npm start` succeed instantly out of the box.
+   - Atomic business logic guaranteeing stockout protection, atomic inventory decrements upon order completion, and auto-rescheduling for PM tasks.
    - ISO-55000 compliant persistent `ActivityLog` audit trail capturing shift handovers, fault reports, work order dispatch, and equipment lifecycle events.
 
 ---
@@ -29,6 +30,7 @@ FORGE is structured as a full-stack industrial web system featuring a decoupled 
 ```
 Mini-Project/
 ├── package.json                      # Root npm scripts (start, seed, test, dev)
+├── .env                              # Environment configuration (MONGODB_URI, PORT, JWT_SECRET)
 ├── README.md                         # Full-stack documentation & API specifications
 │
 ├── frontend/                         # Pure Frontend Application Assets
@@ -59,14 +61,13 @@ Mini-Project/
 │   │   └── analytics.js              # MTBF/MTTR graphs & ISO-55000 audit drawer
 │   └── assets/                       # SVG schematics and industrial iconography
 │
-└── backend/                          # Production-Grade Express & Prisma Backend
+└── backend/                          # Production-Grade Express & Mongoose Backend
     ├── server.js                     # Express app setup, CORS, route mounting, static serving
-    ├── prisma/
-    │   ├── schema.prisma             # Relational schema (User, Equipment, WorkOrder, Parts, ActivityLog)
-    │   ├── seed.js                   # Comprehensive plant database seeding script
-    │   └── dev.db                    # Embedded SQLite plant database
     ├── src/
-    │   ├── db.js                     # Shared PrismaClient singleton
+    │   ├── db.js                     # Resilient Mongoose connection helper (MongoDB / Memory Server)
+    │   ├── seed.js                   # Comprehensive 6-bay plant database seed script
+    │   ├── models/
+    │   │   └── index.js              # Mongoose schemas (User, Equipment, WorkOrder, Parts, ActivityLog, etc.)
     │   ├── middleware/
     │   │   └── auth.js               # JWT verification & RBAC role guards
     │   ├── utils/
@@ -93,6 +94,7 @@ Mini-Project/
 ### 1. Prerequisites
 - **Node.js** (v18.x or higher)
 - **npm** (v9.x or higher)
+- **MongoDB** (Local instance or MongoDB Atlas cluster — *optional*: if offline, in-memory MongoDB activates automatically)
 
 ### 2. Installation & Setup
 Clone the repository and install all project dependencies:
@@ -101,23 +103,36 @@ Clone the repository and install all project dependencies:
 git clone https://github.com/Chronos2110/FORGE--Industrial_Equipment_Maintainance_And_Resource_Management_System.git
 cd Mini-Project
 
-# Install backend dependencies & generate Prisma client
+# Install backend dependencies (Mongoose, Express, etc.)
 npm install
 ```
 
-### 3. Populate Database (Seed Rich Industrial Data)
-Seed SQLite with 8+ accounts, 12 machines across all 6 bays, 10 inventory SKUs (with 3 stockouts), 10 work orders, 8 PM timeline schedules, 4 fault reports, and 15 ISO-55000 audit logs:
+### 3. Environment Configuration (`.env`)
+Create or verify your `.env` file in the project root:
+```env
+PORT=5000
+JWT_SECRET=forge_industrial_jwt_secret_2026
+MONGODB_URI=mongodb://127.0.0.1:27017/forge_industrial
+```
+> **Connecting to MongoDB Atlas**:
+> Paste your Atlas connection URI directly into `.env`:
+> ```env
+> MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/forge_industrial?retryWrites=true&w=majority
+> ```
+
+### 4. Populate Database (Seed Rich Industrial Data)
+Seed MongoDB with 9 accounts, 12 machines across all 6 bays, 10 inventory SKUs (with 3 stockouts), 10 work orders, 8 PM timeline schedules, 4 fault reports, and 15 ISO-55000 audit logs:
 ```bash
 npm run seed
 ```
 
-### 4. Run Automated Integration Tests
+### 5. Run Automated Integration Tests
 Verify 100% backend health, RBAC security, transactional inventory deduction, and auto-rescheduling:
 ```bash
 npm test
 ```
 
-### 5. Launch Application
+### 6. Launch Application
 Start the unified full-stack server on `http://localhost:5000`:
 ```bash
 npm start
@@ -180,7 +195,7 @@ All protected endpoints require an `Authorization: Bearer <JWT>` header or an au
 ### Workforce & Personnel Management (`/api/workforce`)
 - `GET /api/workforce`: List certified technicians (Admin views full plant; Technician views self; Operator 403 Forbidden).
 - `GET /api/workforce/:id`: Detailed technician record.
-- `POST /api/workforce`: Onboard a new certified technician in a single database transaction [Admin only].
+- `POST /api/workforce`: Onboard a new certified technician in a single database operation [Admin only].
 - `PATCH /api/workforce/:id`: Update technician specialization, certifications, bay assignment, and capacity limits.
 - `PATCH /api/workforce/:id/availability`: Toggle technician shift status (`Available`, `On Break`, `Off Shift`).
 - `DELETE /api/workforce/:id`: Offboard technician and unassign pending orders [Admin only].
@@ -196,7 +211,7 @@ All protected endpoints require an `Authorization: Bearer <JWT>` header or an au
 - `GET /api/faults`: List operator fault reports.
 - `GET /api/faults/:id`: Inspect individual fault incident.
 - `POST /api/faults`: File an operational fault report. `CRITICAL` severity automatically transitions the target machine status to `DOWN`.
-- `POST /api/faults/:id/escalate`: Escalate fault into a linked maintenance work order in an atomic transaction [Admin & Tech].
+- `POST /api/faults/:id/escalate`: Escalate fault into a linked maintenance work order in an atomic operation [Admin & Tech].
 - `DELETE /api/faults/:id`: Dismiss fault report [Admin only].
 
 ### ISO-55000 Audit Logging (`/api/activity`)
@@ -236,7 +251,7 @@ Expected output:
 ✅ PASSED: Inventory deduction verified: PRT-103 stock correctly decremented to 3
 ✅ PASSED: Operator can report fault with CRITICAL severity
 ✅ PASSED: Equipment EQ004 status automatically transitioned to DOWN on CRITICAL fault
-✅ PASSED: Fault escalated to linked Work Order: WO-539
+✅ PASSED: Fault escalated to linked Work Order: WO-392
 ✅ PASSED: Telemetry dock badge returns count: 7 alerts
 ✅ PASSED: Ctrl+K search returned 2 equipment matches
 ✅ PASSED: GET /api/activity retrieved 22 persistent ISO-55000 audit trail records
@@ -246,7 +261,7 @@ Expected output:
 ✅ PASSED: PATCH /api/workforce/:id/availability updated technician shift availability
 ✅ PASSED: DELETE /api/workforce/:id cleanly offboarded test technician
 ✅ PASSED: POST /api/maintenance scheduled task: High-Pressure Booster Valve Inspection
-✅ PASSED: PATCH /api/maintenance/:id marked task COMPLETED and auto-rescheduled next due date to 2026-11-19
+✅ PASSED: PATCH /api/maintenance/:id marked task COMPLETED and auto-rescheduled next due date to 2026-11-20
 ✅ PASSED: DELETE /api/maintenance/:id removed test task
 ✅ PASSED: POST /api/inventory created spare part: High-Temperature Silicone O-Ring
 ✅ PASSED: PATCH /api/inventory/:id/restock incremented stock to 75
@@ -260,10 +275,10 @@ Expected output:
 ## 🔒 Security & Industry Compliance
 - **ISO-55000 Standard**: Comprehensive lifecycle asset tracking, timestamped audit logging, and shift handover records.
 - **Role-Based Access Control (RBAC)**: Strict separation of privileges preventing unauthorized equipment modifications or analytics viewing.
-- **Transactional Integrity**: Multi-table updates executed via `prisma.$transaction()` preventing race conditions and inventory drift.
+- **Atomic Operations**: Atomic model updates and inventory deductions preventing race conditions and inventory drift.
 - **Fail-Safe Offline Mode**: If disconnected from the Express backend, `ForgeDataService` gracefully falls back to browser storage, guaranteeing zero plant downtime.
 
 ---
 
 ## 👨‍💻 Authors & Academic Context
-Engineered as part of the Web Programming Laboratory (WPL) Mini-Project. Designed and implemented to demonstrate production-grade architectural segregation, modern relational modeling with Prisma ORM, and high-performance vanilla web development.
+Engineered as part of the Web Programming Laboratory (WPL) Mini-Project. Designed and implemented to demonstrate production-grade architectural segregation, modern document modeling with Mongoose ODM & MongoDB, and high-performance vanilla web development.

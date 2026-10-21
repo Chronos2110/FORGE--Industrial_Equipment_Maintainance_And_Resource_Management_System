@@ -1,4 +1,7 @@
 const app = require('../server');
+const { connectDB } = require('../src/db');
+const { seedDatabase } = require('../src/seed');
+const { User } = require('../src/models');
 const http = require('http');
 
 let server;
@@ -34,6 +37,14 @@ function assert(condition, message) {
 
 async function runTests() {
   console.log('\n--- STARTING FORGE ENTERPRISE BACKEND INTEGRATION TESTS ---\n');
+
+  // Ensure DB connected & seeded
+  await connectDB();
+  const count = await User.countDocuments();
+  if (count === 0) {
+    console.log('Seeding initial dataset for integration tests...');
+    await seedDatabase();
+  }
 
   // Start temporary test server
   server = app.listen(PORT);
@@ -217,11 +228,13 @@ async function runTests() {
 
     console.log('\n🎉 ALL 20 ENTERPRISE BACKEND INTEGRATION TESTS PASSED SUCCESSFULLY!\n');
   } finally {
-    server.close();
+    if (server) server.close();
   }
 }
 
-runTests().catch(err => {
+runTests().then(() => {
+  process.exit(0);
+}).catch(err => {
   console.error('\n❌ Tests encountered an error:', err);
   if (server) server.close();
   process.exit(1);

@@ -2339,7 +2339,7 @@ function initAccessibilityHardening() {
 
 var ForgeApiClient = (function () {
     var _isOnline = false;
-    var _mode = "LOCAL"; // "PRISMA" or "LOCAL"
+    var _mode = "LOCAL"; // "MONGODB" or "LOCAL"
 
     function getBaseUrl() {
         if (window.location.protocol === "http:" || window.location.protocol === "https:") {
@@ -2404,8 +2404,8 @@ var ForgeApiClient = (function () {
                 var json = await res.json();
                 if (json && json.status === "ONLINE") {
                     _isOnline = true;
-                    _mode = "PRISMA";
-                    if (typeof ForgeDataService !== "undefined") ForgeDataService.mode = "PRISMA";
+                    _mode = "MONGODB";
+                    if (typeof ForgeDataService !== "undefined") ForgeDataService.mode = "MONGODB";
                     updateConnectionIndicator(true);
                     return true;
                 }
@@ -2419,7 +2419,7 @@ var ForgeApiClient = (function () {
         return false;
     }
 
-    // Hydrate local cache from Prisma SQLite database
+    // Hydrate local cache from MongoDB Mongoose database
     async function hydrateAll() {
         if (!_isOnline) return false;
         try {
@@ -2685,8 +2685,8 @@ function updateConnectionIndicator(online) {
     if (indicator) {
         if (online) {
             indicator.className = "forge-connection-indicator online";
-            indicator.setAttribute("title", "Active connection to Node.js / Prisma SQLite database");
-            indicator.innerHTML = '<span class="forge-conn-pulse" aria-hidden="true"></span><span>DB CONNECTED (PRISMA)</span>';
+            indicator.setAttribute("title", "Active connection to Node.js / MongoDB Mongoose database");
+            indicator.innerHTML = '<span class="forge-conn-pulse" aria-hidden="true"></span><span>DB CONNECTED (MONGODB)</span>';
         } else {
             indicator.className = "forge-connection-indicator offline";
             indicator.setAttribute("title", "Operating in standalone local cache mode");
@@ -2696,7 +2696,7 @@ function updateConnectionIndicator(online) {
 
     var dockStatus = document.getElementById("dockConnectionStatus");
     if (dockStatus) {
-        dockStatus.textContent = online ? "PRISMA LIVE" : "LOCAL CACHE";
+        dockStatus.textContent = online ? "MONGODB LIVE" : "LOCAL CACHE";
         dockStatus.className = online ? "badge-operational" : "badge-waiting";
     }
 }
@@ -3005,7 +3005,7 @@ var ForgeDataService = {
                 }
 
                 this.setCurrentUser(userRecord);
-                this.logActivity("Auth Terminal", "Personnel authenticated via Prisma (" + userRecord.badgeId + " // " + userRecord.name + ")", "badge-operational");
+                this.logActivity("Auth Terminal", "Personnel authenticated via MongoDB (" + userRecord.badgeId + " // " + userRecord.name + ")", "badge-operational");
                 await ForgeApiClient.hydrateAll();
                 return { success: true, user: userRecord };
             } else if (apiResult && apiResult.error) {
