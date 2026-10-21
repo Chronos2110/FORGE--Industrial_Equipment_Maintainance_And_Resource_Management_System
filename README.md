@@ -1,284 +1,232 @@
-# FORGE — Industrial Equipment Maintenance & Resource Management System (V5)
+# FORGE — Industrial Equipment Maintenance & Resource Management
 
-An enterprise-grade, production-hardened Industrial Operations, Computerized Maintenance Management System (CMMS), and Resource Allocation Platform engineered with a cleanly segregated architecture (`frontend/` and `backend/`), powered by **Express.js**, **Mongoose ODM**, and **MongoDB**, with pure semantic **HTML5/Vanilla CSS/JavaScript** frontend hydration.
+**A full-stack industrial operations management platform for equipment, maintenance, work orders, workforce coordination, and spare-parts inventory.**
 
----
+FORGE brings essential maintenance and resource-management workflows into one centralized application. It is designed to help industrial teams track equipment conditions, organize maintenance activities, coordinate technicians, manage inventory, and review operational performance.
 
-## 📌 Architectural Overview (V5 Segregated Architecture)
+## Overview
 
-FORGE is structured as a full-stack industrial web system featuring a decoupled frontend client and a document-based RESTful backend:
+Industrial equipment requires regular maintenance, timely fault reporting, skilled technicians, and readily available spare parts. When these activities are managed separately, delays and resource shortages can make maintenance harder to coordinate.
 
-1. **Frontend Client (`frontend/`)**:
-   - Zero-dependency, pure HTML5/CSS3/JavaScript interface.
-   - Obsidian Black & Industrial Gold visual language (`#08090C` canvas, `#D49A3D` gold accents, `#28A745` operational status).
-   - Dynamic SVG Industrial Floor Schematic with live plant bay overlays across all 6 production bays.
-   - 4-Lane Preventive Maintenance Compliance Timeline (`Overdue / Critical`, `Due This Week`, `Upcoming Schedule`, `Completed / Verified`).
-   - Drag-and-drop / stage-transitioning 4-stage Work Order Kanban Board (`Scheduled`, `Assigned`, `In Progress`, `Waiting for Parts`, `Completed`).
-   - Full-stack hydration engine (`ForgeApiClient.hydrateAll()` and `ForgeDataService`) that mirrors backend MongoDB records directly into the UI.
+FORGE connects these workflows so that users can manage equipment records, schedule maintenance, create and assign work orders, report faults, track spare parts, and review activity through a shared system.
 
-2. **Backend Engine (`backend/`)**:
-   - Node.js & Express REST API running on port `5000` with JWT cookie/header authentication and Role-Based Access Control (RBAC).
-   - **Mongoose ODM** connecting to **MongoDB** via `MONGODB_URI` (`backend/src/models/index.js` and `backend/src/db.js`).
-   - Built-in zero-config resiliency: automatically falls back to an in-process `mongodb-memory-server` if a local or remote MongoDB instance is not currently active, guaranteeing `npm test`, `npm run seed`, and `npm start` succeed instantly out of the box.
-   - Atomic business logic guaranteeing stockout protection, atomic inventory decrements upon order completion, and auto-rescheduling for PM tasks.
-   - ISO-55000 compliant persistent `ActivityLog` audit trail capturing shift handovers, fault reports, work order dispatch, and equipment lifecycle events.
+## Key Features
 
----
+### Equipment Management
+- Maintain an equipment registry with identifiers, categories, locations, operational status, and health information.
+- View equipment records and their related work orders, maintenance schedules, and fault reports.
+- Update equipment information and monitor reported faults.
 
-## 📂 Repository Structure
+### Maintenance Management
+- Maintain preventive-maintenance schedules and due dates.
+- Track maintenance compliance and completion.
+- Connect maintenance activities to the relevant equipment and assigned personnel.
 
-```
-Mini-Project/
-├── package.json                      # Root npm scripts (start, seed, test, dev)
-├── .env                              # Environment configuration (MONGODB_URI, PORT, JWT_SECRET)
-├── README.md                         # Full-stack documentation & API specifications
-│
-├── frontend/                         # Pure Frontend Application Assets
-│   ├── index.html                    # Industrial Marketing & Telemetry Landing Page
-│   ├── login.html                    # Role-Gated Authentication Console
-│   ├── register.html                 # Personnel Provisioning & Onboarding Terminal
-│   ├── pages/
-│   │   ├── dashboard.html            # Plant Operations Control Center & Bay Triage Strip
-│   │   ├── equipment.html            # Machinery Catalog & Interactive Floor Schematic
-│   │   ├── workorders.html           # 4-Stage Work Order Kanban & Auto-Assign Dispatch
-│   │   ├── maintenance.html          # 4-Lane PM Compliance Timeline & Scheduler
-│   │   ├── workforce.html            # Certified Technician Roster & Capacity Manager
-│   │   ├── inventory.html            # Spare Parts Warehouse & Stockout Warning Desk
-│   │   └── analytics.html            # Reliability Engineering, MTBF & MTTR Telemetry
+### Work Order Management
+- Create and track maintenance work orders.
+- Record work descriptions, priorities, equipment, assignments, and status.
+- Match technician specializations to equipment categories when assigning work.
+- Track required spare parts and their inventory impact.
+
+### Fault Reporting
+- Allow personnel to report equipment faults with descriptions and severity levels.
+- Reflect critical and high-severity faults in equipment status.
+- Escalate eligible fault reports into linked work orders to support follow-up.
+
+### Workforce Management
+- Maintain technician profiles, specializations, certifications, shifts, and availability.
+- Track active workloads and concurrent work-order limits.
+- Apply role-based permissions to workforce information.
+
+### Spare-Parts Inventory
+- Maintain part records, quantities, minimum stock thresholds, costs, storage locations, and suppliers.
+- Identify parts that have reached or fallen below their minimum stock threshold.
+- Support inventory updates and restocking workflows.
+
+### Operational Analytics and Activity Logs
+- Summarize equipment status, work orders, inventory risks, and maintenance activity.
+- Calculate operational indicators such as equipment availability, Mean Time to Repair (MTTR), and Mean Time Between Failures (MTBF).
+- Record significant actions in an activity log.
+
+### Authentication and User Roles
+FORGE supports three roles:
+- **Administrator:** manages equipment, personnel, inventory, and operational workflows.
+- **Technician:** accesses assigned work and relevant maintenance and technical information.
+- **Operator:** views relevant operational information and reports equipment faults.
+
+Access to protected API endpoints is controlled through authentication middleware and role-based authorization.
+
+## Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| Frontend | HTML5, CSS3, Bootstrap 5, Vanilla JavaScript |
+| Backend | Node.js, Express.js |
+| Database | MongoDB, Mongoose |
+| Authentication | JSON Web Tokens (JWT), bcryptjs |
+| API | REST-style HTTP endpoints with JSON |
+| Persistence and fallback | MongoDB with an in-memory MongoDB fallback; frontend localStorage caching |
+| Testing | Node.js backend integration tests |
+
+## Project Structure
+
+```text
+FORGE/
+├── frontend/
+│   ├── index.html
+│   ├── login.html
+│   ├── register.html
 │   ├── css/
-│   │   ├── style.css                 # Industrial Technology Design Tokens & Grid Styles
-│   │   └── bootstrap.min.css         # Bootstrap 5 Grid Framework
+│   │   └── style.css
 │   ├── js/
-│   │   ├── common.js                 # Hydration engine, ForgeDataService, ForgeApiClient
-│   │   ├── api.js                    # Dual-mode API adapter
-│   │   ├── app.js                    # Session lifecycle & role authentication
-│   │   ├── dashboard.js              # Schematic bay rendering & KPI calculators
-│   │   ├── equipment.js              # Equipment registry & bay filter handlers
-│   │   ├── workorders.js             # Kanban stage transitions & modal dispatch
-│   │   ├── maintenance.js            # PM timeline rendering & auto-rescheduling UI
-│   │   ├── workforce.js              # Technician onboarding & shift availability toggles
-│   │   ├── inventory.js              # Stock restock & SKU threshold controllers
-│   │   └── analytics.js              # MTBF/MTTR graphs & ISO-55000 audit drawer
-│   └── assets/                       # SVG schematics and industrial iconography
-│
-└── backend/                          # Production-Grade Express & Mongoose Backend
-    ├── server.js                     # Express app setup, CORS, route mounting, static serving
-    ├── src/
-    │   ├── db.js                     # Resilient Mongoose connection helper (MongoDB / Memory Server)
-    │   ├── seed.js                   # Comprehensive 6-bay plant database seed script
-    │   ├── models/
-    │   │   └── index.js              # Mongoose schemas (User, Equipment, WorkOrder, Parts, ActivityLog, etc.)
-    │   ├── middleware/
-    │   │   └── auth.js               # JWT verification & RBAC role guards
-    │   ├── utils/
-    │   │   └── activity.js           # Shared ISO-55000 activity logging utility
-    │   └── routes/
-    │       ├── auth.js               # Login, register, /me, and PATCH /profile
-    │       ├── equipment.js          # Machinery CRUD across Bay 01 to Bay 06
-    │       ├── workOrders.js         # Work order dispatch, auto-assign, status transitions
-    │       ├── maintenance.js        # PM schedules with auto +30 days rescheduling
-    │       ├── workforce.js          # Technician roster onboarding & availability
-    │       ├── inventory.js          # Spare parts inventory, restocking, stock alerts
-    │       ├── faults.js             # Operator fault reporting & escalation to work orders
-    │       ├── activity.js           # ISO-55000 audit log retrieval & manual log entries
-    │       ├── analytics.js          # Plant-wide MTBF, MTTR, availability & personal metrics
-    │       └── shell.js              # Command palette search, dock telemetry, factory reset
-    └── test/
-        └── backend_test.js           # 20-point enterprise integration test suite
+│   │   ├── api.js
+│   │   ├── common.js
+│   │   ├── app.js
+│   │   ├── dashboard.js
+│   │   ├── equipment.js
+│   │   ├── maintenance.js
+│   │   ├── workorders.js
+│   │   ├── workforce.js
+│   │   ├── inventory.js
+│   │   ├── analytics.js
+│   │   └── register.js
+│   └── pages/
+│       ├── dashboard.html
+│       ├── equipment.html
+│       ├── maintenance.html
+│       ├── workorders.html
+│       ├── workforce.html
+│       ├── inventory.html
+│       └── analytics.html
+├── backend/
+│   ├── server.js
+│   ├── src/
+│   │   ├── db.js
+│   │   ├── seed.js
+│   │   ├── middleware/
+│   │   │   └── auth.js
+│   │   ├── models/
+│   │   │   └── index.js
+│   │   ├── routes/
+│   │   └── utils/
+│   └── test/
+│       └── backend_test.js
+├── package.json
+└── README.md
 ```
 
----
+## Prerequisites
 
-## ⚡ Quick-Start Guide
+- Node.js and npm
+- MongoDB, either a local instance or a configured MongoDB connection
+- A modern web browser
 
-### 1. Prerequisites
-- **Node.js** (v18.x or higher)
-- **npm** (v9.x or higher)
-- **MongoDB** (Local instance or MongoDB Atlas cluster — *optional*: if offline, in-memory MongoDB activates automatically)
+The project also includes `mongodb-memory-server` as a fallback when a primary MongoDB connection cannot be established. This fallback is intended for development and testing, not persistent production storage.
 
-### 2. Installation & Setup
-Clone the repository and install all project dependencies:
+## Getting Started
+
+### 1. Clone the repository
+
 ```bash
-# Clone repository
-git clone https://github.com/Chronos2110/FORGE--Industrial_Equipment_Maintainance_And_Resource_Management_System.git
-cd Mini-Project
+git clone <YOUR_REPOSITORY_URL>
+cd <YOUR_REPOSITORY_FOLDER>
+```
 
-# Install backend dependencies (Mongoose, Express, etc.)
+### 2. Install dependencies
+
+```bash
 npm install
 ```
 
-### 3. Environment Configuration (`.env`)
-Create or verify your `.env` file in the project root:
+### 3. Configure environment variables
+
+Create a `.env` file in the repository root:
+
 ```env
 PORT=5000
-JWT_SECRET=forge_industrial_jwt_secret_2026
 MONGODB_URI=mongodb://127.0.0.1:27017/forge_industrial
+JWT_SECRET=replace_with_a_long_random_secret
+NODE_ENV=development
 ```
-> **Connecting to MongoDB Atlas**:
-> Paste your Atlas connection URI directly into `.env`:
-> ```env
-> MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/forge_industrial?retryWrites=true&w=majority
-> ```
 
-### 4. Populate Database (Seed Rich Industrial Data)
-Seed MongoDB with 9 accounts, 12 machines across all 6 bays, 10 inventory SKUs (with 3 stockouts), 10 work orders, 8 PM timeline schedules, 4 fault reports, and 15 ISO-55000 audit logs:
+Use a private, strong secret. Never commit `.env` or production credentials to GitHub.
+
+### 4. Start the application
+
+Ensure MongoDB is running, then execute:
+
+```bash
+npm start
+```
+
+Open `http://localhost:5000` in your browser. The Express server serves the frontend and API from the same origin.
+
+### 5. Seed the database
+
+To initialize the sample dataset, run:
+
 ```bash
 npm run seed
 ```
 
-### 5. Run Automated Integration Tests
-Verify 100% backend health, RBAC security, transactional inventory deduction, and auto-rescheduling:
+Use sample data for demonstration and testing. Review the seed script before running it against an existing database.
+
+### 6. Run backend integration tests
+
 ```bash
 npm test
 ```
 
-### 6. Launch Application
-Start the unified full-stack server on `http://localhost:5000`:
-```bash
-npm start
-```
-Open your browser to `http://localhost:5000` (or `http://localhost:5000/login.html`).
+The integration tests exercise important API behavior, including authentication, role restrictions, and operational endpoints. A passing test suite is evidence of the scenarios covered by those tests, not proof that every feature or production security requirement has been verified.
 
----
+## API Overview
 
-## 🔑 Default Demo Credentials
+The backend exposes endpoints for the following resources:
 
-FORGE comes pre-populated with accounts for every industrial operational tier:
+| Endpoint | Purpose |
+|---|---|
+| `/api/auth` | Registration, login, session, profile, and logout |
+| `/api/equipment` | Equipment records |
+| `/api/work-orders` | Work-order management |
+| `/api/maintenance` | Maintenance schedules |
+| `/api/faults` | Fault reporting and escalation |
+| `/api/workforce` | Technician and workforce information |
+| `/api/inventory` | Spare-parts inventory |
+| `/api/analytics` | Operational analytics |
+| `/api/activity` | Activity and audit records |
+| `/api/health` | API health check |
 
-| Role | Name | Email / Username | Password | Badge ID | Primary Assignment |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Administrator** | Marcus Vance | `admin@forge.io` (or `admin`) | `admin123` | `ADM-001` | Plant Control Bay |
-| **Operator** | Elena Rostova | `operator@forge.io` (or `op_floor`) | `oper123` | `OP-104` | Bay 01 (Machining) |
-| **Operator** | Kenji Sato | `operator2@forge.io` | `oper123` | `OP-105` | Bay 04 (Robotics) |
-| **Technician (CNC)** | Rajesh Kumar | `rajesh@forge.io` (or `tech_rajesh`) | `tech123` | `TECH-01` | Bay 01 (`CNC Mechanics & Milling`) |
-| **Technician (Hydraulics)**| Sarah Jenkins | `sarah@forge.io` | `tech123` | `TECH-02` | Bay 02 (`Hydraulic & Fluid Power`) |
-| **Technician (Pneumatics)**| Vikram Patel | `vikram@forge.io` | `tech123` | `TECH-03` | Bay 03 (`Pneumatics & Compressors`) |
-| **Technician (Electrical)**| David Chen | `david@forge.io` | `tech123` | `TECH-04` | Bay 04 (`Electrical Systems & PLC`) |
-| **Technician (Piping)** | Alex Morgan | `alex@forge.io` | `tech123` | `TECH-05` | Bay 05 (`Pumps & Industrial Piping`) |
-| **Technician (Sensors)** | Priya Sharma | `priya@forge.io` | `tech123` | `TECH-06` | Bay 06 (`Predictive Analytics & Sensors`) |
+Protected endpoints require a valid authentication token. Permissions depend on the user's role and the individual route.
 
----
+## Sustainable Development Goals (SDGs)
 
-## 📡 RESTful API Documentation
+FORGE has potential alignment with the following United Nations Sustainable Development Goals:
 
-All protected endpoints require an `Authorization: Bearer <JWT>` header or an authenticated `token` cookie.
+- **SDG 8 — Decent Work and Economic Growth:** supports more organized maintenance work, technician coordination, and operational efficiency.
+- **SDG 9 — Industry, Innovation and Infrastructure:** supports equipment reliability, preventive maintenance, and better industrial resource coordination.
+- **SDG 12 — Responsible Consumption and Production:** supports inventory visibility, maintenance planning, and more deliberate use of spare parts and equipment.
 
-### Authentication & Personnel (`/api/auth`)
-- `POST /api/auth/register`: Create a new user (with automatic `TechnicianProfile` creation for technicians).
-- `POST /api/auth/login`: Authenticate by email, username, or `badge_id`.
-- `GET /api/auth/me`: Retrieve current authenticated user profile.
-- `PATCH /api/auth/profile`: Update personal shift status (`Available`, `On Break`, `Off Shift`), assigned machine, and bay location.
-- `POST /api/auth/logout`: Invalidate session and clear auth cookies.
+These are the project's intended contributions. Actual environmental, economic, or workplace improvements would need to be measured after implementation in a real operational setting.
 
-### Industrial Equipment (`/api/equipment`)
-- `GET /api/equipment`: Retrieve all machinery (supports `?status=` and `?bay=` filters).
-- `GET /api/equipment/:id`: Retrieve single equipment asset with linked work orders and maintenance history.
-- `POST /api/equipment`: Register new asset [Admin only].
-- `PATCH /api/equipment/:id`: Update asset telemetry, status, health score, or bay [Admin & Tech].
-- `DELETE /api/equipment/:id`: Cascade decommission equipment and clear linked history [Admin only].
+## Current Scope and Limitations
 
-### Work Orders & Dispatching (`/api/work-orders`)
-- `GET /api/work-orders`: List all work orders (supports `?status=`, `?priority=`, and `?assigned_to=`).
-- `GET /api/work-orders/:id`: Detailed work order inspection with spare parts bill.
-- `POST /api/work-orders`: Dispatch a work order, link required spare parts, and update equipment status.
-- `POST /api/work-orders/:id/auto-assign`: Algorithmic dispatch matching technician specialization to machine category with workload balancing.
-- `PATCH /api/work-orders/:id/status`: Transition work order stage. Transitioning to `COMPLETED` automatically verifies inventory, atomically decrements spare part stock, decrements technician active workload, and restores machine status to `OPERATIONAL`.
-- `DELETE /api/work-orders/:id`: Cancel and delete work order [Admin only].
+FORGE is an academic full-stack prototype demonstrating industrial maintenance workflows and backend integration.
 
-### Preventive Maintenance (`/api/maintenance`)
-- `GET /api/maintenance`: List scheduled PM tasks ordered by `next_due_date`.
-- `GET /api/maintenance/:id`: Retrieve specific PM task.
-- `POST /api/maintenance`: Schedule a recurring inspection [Admin only].
-- `PATCH /api/maintenance/:id`: Update schedule or mark `COMPLETED`. When marked `COMPLETED`, automatically reschedules `next_due_date` by `+frequency_days` (default +30 days) and updates equipment `last_serviced_at`.
-- `DELETE /api/maintenance/:id`: Remove PM schedule [Admin only].
+Before production deployment, it would require a security review, hardened secret management, validated input and error handling, stronger authorization and session controls, deployment configuration, persistent production database operations, backups, monitoring, and broader automated testing.
 
-### Workforce & Personnel Management (`/api/workforce`)
-- `GET /api/workforce`: List certified technicians (Admin views full plant; Technician views self; Operator 403 Forbidden).
-- `GET /api/workforce/:id`: Detailed technician record.
-- `POST /api/workforce`: Onboard a new certified technician in a single database operation [Admin only].
-- `PATCH /api/workforce/:id`: Update technician specialization, certifications, bay assignment, and capacity limits.
-- `PATCH /api/workforce/:id/availability`: Toggle technician shift status (`Available`, `On Break`, `Off Shift`).
-- `DELETE /api/workforce/:id`: Offboard technician and unassign pending orders [Admin only].
+The application's demo data and calculated indicators should not be interpreted as verified live factory telemetry or measured real-world performance.
 
-### Warehouse Spare Parts Inventory (`/api/inventory`)
-- `GET /api/inventory`: List all warehouse spare part SKUs.
-- `GET /api/inventory/:id`: Inspect individual SKU stock and storage bin.
-- `POST /api/inventory`: Register new spare part SKU [Admin only].
-- `PATCH /api/inventory/:id` & `PATCH /api/inventory/:id/restock`: Restock stock quantities and modify minimum safety thresholds.
-- `DELETE /api/inventory/:id`: Remove SKU from inventory registry [Admin only].
+## Future Enhancements
 
-### Fault Reporting (`/api/faults`)
-- `GET /api/faults`: List operator fault reports.
-- `GET /api/faults/:id`: Inspect individual fault incident.
-- `POST /api/faults`: File an operational fault report. `CRITICAL` severity automatically transitions the target machine status to `DOWN`.
-- `POST /api/faults/:id/escalate`: Escalate fault into a linked maintenance work order in an atomic operation [Admin & Tech].
-- `DELETE /api/faults/:id`: Dismiss fault report [Admin only].
+- Industrial sensor and IoT integrations for verified equipment telemetry.
+- Notifications for faults, overdue maintenance, and stock shortages.
+- More detailed maintenance cost and reliability reporting.
+- Deployment with production-grade monitoring, backups, and security controls.
+- Measurement of maintenance efficiency, resource consumption, and waste reduction.
 
-### ISO-55000 Audit Logging (`/api/activity`)
-- `GET /api/activity`: Retrieve chronological audit trail records (supports `?category=` and `?limit=`).
-- `POST /api/activity`: Record a manual shift handover or plant inspection event.
+## Academic Project
 
-### Operations Telemetry & Shell (`/api/analytics`, `/api/search`, `/api/telemetry`, `/api/dev`)
-- `GET /api/analytics/summary`: Quantitative plant analytics including MTBF (Mean Time Between Failures), MTTR (Mean Time to Repair), Availability percentage, and recent audit activity.
-- `GET /api/search?q=<query>`: Fast search powering the Ctrl+K Command Palette across machines, work orders, and parts.
-- `GET /api/telemetry/dock`: Live badge counter feeding the bottom Control Dock alert pill.
-- `POST /api/dev/reset`: Re-runs factory seed script on demand [Admin only].
+FORGE demonstrates the application of frontend development, REST API design, database modeling, authentication, role-based access control, and connected industrial maintenance workflows.
 
----
-
-## 🧪 Enterprise Test Suite Verification
-
-Run the integration test suite:
-```bash
-npm test
-```
-
-Expected output:
-```
---- STARTING FORGE ENTERPRISE BACKEND INTEGRATION TESTS ---
-
-✅ PASSED: API Health Check returns ONLINE
-✅ PASSED: Admin login returns valid JWT token
-✅ PASSED: Technician login returns technician role
-✅ PASSED: Operator login returns operator role
-✅ PASSED: GET /api/auth/me returns current session user (admin@forge.io)
-✅ PASSED: Operator is forbidden (403) from accessing Workforce management
-✅ PASSED: Operator is forbidden (403) from accessing Analytics telemetry
-✅ PASSED: Admin retrieves full plant analytics (MTTR: 24h, MTBF: 2160h, Availability: 75%, Activity: 18 logs)
-✅ PASSED: Operator reads filtered equipment list (returned 9 operational units across 6 bays)
-✅ PASSED: Auto-assign algorithm assigned candidate: Rajesh Kumar
-✅ PASSED: Transactional completion of WO-301 succeeded
-✅ PASSED: Inventory deduction verified: PRT-103 stock correctly decremented to 3
-✅ PASSED: Operator can report fault with CRITICAL severity
-✅ PASSED: Equipment EQ004 status automatically transitioned to DOWN on CRITICAL fault
-✅ PASSED: Fault escalated to linked Work Order: WO-392
-✅ PASSED: Telemetry dock badge returns count: 7 alerts
-✅ PASSED: Ctrl+K search returned 2 equipment matches
-✅ PASSED: GET /api/activity retrieved 22 persistent ISO-55000 audit trail records
-✅ PASSED: POST /api/activity persists custom operational audit entry
-✅ PASSED: PATCH /api/auth/profile successfully updated personnel shift pattern and availability
-✅ PASSED: Admin successfully onboarded new certified technician: Elena Rostova (Tech Test) [Robotic Welding & Automation]
-✅ PASSED: PATCH /api/workforce/:id/availability updated technician shift availability
-✅ PASSED: DELETE /api/workforce/:id cleanly offboarded test technician
-✅ PASSED: POST /api/maintenance scheduled task: High-Pressure Booster Valve Inspection
-✅ PASSED: PATCH /api/maintenance/:id marked task COMPLETED and auto-rescheduled next due date to 2026-11-20
-✅ PASSED: DELETE /api/maintenance/:id removed test task
-✅ PASSED: POST /api/inventory created spare part: High-Temperature Silicone O-Ring
-✅ PASSED: PATCH /api/inventory/:id/restock incremented stock to 75
-✅ PASSED: DELETE /api/inventory/:id deleted test part SKU
-
-🎉 ALL 20 ENTERPRISE BACKEND INTEGRATION TESTS PASSED SUCCESSFULLY!
-```
-
----
-
-## 🔒 Security & Industry Compliance
-- **ISO-55000 Standard**: Comprehensive lifecycle asset tracking, timestamped audit logging, and shift handover records.
-- **Role-Based Access Control (RBAC)**: Strict separation of privileges preventing unauthorized equipment modifications or analytics viewing.
-- **Atomic Operations**: Atomic model updates and inventory deductions preventing race conditions and inventory drift.
-- **Fail-Safe Offline Mode**: If disconnected from the Express backend, `ForgeDataService` gracefully falls back to browser storage, guaranteeing zero plant downtime.
-
----
-
-## 👨‍💻 Authors & Academic Context
-Engineered as part of the Web Programming Laboratory (WPL) Mini-Project. Designed and implemented to demonstrate production-grade architectural segregation, modern document modeling with Mongoose ODM & MongoDB, and high-performance vanilla web development.
+**Project name:** FORGE  
+**Full title:** Industrial Equipment Maintenance & Resource Management System
